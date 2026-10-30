@@ -1,28 +1,29 @@
 # Ứng Dụng IPTV Player Cho Android TV 5.0+ (Lollipop, API 21)
 
-Dự án ứng dụng xem truyền hình IPTV được thiết kế và tối ưu đặc thù cho các dòng **Android TV / Android TV Box chạy Android 5.0, 5.1 (API Level 21/22)** trở lên, tương thích tốt với điều khiển từ xa (Remote / D-Pad).
+Dự án ứng dụng xem truyền hình IPTV được thiết kế và tối ưu đặc thù cho các dòng **Android TV / Android TV Box chạy Android 5.0, 5.1 (API Level 21/22)** trở lên, tương thích tốt với điều khiển từ xa (Remote / D-Pad) và hỗ trợ **Quản lý / Điều khiển từ Điện thoại qua Web**.
 
 ---
 
-## 🌟 Các Tính Năng Mới Bổ Sung
+## 🌟 Các Tính Năng Nổi Bật
 
-1. **Quản Lý Nhiều Danh Sách M3U (Multi-Playlist)**:
-   - Thêm không giới hạn các link M3U / M3U8 từ nhiều nguồn khác nhau (Kênh Trong Nước, Kênh Thể Thao, Kênh Quốc Tế,...).
-   - Đặt tên gợi nhớ cho từng danh sách, dễ dàng chuyển đổi qua lại chỉ với 1 click.
-   - Quản lý và xóa danh sách không còn sử dụng.
-2. **Kênh Yêu Thích (Favorites) ★**:
+1. **📱 Điều Khiển & Quản Lý Từ Điện Thoại (Web Remote Dashboard)**:
+   - Tích hợp sẵn Web Server mini ngay trong ứng dụng (chạy cổng `8080`).
+   - Mở trình duyệt trên điện thoại (cùng mạng Wi-Fi với TV), gõ địa chỉ: `http://<IP_TV>:8080` (địa chỉ này hiển thị rõ ràng trên thanh trên cùng của app).
+   - **Giao diện Web trên điện thoại cho phép**:
+     - **Remote cảm ứng**: Phím điều hướng D-Pad (Lên/Xuống/Trái/Phải/OK), Quay lại, Menu, Chuyển kênh.
+     - **Dán Link M3U siêu nhanh**: Không còn cảnh phải dùng remote TV gõ từng chữ URL dài dằng dặc; chỉ cần copy link M3U trên điện thoại và dán vào web để lưu thẳng vào TV!
+     - **Danh sách kênh & Tìm kiếm**: Xem toàn bộ kênh TV trên màn hình điện thoại, bấm vào kênh nào là TV lập tức phát kênh đó.
+     - **Cài đặt khởi động**: Bật/tắt tự mở app khi TV khởi động ngay trên điện thoại.
+2. **Quản Lý Nhiều Danh Sách M3U (Multi-Playlist)**:
+   - Thêm không giới hạn các link M3U / M3U8 từ nhiều nguồn khác nhau.
+   - Dễ dàng chuyển đổi qua lại chỉ với 1 thao tác.
+3. **Kênh Yêu Thích (Favorites) ★**:
    - Nhấn giữ phím **OK** trên bất kỳ kênh nào để Thêm hoặc Xóa khỏi mục Yêu Thích.
-   - Nhóm danh mục **★ KÊNH YÊU THÍCH** tự động xuất hiện ở vị trí đầu tiên của bảng danh mục để truy cập nhanh chóng.
-3. **Kênh Mặc Định Khi Khởi Động**:
-   - Lựa chọn linh hoạt giữa:
-     - **Vào lại kênh vừa xem gần nhất** (tiếp tục theo dõi chương trình đang dở).
-     - **Luôn mở một kênh cố định** (ví dụ: tự động bật ngay VTV1 HD mỗi lần mở app).
-   - Thiết lập trực tiếp bằng cách nhấn giữ phím **OK** trên kênh muốn chọn.
-4. **Tự Động Mở Ứng Dụng Khi Bật TV (Auto-start on Boot)**:
+   - Nhóm danh mục **★ KÊNH YÊU THÍCH** tự động ưu tiên xuất hiện đầu tiên.
+4. **Kênh Mặc Định Khi Khởi Động**:
+   - Tùy chọn: **Vào lại kênh vừa xem gần nhất** hoặc **Luôn mở một kênh cố định**.
+5. **Tự Động Mở App Khi Bật TV (Auto-start on Boot)**:
    - Tích hợp `BootReceiver` tự động kích hoạt app ngay khi Android TV vừa khởi động xong.
-   - Tùy chọn BẬT / TẮT dễ dàng trong màn hình Cài Đặt.
-5. **Vào Thẳng Kênh Xem Ngay**:
-   - Ngay khi mở app (hoặc khi TV khởi động), app lập tức vào thẳng kênh và phát toàn màn hình không cần bấm thêm bất kỳ nút nào.
 
 ---
 

@@ -22,10 +22,12 @@ import com.iptv.tvapp.data.PreferencesHelper
 import com.iptv.tvapp.databinding.ActivityMainBinding
 import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
+import com.iptv.tvapp.server.TvWebServer
 import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
+import com.iptv.tvapp.util.NetworkUtils
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -35,6 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var playlistManager: PlaylistManager
 
     private var player: ExoPlayer? = null
+    private var webServer: TvWebServer? = null
+
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var channelAdapter: ChannelAdapter
 
@@ -60,6 +64,7 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         initPlayer()
+        initWebServer()
         loadPlaylist(forceRefresh = false)
     }
 
@@ -98,6 +103,80 @@ class MainActivity : AppCompatActivity() {
 
         binding.rootView.setOnClickListener {
             toggleOverlay()
+        }
+    }
+
+    private fun initWebServer() {
+        val ip = NetworkUtils.getLocalIpAddress() ?: "127.0.0.1"
+        binding.tvWebRemoteBadge.text = "📱 Web Remote: http://$ip:8080"
+
+        webServer = TvWebServer(
+            port = 8080,
+            prefs = prefs,
+            channelProvider = { allChannels },
+            currentPlayingProvider = { currentPlayingChannel },
+            onPlayChannel = { ch ->
+                playChannel(ch)
+                hideHandler.postDelayed({ hideOverlay() }, 800)
+            },
+            onSendKey = { action ->
+                handleRemoteAction(action)
+            },
+            onPlaylistChanged = {
+                loadPlaylist(forceRefresh = false)
+            },
+            onChannelsUpdated = {
+                refreshChannelsState()
+            }
+        )
+        webServer?.start()
+    }
+
+    private fun handleRemoteAction(action: String) {
+        resetOverlayTimer()
+        when (action) {
+            "up" -> {
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP))
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_UP))
+                } else {
+                    switchChannel(next = false)
+                }
+            }
+            "down" -> {
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
+                } else {
+                    switchChannel(next = true)
+                }
+            }
+            "left" -> {
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT))
+            }
+            "right" -> {
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
+            }
+            "center", "ok" -> {
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+                } else {
+                    showOverlay()
+                }
+            }
+            "back" -> {
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    hideOverlay()
+                }
+            }
+            "menu" -> {
+                showSettingsDialog()
+            }
+            "ch_prev" -> switchChannel(next = false)
+            "ch_next" -> switchChannel(next = true)
         }
     }
 
@@ -177,8 +256,6 @@ class MainActivity : AppCompatActivity() {
 
                 binding.layoutBuffering.visibility = View.GONE
 
-                // Xác định kênh phát khi khởi động:
-                // Nếu chọn chế độ Kênh Cố Định -> tìm đúng kênh đó; nếu không có -> kênh vừa xem -> kênh đầu tiên
                 val targetChannel = if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL && !prefs.defaultStartupChannelUrl.isNullOrBlank()) {
                     allChannels.firstOrNull { it.streamUrl == prefs.defaultStartupChannelUrl }
                         ?: allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
@@ -310,7 +387,6 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN -> {
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     switchChannel(next = true)
-                    return true
                 }
             }
             KeyEvent.KEYCODE_MENU -> {
@@ -383,6 +459,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         hideHandler.removeCallbacksAndMessages(null)
+        webServer?.stop()
+        webServer = null
         player?.release()
         player = null
     }

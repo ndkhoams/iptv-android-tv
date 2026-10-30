@@ -100,30 +100,30 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:background="@color/tv_overlay_bg"
-        android:padding="24dp"
+        android:padding="20dp"
         android:visibility="visible">
 
-        <!-- Top Bar: Tiêu đề + Nguồn Playlist + Nút thao tác -->
+        <!-- Top Bar: Tiêu đề + Nguồn Playlist + Web Remote Info + Nút thao tác -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="12dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/app_name"
                 android:textColor="@color/accent"
-                android:textSize="22sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvActivePlaylistBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:background="#1E293B"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp"
@@ -131,14 +131,28 @@
                 android:textSize="12sp"
                 android:text="Danh sách: Mặc định" />
 
+            <!-- Địa chỉ Web Server điều khiển từ Điện thoại -->
+            <TextView
+                android:id="@+id/tvWebRemoteBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="#064E3B"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:textColor="#34D399"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:text="📱 Web Remote: http://192.168.1.xxx:8080" />
+
             <TextView
                 android:id="@+id/tvCurrentPlayingTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="12dp"
                 android:textColor="@color/text_primary"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:text="" />
@@ -147,12 +161,12 @@
             <Button
                 android:id="@+id/btnReload"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginEnd="12dp"
-                android:paddingHorizontal="16dp"
+                android:layout_height="38dp"
+                android:layout_marginEnd="10dp"
+                android:paddingHorizontal="14dp"
                 android:text="@string/reload"
                 android:textColor="@color/text_primary"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:background="@drawable/selector_button_tv"
                 android:focusable="true"
                 android:focusableInTouchMode="true" />
@@ -161,11 +175,11 @@
             <Button
                 android:id="@+id/btnSettings"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:paddingHorizontal="16dp"
+                android:layout_height="38dp"
+                android:paddingHorizontal="14dp"
                 android:text="@string/settings"
                 android:textColor="@color/text_primary"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:background="@drawable/selector_button_tv"
                 android:focusable="true"
                 android:focusableInTouchMode="true" />
@@ -180,7 +194,7 @@
 
             <!-- Danh sách Nhóm kênh -->
             <LinearLayout
-                android:layout_width="260dp"
+                android:layout_width="250dp"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:background="@drawable/bg_item_normal"
@@ -211,7 +225,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="14dp"
                 android:background="@drawable/bg_item_normal"
                 android:padding="8dp">
 
@@ -255,9 +269,9 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="10dp"
             android:gravity="center"
-            android:text="Nhấn OK: Xem kênh • Giữ OK: Yêu Thích ★ / Đặt Mặc Định • Menu: Cài Đặt"
+            android:text="Nhấn OK: Xem • Giữ OK: Yêu Thích ★ / Mặc Định • Menu: Cài Đặt • Vào Web từ điện thoại để điều khiển"
             android:textColor="@color/text_muted"
             android:textSize="13sp" />
     </LinearLayout>
