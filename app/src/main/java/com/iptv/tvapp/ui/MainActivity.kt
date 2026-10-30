@@ -387,6 +387,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN -> {
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     switchChannel(next = true)
+                    return true
                 }
             }
             KeyEvent.KEYCODE_MENU -> {

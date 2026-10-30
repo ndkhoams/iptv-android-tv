@@ -16,12 +16,9 @@ object WebPageTemplate {
             --card-bg: #1e293b;
             --card-border: #334155;
             --accent: #00e5ff;
-            --accent-hover: #38bdf8;
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
             --btn-active: #2563eb;
-            --danger: #ef4444;
-            --success: #10b981;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding-bottom: 70px; }
@@ -31,17 +28,14 @@ object WebPageTemplate {
         .now-playing-banner span.ch-name { font-weight: bold; color: #fff; }
         .now-playing-banner span.ch-badge { background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
-        /* TABS */
         .tab-content { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
         .tab-content.active { display: block; }
         
-        /* BOTTOM NAVIGATION BAR */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #131d2e; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
         .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; flex: 1; padding: 6px 0; }
         .nav-btn.active { color: var(--accent); font-weight: bold; }
         .nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
 
-        /* TAB 1: REMOTE CONTROLLER */
         .remote-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); margin-bottom: 16px; }
         .dpad-container { width: 220px; height: 220px; margin: 10px auto; position: relative; background: #0b1120; border-radius: 50%; border: 2px solid var(--card-border); box-shadow: inset 0 4px 12px rgba(0,0,0,0.6); }
         .dpad-btn { position: absolute; background: #1e293b; border: 1px solid var(--card-border); color: var(--text-main); font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 10px; transition: all 0.1s; }
@@ -56,7 +50,6 @@ object WebPageTemplate {
         .action-btn { flex: 1; padding: 12px; background: #1e293b; border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .action-btn:active { background: var(--btn-active); }
 
-        /* TAB 2: CHANNEL LIST */
         .search-box { width: 100%; padding: 12px 14px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
         .search-box:focus { border-color: var(--accent); }
         .channel-item { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.15s; }
@@ -68,7 +61,6 @@ object WebPageTemplate {
         .btn-fav { background: none; border: none; font-size: 20px; color: #64748b; padding: 4px 8px; cursor: pointer; }
         .btn-fav.active { color: #fbbf24; }
 
-        /* TAB 3: PLAYLIST MANAGER */
         .form-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
         .form-card h3 { font-size: 15px; color: var(--accent); margin-bottom: 12px; }
         .form-group { margin-bottom: 10px; }
@@ -88,7 +80,6 @@ object WebPageTemplate {
         .btn-select { background: #10b981; color: #fff; }
         .btn-delete { background: #ef4444; color: #fff; }
 
-        /* TOAST NOTIFICATION */
         #toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid var(--accent); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         #toast.show { opacity: 1; }
     </style>
@@ -204,18 +195,21 @@ object WebPageTemplate {
     <div id="toast">Thông báo</div>
 
     <script>
-        let allChannels = [];
+        var allChannels = [];
 
         function showToast(msg) {
-            const toast = document.getElementById('toast');
+            var toast = document.getElementById('toast');
             toast.innerText = msg;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
+            setTimeout(function() { toast.classList.remove('show'); }, 2000);
         }
 
         function switchTab(tabId, btn) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            var tabs = document.querySelectorAll('.tab-content');
+            for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+            var btns = document.querySelectorAll('.nav-btn');
+            for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+
             document.getElementById('tab-' + tabId).classList.add('active');
             btn.classList.add('active');
 
@@ -224,171 +218,180 @@ object WebPageTemplate {
             if (tabId === 'settings') loadSettings();
         }
 
-        async function sendKey(action) {
-            try {
-                const res = await fetch('/api/key', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ action: action })
-                });
-                const data = await res.json();
+        function sendKey(action) {
+            fetch('/api/key', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: action })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
                 if (data.nowPlaying) {
                     document.getElementById('bannerChName').innerText = data.nowPlaying;
                 }
-            } catch (e) {
+            }).catch(function() {
                 showToast("Lỗi gửi lệnh!");
-            }
+            });
         }
 
-        async function fetchStatus() {
-            try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
+        function fetchStatus() {
+            fetch('/api/status').then(function(res) { return res.json(); })
+            .then(function(data) {
                 document.getElementById('bannerChName').innerText = data.nowPlaying || 'Chưa phát kênh';
                 document.getElementById('tvIpBadge').innerText = 'TV: ' + data.ip;
-            } catch (e) {}
+            }).catch(function() {});
         }
 
-        async function loadChannels() {
-            const container = document.getElementById('channelsContainer');
-            try {
-                const res = await fetch('/api/channels');
-                allChannels = await res.json();
+        function loadChannels() {
+            var container = document.getElementById('channelsContainer');
+            fetch('/api/channels').then(function(res) { return res.json(); })
+            .then(function(data) {
+                allChannels = data;
                 renderChannels(allChannels);
-            } catch (e) {
+            }).catch(function() {
                 container.innerHTML = 'Lỗi tải danh sách kênh.';
-            }
+            });
         }
 
         function renderChannels(list) {
-            const container = document.getElementById('channelsContainer');
+            var container = document.getElementById('channelsContainer');
             if (list.length === 0) {
                 container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px;">Không có kênh nào.</div>';
                 return;
             }
-            container.innerHTML = list.map(ch => `
-                <div class="channel-item" onclick="playChannel('${encodeURIComponent(ch.streamUrl)}')">
-                    <div class="channel-left">
-                        <span class="channel-num">${ch.number < 10 ? '0' + ch.number : ch.number}</span>
-                        ${ch.logoUrl ? `<img class="channel-logo" src="${ch.logoUrl}" onerror="this.style.display='none'">` : ''}
-                        <div class="channel-title">${ch.name}</div>
-                    </div>
-                    <button class="btn-fav ${ch.isFavorite ? 'active' : ''}" onclick="event.stopPropagation(); toggleFav('${encodeURIComponent(ch.streamUrl)}')">★</button>
-                </div>
-            `).join('');
+            var html = '';
+            for (var i = 0; i < list.length; i++) {
+                var ch = list[i];
+                var numStr = ch.number < 10 ? '0' + ch.number : '' + ch.number;
+                var encUrl = encodeURIComponent(ch.streamUrl);
+                var logoHtml = ch.logoUrl ? '<img class="channel-logo" src="' + ch.logoUrl + '" onerror="this.style.display=\'none\'">' : '';
+                var favClass = ch.isFavorite ? 'btn-fav active' : 'btn-fav';
+                html += '<div class="channel-item" onclick="playChannel(\'' + encUrl + '\')">' +
+                    '<div class="channel-left">' +
+                        '<span class="channel-num">' + numStr + '</span>' +
+                        logoHtml +
+                        '<div class="channel-title">' + ch.name + '</div>' +
+                    '</div>' +
+                    '<button class="' + favClass + '" onclick="event.stopPropagation(); toggleFav(\'' + encUrl + '\')">★</button>' +
+                '</div>';
+            }
+            container.innerHTML = html;
         }
 
         function filterChannels() {
-            const keyword = document.getElementById('channelSearch').value.toLowerCase();
-            const filtered = allChannels.filter(ch => ch.name.toLowerCase().includes(keyword));
+            var keyword = document.getElementById('channelSearch').value.toLowerCase();
+            var filtered = [];
+            for (var i = 0; i < allChannels.length; i++) {
+                if (allChannels[i].name.toLowerCase().indexOf(keyword) !== -1) {
+                    filtered.push(allChannels[i]);
+                }
+            }
             renderChannels(filtered);
         }
 
-        async function playChannel(encodedUrl) {
-            try {
-                const res = await fetch('/api/play', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ streamUrl: decodeURIComponent(encodedUrl) })
-                });
-                const data = await res.json();
+        function playChannel(encodedUrl) {
+            fetch('/api/play', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ streamUrl: decodeURIComponent(encodedUrl) })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
                 showToast('Đang phát: ' + data.channelName);
                 document.getElementById('bannerChName').innerText = data.channelName;
-            } catch (e) {
+            }).catch(function() {
                 showToast('Lỗi gửi lệnh phát!');
-            }
+            });
         }
 
-        async function toggleFav(encodedUrl) {
-            try {
-                const res = await fetch('/api/favorite/toggle', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ streamUrl: decodeURIComponent(encodedUrl) })
-                });
-                const data = await res.json();
+        function toggleFav(encodedUrl) {
+            fetch('/api/favorite/toggle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ streamUrl: decodeURIComponent(encodedUrl) })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
                 showToast(data.isFavorite ? 'Đã thêm Yêu Thích ★' : 'Đã bỏ Yêu Thích');
                 loadChannels();
-            } catch (e) {}
+            }).catch(function() {});
         }
 
-        async function loadPlaylists() {
-            const container = document.getElementById('playlistsContainer');
-            try {
-                const res = await fetch('/api/playlists');
-                const list = await res.json();
-                container.innerHTML = list.map(item => `
-                    <div class="playlist-item ${item.isSelected ? 'selected' : ''}">
-                        <div class="playlist-info">
-                            <div class="playlist-name">${item.name} ${item.isSelected ? '✓ (Đang chọn)' : ''}</div>
-                            <div class="playlist-url">${item.url}</div>
-                        </div>
-                        <div class="playlist-actions">
-                            ${!item.isSelected ? `<button class="btn-sm btn-select" onclick="selectPlaylist('${item.id}')">Chọn</button>` : ''}
-                            <button class="btn-sm btn-delete" onclick="deletePlaylist('${item.id}')">Xóa</button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (e) {
+        function loadPlaylists() {
+            var container = document.getElementById('playlistsContainer');
+            fetch('/api/playlists').then(function(res) { return res.json(); })
+            .then(function(list) {
+                var html = '';
+                for (var i = 0; i < list.length; i++) {
+                    var item = list[i];
+                    var itemClass = item.isSelected ? 'playlist-item selected' : 'playlist-item';
+                    var selBadge = item.isSelected ? ' ✓ (Đang chọn)' : '';
+                    var selectBtn = !item.isSelected ? '<button class="btn-sm btn-select" onclick="selectPlaylist(\'' + item.id + '\')">Chọn</button>' : '';
+                    html += '<div class="' + itemClass + '">' +
+                        '<div class="playlist-info">' +
+                            '<div class="playlist-name">' + item.name + selBadge + '</div>' +
+                            '<div class="playlist-url">' + item.url + '</div>' +
+                        '</div>' +
+                        '<div class="playlist-actions">' +
+                            selectBtn +
+                            '<button class="btn-sm btn-delete" onclick="deletePlaylist(\'' + item.id + '\')">Xóa</button>' +
+                        '</div>' +
+                    '</div>';
+                }
+                container.innerHTML = html;
+            }).catch(function() {
                 container.innerHTML = 'Lỗi tải danh sách playlist.';
-            }
+            });
         }
 
-        async function addNewPlaylist() {
-            const name = document.getElementById('newPlName').value.trim();
-            const url = document.getElementById('newPlUrl').value.trim();
+        function addNewPlaylist() {
+            var name = document.getElementById('newPlName').value.trim();
+            var url = document.getElementById('newPlUrl').value.trim();
             if (!name || !url) {
                 showToast('Vui lòng nhập tên và link M3U!');
                 return;
             }
-            try {
-                const res = await fetch('/api/playlist/add', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ name: name, url: url })
-                });
-                const data = await res.json();
+            fetch('/api/playlist/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name: name, url: url })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
                 if (data.success) {
                     showToast('Đã thêm playlist mới!');
                     document.getElementById('newPlName').value = '';
                     document.getElementById('newPlUrl').value = '';
                     loadPlaylists();
                 }
-            } catch (e) {
+            }).catch(function() {
                 showToast('Lỗi thêm playlist!');
-            }
+            });
         }
 
-        async function selectPlaylist(id) {
-            try {
-                await fetch('/api/playlist/select', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: id })
-                });
+        function selectPlaylist(id) {
+            fetch('/api/playlist/select', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: id })
+            }).then(function() {
                 showToast('Đã chuyển playlist trên TV!');
                 loadPlaylists();
                 fetchStatus();
-            } catch (e) {}
+            }).catch(function() {});
         }
 
-        async function deletePlaylist(id) {
+        function deletePlaylist(id) {
             if (!confirm('Xóa danh sách này?')) return;
-            try {
-                await fetch('/api/playlist/delete', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: id })
-                });
+            fetch('/api/playlist/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: id })
+            }).then(function() {
                 showToast('Đã xóa playlist!');
                 loadPlaylists();
-            } catch (e) {}
+            }).catch(function() {});
         }
 
-        async function loadSettings() {
-            try {
-                const res = await fetch('/api/settings');
-                const data = await res.json();
+        function loadSettings() {
+            fetch('/api/settings').then(function(res) { return res.json(); })
+            .then(function(data) {
                 document.getElementById('chkAutoBoot').checked = data.autoStartOnBoot;
                 if (data.startupMode === 'FIXED_CHANNEL') {
                     document.getElementById('optFixedChannel').checked = true;
@@ -396,23 +399,21 @@ object WebPageTemplate {
                     document.getElementById('optLastWatched').checked = true;
                 }
                 document.getElementById('lblFixedName').innerText = data.defaultStartupChannelName || 'Chưa chọn';
-            } catch (e) {}
+            }).catch(function() {});
         }
 
-        async function updateBootSettings() {
-            const autoBoot = document.getElementById('chkAutoBoot').checked;
-            const mode = document.querySelector('input[name="startupMode"]:checked').value;
-            try {
-                await fetch('/api/settings/boot', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ autoStartOnBoot: autoBoot, startupMode: mode })
-                });
+        function updateBootSettings() {
+            var autoBoot = document.getElementById('chkAutoBoot').checked;
+            var mode = document.querySelector('input[name="startupMode"]:checked').value;
+            fetch('/api/settings/boot', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ autoStartOnBoot: autoBoot, startupMode: mode })
+            }).then(function() {
                 showToast('Đã lưu cài đặt khởi động!');
-            } catch (e) {}
+            }).catch(function() {});
         }
 
-        // Tự động cập nhật trạng thái mỗi 3 giây
         fetchStatus();
         setInterval(fetchStatus, 3000);
     </script>
