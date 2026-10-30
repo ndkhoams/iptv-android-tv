@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">IPTV TV Player</string>
+    <string name="all_channels">Tất cả kênh</string>
+    <string name="channels_count">%d kênh</string>
+    <string name="loading_playlist">Đang tải danh sách kênh…</string>
+    <string name="empty_playlist">Không có kênh nào. Bấm Cài Đặt để nhập link IPTV M3U.</string>
+    <string name="load_failed">Lỗi tải danh sách M3U. Vui lòng kiểm tra lại đường link hoặc kết nối mạng.</string>
+    <string name="settings">Cài đặt M3U</string>
+    <string name="reload">Tải lại</string>
+    <string name="playlist_url_hint">Nhập link danh sách IPTV (M3U / M3U8)</string>
+    <string name="save_and_load">Lưu &amp; Tải Kênh</string>
+    <string name="cancel">Hủy</string>
+    <string name="default_sample">Kênh Mẫu Miễn Phí</string>
+    <string name="stream_buffering">Đang tải luồng…</string>
+    <string name="stream_error">Không thể phát luồng này. Bấm phím Lên/Xuống để chuyển kênh.</string>
+    <string name="tv_guide_hint">Bấm OK / Enter để mở Danh sách kênh • Menu để Cài đặt</string>
+</resources>
