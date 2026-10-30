@@ -20,6 +20,9 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.video.VideoSize
+import org.videolan.libvlc.interfaces.IVLCVout
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.extractor.ts.DefaultTsPayloadReaderFactory
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
@@ -355,6 +358,10 @@ class MainActivity : AppCompatActivity() {
                 "--deinterlace=1",
                 "--deinterlace-mode=blend",
                 "--video-filter=deinterlace",
+                // Bắt buộc luôn phát độ phân giải 1080/cao nhất trong HLS/DASH dù màn hình là 720p
+                "--adaptive-logic=highest",
+                "--adaptive-maxwidth=0",
+                "--adaptive-maxheight=0",
                 "--network-caching=2000",
                 "--live-caching=2000",
                 "--clock-jitter=0",
@@ -365,6 +372,28 @@ class MainActivity : AppCompatActivity() {
             libVLC = LibVLC(this, options)
             vlcPlayer = VlcMediaPlayer(libVLC).apply {
                 attachViews(binding.vlcVideoLayout, null, false, false)
+
+                // Lắng nghe kích thước khung hình giải mã thực tế từ VLC
+                vlcVout.addCallback(object : IVLCVout.Callback {
+                    override fun onSurfacesCreated(vlcVout: IVLCVout?) {}
+                    override fun onSurfacesDestroyed(vlcVout: IVLCVout?) {}
+                    override fun onNewLayout(
+                        vlcVout: IVLCVout?,
+                        width: Int,
+                        height: Int,
+                        visibleWidth: Int,
+                        visibleHeight: Int,
+                        sarNum: Int,
+                        sarDen: Int
+                    ) {
+                        if (width > 0 && height > 0) {
+                            runOnUiThread {
+                                updateDynamicResolutionBadge(width, height)
+                            }
+                        }
+                    }
+                })
+
                 setEventListener { event ->
                     runOnUiThread {
                         when (event.type) {
@@ -378,6 +407,11 @@ class MainActivity : AppCompatActivity() {
                             VlcMediaPlayer.Event.Playing -> {
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
+                                currentVideoTrack?.let { track ->
+                                    if (track.width > 0 && track.height > 0) {
+                                        updateDynamicResolutionBadge(track.width, track.height)
+                                    }
+                                }
                             }
                             VlcMediaPlayer.Event.EncounteredError -> {
                                 binding.layoutBuffering.visibility = View.GONE
@@ -420,7 +454,18 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // 4. Hỗ trợ đầy đủ HTTP / HTTPS và giao thức luồng mạng UDP multicast
+        // 4. Bắt buộc ExoPlayer luôn chọn độ phân giải 1080/cao nhất trong HLS dù màn hình là 720p
+        val trackSelector = DefaultTrackSelector(this).apply {
+            parameters = buildUponParameters()
+                .setForceHighestSupportedBitrate(true)
+                .setViewportSizeToPhysicalDisplaySize(false) // Không giới hạn theo màn hình 720p!
+                .setExceedRendererCapabilitiesIfNecessary(true)
+                .setExceedVideoConstraintsIfNecessary(true)
+                .setMaxVideoSize(3840, 2160)
+                .build()
+        }
+
+        // 5. Hỗ trợ đầy đủ HTTP / HTTPS và giao thức luồng mạng UDP multicast
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0 (SmartTV; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) ExoPlayer")
             .setConnectTimeoutMs(15000)
@@ -433,6 +478,7 @@ class MainActivity : AppCompatActivity() {
         player = ExoPlayer.Builder(this)
             .setRenderersFactory(renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setTrackSelector(trackSelector)
             .setLoadControl(loadControl)
             .build()
             .apply {
@@ -455,6 +501,14 @@ class MainActivity : AppCompatActivity() {
                             }
                             Player.STATE_IDLE -> {
                                 binding.layoutBuffering.visibility = View.GONE
+                            }
+                        }
+                    }
+
+                    override fun onVideoSizeChanged(videoSize: VideoSize) {
+                        if (videoSize.width > 0 && videoSize.height > 0) {
+                            runOnUiThread {
+                                updateDynamicResolutionBadge(videoSize.width, videoSize.height)
                             }
                         }
                     }
@@ -553,13 +607,13 @@ class MainActivity : AppCompatActivity() {
             binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
         }
 
-        // Độ phân giải
+        // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), tự động cập nhật chính xác từ luồng phát thực tế
         val upperName = channel.name.uppercase()
-        when {
-            upperName.contains("4K") -> binding.tvSpotlightResolution.text = "4K UHD"
-            upperName.contains("FHD") || upperName.contains("1080") -> binding.tvSpotlightResolution.text = "FHD 1080i"
-            upperName.contains("HD") || upperName.contains("720") -> binding.tvSpotlightResolution.text = "HD 720p"
-            else -> binding.tvSpotlightResolution.text = "SD 576i"
+        binding.tvSpotlightResolution.text = when {
+            upperName.contains("4K") -> "4K UHD"
+            upperName.contains("FHD") || upperName.contains("1080") -> "FHD 1080"
+            upperName.contains("HD") || upperName.contains("720") -> "HD 720p"
+            else -> "FHD 1080"
         }
 
         binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "IPTV"
@@ -643,6 +697,10 @@ class MainActivity : AppCompatActivity() {
                 addOption(":deinterlace=1")
                 addOption(":deinterlace-mode=blend")
                 addOption(":video-filter=deinterlace")
+                // BẮT BUỘC LUÔN PHÁT ĐỘ PHÂN GIẢI 1080/CAO NHẤT DÙ MÀN HÌNH MÁY LÀ 720P
+                addOption(":adaptive-logic=highest")
+                addOption(":adaptive-maxwidth=0")
+                addOption(":adaptive-maxheight=0")
                 addOption(":network-caching=2000")
                 addOption(":live-caching=2000")
             }
@@ -654,6 +712,19 @@ class MainActivity : AppCompatActivity() {
             binding.tvErrorMessage.visibility = View.VISIBLE
             binding.tvErrorDetail.text = "Không thể phát qua VLC: ${e.localizedMessage}"
         }
+    }
+
+    private fun updateDynamicResolutionBadge(width: Int, height: Int) {
+        val badgeText = when {
+            height >= 2000 || width >= 3800 -> "4K UHD"
+            height >= 1000 || width >= 1900 -> "FHD 1080"
+            height >= 700 || width >= 1200 -> "HD 720p"
+            height > 0 -> "SD ${height}p"
+            else -> "FHD 1080"
+        }
+        binding.tvSpotlightResolution.text = badgeText
+        val streamInfo = binding.tvSpotlightStreamInfo.text.toString()
+        binding.tvQuickResolution.text = "$badgeText • $streamInfo"
     }
 
     private fun playWithExoPlayer(streamUriString: String) {
@@ -701,6 +772,15 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.ivQuickLogo.setImageResource(R.drawable.ic_tv_placeholder)
         }
+
+        val upperName = channel.name.uppercase()
+        val defaultRes = when {
+            upperName.contains("4K") -> "4K UHD"
+            upperName.contains("FHD") || upperName.contains("1080") -> "FHD 1080"
+            upperName.contains("HD") || upperName.contains("720") -> "HD 720p"
+            else -> "FHD 1080"
+        }
+        binding.tvQuickResolution.text = "$defaultRes • FPT Play Live"
 
         binding.quickChannelInfo.visibility = View.VISIBLE
 
