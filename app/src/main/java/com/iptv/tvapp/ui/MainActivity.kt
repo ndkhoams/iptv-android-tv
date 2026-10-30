@@ -3,6 +3,7 @@ package com.iptv.tvapp.ui
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.TrafficStats
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
@@ -88,7 +89,27 @@ class MainActivity : AppCompatActivity() {
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideOverlayRunnable = Runnable { hideOverlay() }
-    private val hideQuickBannerRunnable = Runnable { binding.quickChannelInfo.visibility = View.GONE }
+    private val hideQuickBannerRunnable = Runnable {
+        binding.quickChannelInfo.visibility = View.GONE
+        if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+            stopTelemetryUpdates()
+        }
+    }
+
+    private var lastRxBytes: Long = 0L
+    private var lastRxTime: Long = 0L
+    private var currentMeasuredBitrateMbps: Float = 0f
+    private val telemetryHandler = Handler(Looper.getMainLooper())
+    private val telemetryRunnable = object : Runnable {
+        override fun run() {
+            if (isFinishing || isDestroyed) return
+            measureRealtimeBitrate()
+            updateDynamicTelemetry()
+            if (binding.quickChannelInfo.visibility == View.VISIBLE || binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                telemetryHandler.postDelayed(this, 1500L)
+            }
+        }
+    }
 
     private val clockHandler = Handler(Looper.getMainLooper())
     private val clockRunnable = object : Runnable {
@@ -405,8 +426,8 @@ class MainActivity : AppCompatActivity() {
                 "--clock-jitter=0",
                 "--clock-synchro=0",
                 "--no-audio-time-stretch",
-                // 5. Giảm tải CPU & tiết kiệm tài nguyên cho Android TV
-                "--no-stats",
+                // 5. Bật thống kê lưu lượng để đo chính xác bitrate thời gian thực
+                "--stats",
                 "--no-video-title-show",
                 // 6. Luôn ưu tiên luồng chất lượng 1080p cao nhất trong adaptive streaming
                 "--adaptive-logic=highest",
@@ -722,6 +743,11 @@ class MainActivity : AppCompatActivity() {
         currentPlayingChannel = channel
         prefs.lastChannelUrl = channel.streamUrl
 
+        currentMeasuredBitrateMbps = 0f
+        lastRxBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid())
+        lastRxTime = System.currentTimeMillis()
+        startTelemetryUpdates()
+
         channelAdapter.setPlayingChannel(channel)
         updateSpotlight(channel)
 
@@ -829,6 +855,73 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun startTelemetryUpdates() {
+        telemetryHandler.removeCallbacks(telemetryRunnable)
+        telemetryHandler.postDelayed(telemetryRunnable, 800L)
+    }
+
+    private fun stopTelemetryUpdates() {
+        telemetryHandler.removeCallbacks(telemetryRunnable)
+    }
+
+    private fun measureRealtimeBitrate() {
+        val now = System.currentTimeMillis()
+        val currentBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid())
+
+        var sampledMbps = 0f
+
+        // 1. Đo lường qua TrafficStats của Linux Kernel (Độ chính xác cao, chuẩn xác cho cả HLS, UDP multicast, udpxy)
+        if (currentBytes > 0 && lastRxBytes > 0 && now > lastRxTime) {
+            val deltaBytes = currentBytes - lastRxBytes
+            val deltaTimeMs = now - lastRxTime
+            if (deltaTimeMs in 500..5000 && deltaBytes > 0) {
+                val bps = (deltaBytes * 8f * 1000f) / deltaTimeMs
+                val mbps = bps / 1_000_000f
+                if (mbps in 0.1f..150.0f) {
+                    sampledMbps = mbps
+                }
+            }
+        }
+
+        lastRxBytes = currentBytes
+        lastRxTime = now
+
+        // 2. Dự phòng: Kiểm tra thống kê trực tiếp từ LibVLC Media Stats nếu có
+        if (sampledMbps == 0f && prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
+            try {
+                vlcPlayer?.media?.let { media ->
+                    val stats = media.stats
+                    if (stats != null) {
+                        val vlcMbps = (stats.inputBitrate * 8f) / 1_000_000f
+                        if (vlcMbps in 0.1f..150.0f) {
+                            sampledMbps = vlcMbps
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 3. Dự phòng: Kiểm tra định dạng ExoPlayer
+        if (sampledMbps == 0f && prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
+            val vf = player?.videoFormat
+            if (vf != null && vf.bitrate > 0) {
+                val exoMbps = vf.bitrate / 1_000_000f
+                if (exoMbps in 0.1f..150.0f) {
+                    sampledMbps = exoMbps
+                }
+            }
+        }
+
+        // 4. Cập nhật bitrate với bộ lọc làm mượt (Exponential Moving Average)
+        if (sampledMbps > 0.1f) {
+            currentMeasuredBitrateMbps = if (currentMeasuredBitrateMbps > 0.1f) {
+                currentMeasuredBitrateMbps * 0.6f + sampledMbps * 0.4f
+            } else {
+                sampledMbps
+            }
+        }
+    }
+
     private fun updateDynamicTelemetry() {
         val currentCh = currentPlayingChannel ?: return
 
@@ -922,15 +1015,23 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // Định dạng Bitrate
-        val bitrateStr = if (bitrateBps > 100_000) {
+        // Định dạng Bitrate thực tế đo đạc
+        val bitrateStr = if (currentMeasuredBitrateMbps > 0.1f) {
+            String.format(Locale.US, "%.1f Mbps", currentMeasuredBitrateMbps)
+        } else if (bitrateBps > 100_000) {
             String.format(Locale.US, "%.1f Mbps", bitrateBps / 1_000_000f)
         } else {
             val match = Regex("(?i)(\\d+(?:\\.\\d+)?)\\s*mbps").find(currentCh.name)
             if (match != null) {
                 "${match.groupValues[1]} Mbps"
             } else {
-                "8.0 Mbps"
+                when {
+                    height >= 2000 || width >= 3800 -> "15.0 Mbps"
+                    height >= 900 || width >= 1400 -> "6.5 Mbps"
+                    height >= 700 || width >= 1200 -> "3.5 Mbps"
+                    height > 0 -> "1.8 Mbps"
+                    else -> "5.0 Mbps"
+                }
             }
         }
 
@@ -943,32 +1044,34 @@ class MainActivity : AppCompatActivity() {
             else -> "FHD 1080"
         }
 
-        // Dòng 3 (Video): Độ phân giải thực tế @ FPS • Bitrate • Chuẩn phân giải
-        val fpsStr = if (fps > 0) " @ ${fps}fps" else " @ 50fps"
-        val videoResText = if (width > 0 && height > 0) {
-            "${width}x${height}$fpsStr • $bitrateStr • $resBadge"
-        } else {
-            "1920x1080 @ 50fps • $bitrateStr • $resBadge"
-        }
-
-        // Dòng 4 (Audio): Âm thanh: Codec Channels (SampleRate)
-        val audioInfoText = if (aCodec.isNotBlank()) {
-            val details = listOfNotNull(
+        // Chi tiết Audio: Codec Kênh âm thanh (Tần số lấy mẫu)
+        val audioDetails = if (aCodec.isNotBlank()) {
+            listOfNotNull(
                 aCodec.takeIf { it.isNotBlank() },
                 aChannels.takeIf { it.isNotBlank() },
                 aSampleRate.takeIf { it.isNotBlank() }?.let { "($it)" }
             ).joinToString(" ")
-            "Âm thanh: $details"
         } else {
-            "Âm thanh: AAC Stereo 2.0 (48kHz)"
+            "AAC Stereo 2.0 (48kHz)"
         }
 
-        binding.tvSpotlightResolution.text = resBadge
-        binding.tvQuickResolution.text = videoResText
-        binding.tvQuickAudioBitrate.text = audioInfoText
+        val fpsStr = if (fps > 0) " @ ${fps}fps" else " @ 50fps"
+        val resDim = if (width > 0 && height > 0) {
+            "${width}x${height}$fpsStr"
+        } else {
+            "1920x1080 @ 50fps"
+        }
 
+        // Bố cục Dòng 3 thẻ OSD góc dưới (Màu xanh Cyan):
+        // Kích thước độ phân giải @ Tần số quét • Bitrate • Thông tin Audio chi tiết
+        // Ví dụ: 1920x1080 @ 50fps • 8.0 Mbps • AAC Stereo 2.0 (48kHz)
+        val quickOsdLine3 = "$resDim • $bitrateStr • $audioDetails"
+        binding.tvQuickResolution.text = quickOsdLine3
+        binding.tvQuickAudioBitrate.text = "Âm thanh: $audioDetails"
+
+        binding.tvSpotlightResolution.text = resBadge
         val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) "ExoPlayer" else "LibVLC (MediaCodec)"
-        binding.tvSpotlightStreamInfo.text = "$videoResText | $audioInfoText | $engineName"
+        binding.tvSpotlightStreamInfo.text = "$resDim • $bitrateStr • $resBadge | Âm thanh: $audioDetails | $engineName"
     }
 
     private fun playWithExoPlayer(streamUriString: String) {
@@ -1027,17 +1130,32 @@ class MainActivity : AppCompatActivity() {
         }
 
         val upperName = channel.name.uppercase()
-        val defaultRes = when {
-            upperName.contains("4K") -> "4K UHD"
-            upperName.contains("720") -> "HD 720p"
-            upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
-            else -> "FHD 1080"
+        val initialResDim = when {
+            upperName.contains("4K") -> "3840x2160 @ 50fps"
+            upperName.contains("720") -> "1280x720 @ 50fps"
+            upperName.contains("SD") -> "720x576 @ 50fps"
+            else -> "1920x1080 @ 50fps"
         }
-        val match = Regex("(?i)(\\d+(?:\\.\\d+)?)\\s*mbps").find(channel.name)
-        val defaultBitrate = if (match != null) "${match.groupValues[1]} Mbps" else "8.0 Mbps"
-        binding.tvQuickResolution.text = "1920x1080 @ 50fps • $defaultBitrate • $defaultRes"
+        val initialBitrate = if (currentMeasuredBitrateMbps > 0.1f) {
+            String.format(Locale.US, "%.1f Mbps", currentMeasuredBitrateMbps)
+        } else {
+            val match = Regex("(?i)(\\d+(?:\\.\\d+)?)\\s*mbps").find(channel.name)
+            if (match != null) {
+                "${match.groupValues[1]} Mbps"
+            } else {
+                when {
+                    upperName.contains("4K") -> "15.0 Mbps"
+                    upperName.contains("720") -> "3.5 Mbps"
+                    upperName.contains("SD") -> "1.8 Mbps"
+                    else -> "6.5 Mbps"
+                }
+            }
+        }
+        // Dòng 3 (Màu xanh Cyan): Kích thước độ phân giải @ FPS • Bitrate • Thông tin Audio chi tiết
+        binding.tvQuickResolution.text = "$initialResDim • $initialBitrate • AAC Stereo 2.0 (48kHz)"
         binding.tvQuickAudioBitrate.text = "Âm thanh: AAC Stereo 2.0 (48kHz)"
         updateDynamicTelemetry()
+        startTelemetryUpdates()
 
         binding.quickChannelInfo.visibility = View.VISIBLE
 
@@ -1171,6 +1289,7 @@ class MainActivity : AppCompatActivity() {
     private fun showOverlay() {
         binding.channelGuideOverlay.visibility = View.VISIBLE
         resetOverlayTimer()
+        startTelemetryUpdates()
 
         val playing = currentPlayingChannel
         if (playing != null) {
@@ -1314,6 +1433,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        stopTelemetryUpdates()
         if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
             vlcPlayer?.let { vp ->
                 try {
@@ -1331,6 +1451,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopTelemetryUpdates()
+        telemetryHandler.removeCallbacksAndMessages(null)
         hideHandler.removeCallbacksAndMessages(null)
         clockHandler.removeCallbacksAndMessages(null)
         spotlightHandler.removeCallbacksAndMessages(null)

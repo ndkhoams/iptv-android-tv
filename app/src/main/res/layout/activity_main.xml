@@ -98,79 +98,76 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:layout_margin="24dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:orientation="vertical"
         android:background="@drawable/bg_fpt_quick_banner"
         android:paddingStart="16dp"
-        android:paddingEnd="18dp"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/tvQuickNumber"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/fpt_orange"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:text="01" />
-
-        <ImageView
-            android:id="@+id/ivQuickLogo"
-            android:layout_width="44dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="10dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_tv_placeholder" />
-
+        <!-- Dòng 1: Số thứ tự kênh + Logo + Tên kênh (ví dụ: 01 [Logo] VTV1 (HD 8Mbps)) -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginStart="12dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvQuickNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/fpt_orange"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:text="01" />
+
+            <ImageView
+                android:id="@+id/ivQuickLogo"
+                android:layout_width="44dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_tv_placeholder" />
 
             <TextView
                 android:id="@+id/tvQuickName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
                 android:textColor="@color/text_primary"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:text="VTV1 HD" />
-
-            <!-- Tên chương trình EPG đang phát thời gian thực -->
-            <TextView
-                android:id="@+id/tvQuickProgramTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/fpt_orange"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:text="● Đang phát: Bản tin Thời sự" />
-
-            <!-- Dòng 3: Độ phân giải luồng, FPS, Bitrate -->
-            <TextView
-                android:id="@+id/tvQuickResolution"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="1920x1080 @ 50fps • 8.0 Mbps • FHD 1080"
-                android:textColor="#38BDF8"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <!-- Dòng 4: Thông tin Audio (Codec, Kênh âm thanh Stereo/5.1, Tần số lấy mẫu) -->
-            <TextView
-                android:id="@+id/tvQuickAudioBitrate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:text="Âm thanh: AAC Stereo 2.0 (48kHz)"
-                android:textColor="#94A3B8"
-                android:textSize="10sp" />
+                android:text="VTV1 (HD 8Mbps)" />
         </LinearLayout>
+
+        <!-- Dòng 2 (Màu cam): Lịch phát sóng EPG thời gian thực (● Đang phát: Bản tin Thời sự (20:00 - 21:00)) -->
+        <TextView
+            android:id="@+id/tvQuickProgramTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/fpt_orange"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:text="● Đang phát: Bản tin Thời sự (20:00 - 21:00)" />
+
+        <!-- Dòng 3 (Màu xanh Cyan): Kích thước độ phân giải thực tế @ FPS • Bitrate • Thông tin Audio chi tiết -->
+        <TextView
+            android:id="@+id/tvQuickResolution"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="1920x1080 @ 50fps • -- Mbps • AAC Stereo 2.0 (48kHz)"
+            android:textColor="#38BDF8"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvQuickAudioBitrate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- 5. GIAO DIỆN CHÍNH FPT PLAY BOX G2 3 CỘT (Tối ưu 1280x720) -->
