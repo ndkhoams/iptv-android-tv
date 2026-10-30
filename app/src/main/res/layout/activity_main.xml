@@ -528,6 +528,8 @@
                     android:layout_marginTop="8dp"
                     android:orientation="vertical"
                     android:background="#151329"
+                    android:clipChildren="true"
+                    android:clipToPadding="true"
                     android:padding="8dp">
 
                     <LinearLayout
@@ -535,7 +537,8 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="4dp">
+                        android:background="#151329"
+                        android:paddingBottom="4dp">
 
                         <TextView
                             android:layout_width="0dp"
@@ -563,6 +566,9 @@
                         android:layout_weight="1"
                         android:layout_marginTop="2dp"
                         android:layout_marginBottom="4dp"
+                        android:clipChildren="true"
+                        android:clipToPadding="true"
+                        android:overScrollMode="never"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
                         android:descendantFocusability="afterDescendants"
@@ -585,6 +591,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
+                        android:background="#151329"
+                        android:paddingTop="2dp"
                         android:text="Giao thức: UDP / udpxy"
                         android:textColor="@color/text_muted"
                         android:textSize="9sp"

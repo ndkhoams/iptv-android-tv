@@ -55,6 +55,7 @@ import kotlinx.coroutines.withContext
 import org.videolan.libvlc.LibVLC
 import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer as VlcMediaPlayer
+import org.videolan.libvlc.interfaces.IMedia
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -764,22 +765,32 @@ class MainActivity : AppCompatActivity() {
                         else -> vt.codec?.uppercase() ?: "H.264"
                     }
                 }
-                vlcPlayer?.currentAudioTrack?.let { at ->
-                    aChannels = when (at.channels) {
-                        2 -> "Stereo 2.0"
-                        6 -> "5.1 Surround"
-                        1 -> "Mono"
-                        else -> if (at.channels > 0) "${at.channels}.0" else "Stereo 2.0"
-                    }
-                    if (at.rate > 0) {
-                        aSampleRate = "${at.rate / 1000}kHz"
-                    }
-                    aCodec = when (at.codec?.lowercase()) {
-                        "mp4a", "aac" -> "AAC"
-                        "ac3" -> "Dolby AC3"
-                        "eac3" -> "Dolby Digital+"
-                        "mpga" -> "MPEG Audio"
-                        else -> at.codec?.uppercase() ?: "AAC"
+                vlcPlayer?.media?.let { media ->
+                    val trackCount = media.trackCount
+                    val curAudioId = vlcPlayer?.audioTrack ?: -1
+                    for (i in 0 until trackCount) {
+                        val track = media.getTrack(i)
+                        if (track is IMedia.AudioTrack) {
+                            if (curAudioId == -1 || track.id == curAudioId || aChannels.isEmpty()) {
+                                aChannels = when (track.channels) {
+                                    2 -> "Stereo 2.0"
+                                    6 -> "5.1 Surround"
+                                    1 -> "Mono"
+                                    else -> if (track.channels > 0) "${track.channels}.0" else "Stereo 2.0"
+                                }
+                                if (track.rate > 0) {
+                                    aSampleRate = "${track.rate / 1000}kHz"
+                                }
+                                aCodec = when (track.codec?.lowercase()) {
+                                    "mp4a", "aac" -> "AAC"
+                                    "ac3" -> "Dolby AC3"
+                                    "eac3" -> "Dolby Digital+"
+                                    "mpga" -> "MPEG Audio"
+                                    else -> track.codec?.uppercase() ?: "AAC"
+                                }
+                                if (track.id == curAudioId) break
+                            }
+                        }
                     }
                 }
             } else {
