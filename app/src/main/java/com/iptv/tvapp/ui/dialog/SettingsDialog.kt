@@ -5,9 +5,12 @@ import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -134,11 +137,21 @@ class SettingsDialog(
         }
     }
 
+    private fun showSoftKeyboard(view: View) {
+        view.requestFocus()
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(view, InputMethodManager.SHOW_FORCED)
+    }
+
     private fun initFocusNavigation() {
         // Khắc phục bẫy focus của bàn phím TV trên trường nhập văn bản
-        binding.etNewPlaylistName.setOnKeyListener { _, keyCode, event ->
+        binding.etNewPlaylistName.setOnKeyListener { v, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        showSoftKeyboard(v)
+                        true
+                    }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
                         binding.etNewPlaylistUrl.requestFocus()
                         true
@@ -155,10 +168,17 @@ class SettingsDialog(
                 }
             } else false
         }
+        binding.etNewPlaylistName.setOnClickListener { v ->
+            showSoftKeyboard(v)
+        }
 
-        binding.etNewPlaylistUrl.setOnKeyListener { _, keyCode, event ->
+        binding.etNewPlaylistUrl.setOnKeyListener { v, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        showSoftKeyboard(v)
+                        true
+                    }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
                         binding.btnBrowseLocalFile.requestFocus()
                         true
@@ -174,6 +194,9 @@ class SettingsDialog(
                     else -> false
                 }
             } else false
+        }
+        binding.etNewPlaylistUrl.setOnClickListener { v ->
+            showSoftKeyboard(v)
         }
 
         binding.btnBrowseLocalFile.setOnKeyListener { _, keyCode, event ->
@@ -192,9 +215,13 @@ class SettingsDialog(
             } else false
         }
 
-        binding.etUdpxyServer.setOnKeyListener { _, keyCode, event ->
+        binding.etUdpxyServer.setOnKeyListener { v, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        showSoftKeyboard(v)
+                        true
+                    }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
                         binding.btnBackupConfig.requestFocus()
                         true
@@ -217,17 +244,26 @@ class SettingsDialog(
         binding.etUdpxyServer.setText(prefs.udpxyServer)
 
         // Tự động cuộn lên vị trí thấy rõ toàn bộ ô nhập liệu khi bàn phím ảo TV hiện lên
-        binding.etUdpxyServer.setOnFocusChangeListener { _, hasFocus ->
+        binding.etUdpxyServer.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
                 binding.scrollViewSettingsRight.post {
                     binding.scrollViewSettingsRight.smoothScrollTo(0, binding.layoutUdpxySection.top - 20)
                 }
             }
         }
-        binding.etUdpxyServer.setOnClickListener {
+        binding.etUdpxyServer.setOnClickListener { v ->
+            showSoftKeyboard(v)
             binding.scrollViewSettingsRight.post {
                 binding.scrollViewSettingsRight.smoothScrollTo(0, binding.layoutUdpxySection.top - 20)
             }
+        }
+        binding.etUdpxyServer.setOnEditorActionListener { v, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.hideSoftInputFromWindow(v.windowToken, 0)
+                binding.btnBackupConfig.requestFocus()
+                true
+            } else false
         }
     }
 

@@ -205,6 +205,10 @@ class EpgManager(private val context: Context) {
                                 }
                             }
                             currentChannelId = null
+                            currentStart = 0L
+                            currentStop = 0L
+                            currentTitle = null
+                            currentDesc = null
                         }
                     }
                 }
@@ -212,14 +216,15 @@ class EpgManager(private val context: Context) {
             }
         }
 
-        // Sắp xếp theo thời gian
+        // Sắp xếp theo thời gian và loại bỏ trùng lặp
         epgMap.clear()
         for ((k, list) in tempMap) {
-            list.sortBy { it.startTime }
-            epgMap[k] = list
+            val sorted = list.distinctBy { it.startTime to it.title }.sortedBy { it.startTime }
+            epgMap[k] = sorted
         }
     }
 
+    @Synchronized
     private fun parseTime(timeStr: String?): Long {
         if (timeStr.isNullOrBlank()) return 0L
         return try {
@@ -233,6 +238,19 @@ class EpgManager(private val context: Context) {
      * Lấy danh sách timeline lịch phát sóng của kênh
      */
     fun getTimelineForChannel(channelId: String?, channelName: String?): List<EpgProgram> {
+        val rawList = findRawTimeline(channelId, channelName)
+        if (rawList.isEmpty()) return emptyList()
+
+        val now = System.currentTimeMillis()
+        val keepThreshold = now - 60 * 60 * 1000L // Lọc bỏ các chương trình đã kết thúc quá 1 tiếng trước
+
+        return rawList
+            .filter { it.endTime >= keepThreshold }
+            .distinctBy { it.startTime to it.title }
+            .sortedBy { it.startTime }
+    }
+
+    private fun findRawTimeline(channelId: String?, channelName: String?): List<EpgProgram> {
         val id = channelId?.lowercase(Locale.ROOT)?.trim()
         if (!id.isNullOrBlank()) {
             epgMap[id]?.let { return it }

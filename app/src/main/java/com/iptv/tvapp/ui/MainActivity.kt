@@ -549,9 +549,11 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (targetChannel != null) {
-                    playChannel(targetChannel)
-                    // Tự động phát kênh mặc định ngay, ẩn giao diện cài đặt/danh mục để xem toàn màn hình
-                    hideOverlay()
+                    binding.vlcVideoLayout.post {
+                        playChannel(targetChannel)
+                        // Tự động phát kênh mặc định ngay, ẩn giao diện cài đặt/danh mục để xem toàn màn hình
+                        hideOverlay()
+                    }
                 } else {
                     showOverlay()
                 }
@@ -665,8 +667,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvEpgEmpty.visibility = View.GONE
             epgTimelineAdapter.submitList(timeline)
 
-            val now = System.currentTimeMillis()
-            val currentIndex = timeline.indexOfFirst { it.isCurrent(now) }
+            val currentIndex = epgTimelineAdapter.getCurrentPlayingPosition()
             if (currentIndex != -1) {
                 binding.rvSpotlightEpg.scrollToPosition(currentIndex)
             } else {
@@ -754,7 +755,7 @@ class MainActivity : AppCompatActivity() {
             vp.stop()
             val media = Media(vlc, Uri.parse(streamUriString)).apply {
                 // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
-                setHWDecoderEnabled(true, true)
+                setHWDecoderEnabled(true, false)
                 addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
                 addOption(":avcodec-hw=any")
                 addOption(":deinterlace=1")
@@ -1224,10 +1225,21 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
+            vlcPlayer?.attachViews(binding.vlcVideoLayout, null, false, false)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            vlcPlayer?.play()
+            if (currentPlayingChannel != null && vlcPlayer?.isPlaying == false) {
+                playChannel(currentPlayingChannel!!)
+            } else {
+                vlcPlayer?.play()
+            }
         } else {
             player?.play()
         }
@@ -1241,7 +1253,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        vlcPlayer?.stop()
+        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
+            vlcPlayer?.stop()
+            vlcPlayer?.detachViews()
+        }
         player?.pause()
     }
 

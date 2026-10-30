@@ -19,12 +19,26 @@ class EpgTimelineAdapter(
 
     private val programs = mutableListOf<EpgProgram>()
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private var currentPlayingIndex: Int = -1
 
     fun submitList(list: List<EpgProgram>) {
         programs.clear()
         programs.addAll(list)
+
+        val now = System.currentTimeMillis()
+        // Tìm chương trình đang phát duy nhất: nằm trong khoảng [startTime, endTime)
+        val foundIndex = programs.indexOfFirst { it.isCurrent(now) }
+        currentPlayingIndex = if (foundIndex != -1) {
+            foundIndex
+        } else {
+            // Nếu không có chương trình nào đúng thời điểm, chọn chương trình sắp phát gần nhất
+            programs.indexOfFirst { it.startTime >= now }
+        }
+
         notifyDataSetChanged()
     }
+
+    fun getCurrentPlayingPosition(): Int = currentPlayingIndex
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EpgViewHolder {
         val binding = ItemEpgTimelineBinding.inflate(
@@ -34,7 +48,7 @@ class EpgTimelineAdapter(
     }
 
     override fun onBindViewHolder(holder: EpgViewHolder, position: Int) {
-        holder.bind(programs[position])
+        holder.bind(programs[position], position == currentPlayingIndex)
     }
 
     override fun getItemCount(): Int = programs.size
@@ -67,8 +81,7 @@ class EpgTimelineAdapter(
                     view.scaleY = 1.0f
                     val pos = adapterPosition
                     if (pos != RecyclerView.NO_POSITION && pos < programs.size) {
-                        val prog = programs[pos]
-                        if (prog.isCurrent(System.currentTimeMillis())) {
+                        if (pos == currentPlayingIndex) {
                             view.setBackgroundResource(R.drawable.bg_epg_current_item)
                         } else {
                             view.setBackgroundResource(R.drawable.selector_epg_item)
@@ -78,10 +91,9 @@ class EpgTimelineAdapter(
             }
         }
 
-        fun bind(program: EpgProgram) {
+        fun bind(program: EpgProgram, isCurrent: Boolean) {
             val now = System.currentTimeMillis()
-            val isCurrent = program.isCurrent(now)
-            val isUpcoming = program.isUpcoming(now)
+            val isUpcoming = !isCurrent && program.startTime >= now
 
             val startStr = timeFormat.format(Date(program.startTime))
             val endStr = timeFormat.format(Date(program.endTime))
