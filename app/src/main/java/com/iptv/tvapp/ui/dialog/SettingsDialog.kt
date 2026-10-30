@@ -7,6 +7,7 @@ import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.iptv.tvapp.R
 import com.iptv.tvapp.data.PreferencesHelper
@@ -135,14 +136,21 @@ class SettingsDialog(
                     Toast.makeText(context, "Cần giữ lại ít nhất 1 danh sách!", Toast.LENGTH_SHORT).show()
                     return@PlaylistSourceAdapter
                 }
-                playlistList.removeAll { it.id == sourceToDelete.id }
-                if (sourceToDelete.isSelected) {
-                    playlistList[0].isSelected = true
-                    hasChangedPlaylist = true
-                }
-                prefs.savePlaylists(playlistList)
-                adapter.submitList(playlistList.toList())
-                Toast.makeText(context, "Đã xóa danh sách", Toast.LENGTH_SHORT).show()
+                AlertDialog.Builder(context, R.style.TvDialogTheme)
+                    .setTitle("Xác nhận xóa")
+                    .setMessage("Bạn có chắc chắn muốn xóa danh sách \"${sourceToDelete.name}\"?")
+                    .setPositiveButton("Xóa") { _, _ ->
+                        playlistList.removeAll { it.id == sourceToDelete.id }
+                        if (sourceToDelete.isSelected) {
+                            playlistList[0].isSelected = true
+                            hasChangedPlaylist = true
+                        }
+                        prefs.savePlaylists(playlistList)
+                        adapter.submitList(playlistList.toList())
+                        Toast.makeText(context, "Đã xóa danh sách", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Hủy", null)
+                    .show()
             }
         )
 

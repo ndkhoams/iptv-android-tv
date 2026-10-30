@@ -38,19 +38,34 @@ class PlaylistSourceAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
-            binding.root.setOnClickListener {
+            // D-pad OK để chọn Playlist
+            binding.layoutPlaylistSelect.setOnClickListener {
                 val pos = adapterPosition
                 if (pos != RecyclerView.NO_POSITION) {
                     onSelect(playlists[pos])
                 }
             }
 
+            // Hỗ trợ giữ phím OK trực tiếp trên playlist để xóa
+            binding.layoutPlaylistSelect.setOnLongClickListener {
+                val pos = adapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    onDelete(playlists[pos])
+                }
+                true
+            }
+
+            // D-pad Sang Phải -> Bấm OK trên nút Thùng Rác để xóa
             binding.btnDeletePlaylist.setOnClickListener {
                 val pos = adapterPosition
                 if (pos != RecyclerView.NO_POSITION) {
                     onDelete(playlists[pos])
                 }
             }
+
+            // Ràng buộc điều hướng D-pad 4 nút
+            binding.layoutPlaylistSelect.nextFocusRightId = binding.btnDeletePlaylist.id
+            binding.btnDeletePlaylist.nextFocusLeftId = binding.layoutPlaylistSelect.id
         }
 
         fun bind(source: PlaylistSource) {
@@ -58,7 +73,7 @@ class PlaylistSourceAdapter(
             binding.tvPlaylistUrl.text = source.url
 
             binding.ivSelectedCheck.visibility = if (source.isSelected) View.VISIBLE else View.INVISIBLE
-            binding.root.isSelected = source.isSelected
+            binding.layoutPlaylistSelect.isSelected = source.isSelected
         }
     }
 }

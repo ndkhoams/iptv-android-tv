@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.iptv.tvapp.R
 import com.iptv.tvapp.databinding.ItemEpgTimelineBinding
 import com.iptv.tvapp.model.EpgProgram
 import java.text.SimpleDateFormat
@@ -54,19 +55,28 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
                 binding.tvTimelineDot.setTextColor(Color.parseColor("#FF6500"))
                 binding.tvProgramTime.setTextColor(Color.parseColor("#FF6500"))
                 binding.tvProgramTitle.setTextColor(Color.parseColor("#FFFFFF"))
+                binding.tvProgramTitle.textSize = 12.5f
                 binding.tvLiveBadge.visibility = View.VISIBLE
+                binding.root.setBackgroundResource(R.drawable.bg_epg_current_item)
+                binding.root.setPadding(14, 8, 14, 8)
             } else if (isUpcoming) {
                 binding.tvTimelineDot.text = "○"
                 binding.tvTimelineDot.setTextColor(Color.parseColor("#64748B"))
                 binding.tvProgramTime.setTextColor(Color.parseColor("#94A3B8"))
                 binding.tvProgramTitle.setTextColor(Color.parseColor("#CBD5E1"))
+                binding.tvProgramTitle.textSize = 11.5f
                 binding.tvLiveBadge.visibility = View.GONE
+                binding.root.background = null
+                binding.root.setPadding(6, 6, 6, 6)
             } else {
                 binding.tvTimelineDot.text = "·"
                 binding.tvTimelineDot.setTextColor(Color.parseColor("#475569"))
                 binding.tvProgramTime.setTextColor(Color.parseColor("#64748B"))
                 binding.tvProgramTitle.setTextColor(Color.parseColor("#64748B"))
+                binding.tvProgramTitle.textSize = 11.5f
                 binding.tvLiveBadge.visibility = View.GONE
+                binding.root.background = null
+                binding.root.setPadding(6, 6, 6, 6)
             }
         }
     }

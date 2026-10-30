@@ -67,6 +67,14 @@
                 android:textColor="@color/fpt_orange"
                 android:textSize="14sp"
                 android:textStyle="bold"
+                android:layout_marginBottom="2dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• Nhấn OK: Chọn • Sang Phải (hoặc Giữ OK): Xóa danh sách"
+                android:textColor="#94A3B8"
+                android:textSize="11sp"
                 android:layout_marginBottom="6dp" />
 
             <!-- Danh sách các nguồn M3U -->
@@ -78,8 +86,8 @@
                 android:background="#151329"
                 android:padding="6dp"
                 android:clipToPadding="false"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
+                android:focusable="false"
+                android:descendantFocusability="afterDescendants"
                 android:nextFocusDown="@+id/etNewPlaylistName" />
 
             <!-- Form thêm nguồn M3U mới -->
@@ -195,7 +203,6 @@
                     android:textColor="#34D399"
                     android:textSize="12sp"
                     android:textStyle="bold"
-                    android:nextFocusLeft="@+id/etNewPlaylistName"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
 

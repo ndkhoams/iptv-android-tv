@@ -614,9 +614,17 @@ class MainActivity : AppCompatActivity() {
         // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn
         val timeline = epgManager.getTimelineForChannel(channel.id, channel.name)
         if (timeline.isNotEmpty()) {
+            val now = System.currentTimeMillis()
+            // Lọc các chương trình chưa kết thúc (endTime > now)
+            // Nhờ đó chương trình đang phát luôn hiển thị đầu tiên, ngay dưới tiêu đề EPG mà không cần cuộn
+            var displayTimeline = timeline.filter { it.endTime > now }
+            if (displayTimeline.isEmpty()) {
+                displayTimeline = timeline.takeLast(10)
+            }
             binding.rvSpotlightEpg.visibility = View.VISIBLE
             binding.tvEpgEmpty.visibility = View.GONE
-            epgTimelineAdapter.submitList(timeline)
+            epgTimelineAdapter.submitList(displayTimeline)
+            binding.rvSpotlightEpg.scrollToPosition(0)
         } else {
             binding.rvSpotlightEpg.visibility = View.GONE
             binding.tvEpgEmpty.visibility = View.VISIBLE
