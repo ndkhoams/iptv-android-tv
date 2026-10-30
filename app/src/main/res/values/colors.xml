@@ -1,24 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#1E293B</color>
-    <color name="primary_dark">#0F172A</color>
-    <color name="accent">#00E5FF</color>
-    <color name="accent_focused">#2563EB</color>
+    <!-- Bảng màu FPT Play Android TV G2 & Apple TV+ Glassmorphism -->
+    <color name="fpt_orange">#FF6500</color>           <!-- Cam FPT chuẩn thương hiệu -->
+    <color name="fpt_orange_light">#FF8533</color>     <!-- Cam sáng hiệu ứng glow -->
+    <color name="fpt_pink_neon">#FF458C</color>        <!-- Hồng neon G2 -->
+    <color name="fpt_violet">#8554FF</color>           <!-- Tím vũ trụ -->
+    <color name="fpt_cyan">#33C7FF</color>             <!-- Xanh ngọc FPT -->
     
-    <color name="tv_bg_dark">#0A0E17</color>
-    <color name="tv_overlay_bg">#D90A0E17</color>
-    <color name="tv_panel_bg">#E6131D2E</color>
+    <!-- Màu nền và kính mờ Glassmorphism -->
+    <color name="fpt_bg_dark">#0E0C1B</color>          <!-- Nền tối tím than vũ trụ #0E0C1B -->
+    <color name="fpt_surface">#161526</color>          <!-- Nền thẻ Card G2 -->
+    <color name="fpt_surface_dark">#0B0A14</color>     <!-- Nền sâu -->
+    <color name="fpt_overlay_bg">#E60E0C1B</color>     <!-- Kính mờ toàn màn hình 90% -->
+    <color name="fpt_panel_bg">#D9161526</color>       <!-- Kính mờ panel -->
+    <color name="fpt_glass_border">#33FFFFFF</color>   <!-- Viền kính sáng mảnh -->
+
+    <!-- Trạng thái Focus hàng kênh chuẩn live_item_channel.xml G2 -->
+    <color name="fpt_item_focused_bg">#F1F3F5</color>  <!-- Khi focus: Nền trắng sáng #F1F3F5 -->
+    <color name="fpt_item_focused_text">#111827</color><!-- Khi focus: Chữ đen đậm -->
+    <color name="fpt_item_selected_bg">#2A2744</color> <!-- Kênh đang phát nền tím than sáng -->
     
-    <color name="item_bg_normal">#1E293B</color>
-    <color name="item_bg_focused">#2563EB</color>
-    <color name="item_bg_selected">#0F766E</color>
-    <color name="item_border_focused">#60A5FA</color>
-    
+    <!-- Màu chữ -->
     <color name="text_primary">#F8FAFC</color>
     <color name="text_secondary">#94A3B8</color>
-    <color name="text_focused">#FFFFFF</color>
     <color name="text_muted">#64748B</color>
+    <color name="text_fpt_orange">#FF6500</color>
     
     <color name="status_live">#EF4444</color>
+    <color name="badge_4k">#0284C7</color>
     <color name="transparent">#00000000</color>
+    
+    <!-- Backward compatibility -->
+    <color name="primary">#161526</color>
+    <color name="primary_dark">#0E0C1B</color>
+    <color name="accent">#FF6500</color>
+    <color name="accent_focused">#FF8533</color>
+    <color name="tv_bg_dark">#0E0C1B</color>
+    <color name="tv_overlay_bg">#E60E0C1B</color>
+    <color name="item_bg_normal">#161526</color>
+    <color name="item_bg_focused">#F1F3F5</color>
 </resources>

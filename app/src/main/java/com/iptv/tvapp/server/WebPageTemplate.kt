@@ -12,19 +12,19 @@ object WebPageTemplate {
     <title>IPTV TV Remote & Quản Lý</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --card-border: #334155;
-            --accent: #00e5ff;
+            --bg-color: #0E0C1B;
+            --card-bg: #161526;
+            --card-border: #2E294E;
+            --accent: #FF6500;
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
-            --btn-active: #2563eb;
+            --btn-active: #FF6500;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding-bottom: 70px; }
-        header { background: #131d2e; padding: 14px 16px; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+        header { background: #121024; padding: 14px 16px; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
         header h1 { font-size: 17px; color: var(--accent); font-weight: 700; }
-        .now-playing-banner { background: linear-gradient(135deg, #1e3a8a, #0f172a); border-bottom: 1px solid #1d4ed8; padding: 10px 16px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .now-playing-banner { background: linear-gradient(135deg, #FF650033, #0E0C1B); border-bottom: 1px solid #FF650066; padding: 10px 16px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         .now-playing-banner span.ch-name { font-weight: bold; color: #fff; }
         .now-playing-banner span.ch-badge { background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
@@ -44,7 +44,7 @@ object WebPageTemplate {
         .dpad-down { bottom: 10px; left: 75px; width: 70px; height: 50px; border-radius: 8px 8px 25px 25px; }
         .dpad-left { top: 75px; left: 10px; width: 50px; height: 70px; border-radius: 25px 8px 8px 25px; }
         .dpad-right { top: 75px; right: 10px; width: 50px; height: 70px; border-radius: 8px 25px 25px 8px; }
-        .dpad-ok { top: 75px; left: 75px; width: 70px; height: 70px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 18px; border: 2px solid var(--accent); }
+        .dpad-ok { top: 75px; left: 75px; width: 70px; height: 70px; border-radius: 50%; background: #FF6500; color: #fff; font-size: 18px; border: 2px solid #FF8533; }
 
         .row-actions { display: flex; gap: 12px; margin-top: 14px; }
         .action-btn { flex: 1; padding: 12px; background: #1e293b; border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
@@ -67,11 +67,11 @@ object WebPageTemplate {
         .form-group label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
         .form-input { width: 100%; padding: 10px 12px; background: #0b1120; border: 1px solid var(--card-border); border-radius: 8px; color: #fff; font-size: 13px; outline: none; }
         .form-input:focus { border-color: var(--accent); }
-        .submit-btn { width: 100%; padding: 12px; background: #2563eb; border: none; border-radius: 8px; color: #fff; font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 6px; }
-        .submit-btn:active { background: #1d4ed8; }
+        .submit-btn { width: 100%; padding: 12px; background: #FF6500; border: none; border-radius: 8px; color: #fff; font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 6px; }
+        .submit-btn:active { background: #FF8533; }
         
         .playlist-item { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
-        .playlist-item.selected { border-color: var(--accent); background: #1e3a8a33; }
+        .playlist-item.selected { border-color: var(--accent); background: #FF650022; }
         .playlist-info { flex: 1; margin-right: 10px; overflow: hidden; }
         .playlist-name { font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 2px; }
         .playlist-url { font-size: 11px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -87,7 +87,7 @@ object WebPageTemplate {
 <body>
 
     <header>
-        <h1>📱 IPTV TV REMOTE</h1>
+        <h1>📱 FPT PLAY IPTV REMOTE</h1>
         <span id="tvIpBadge" style="font-size:12px; color:var(--text-sub);">Đang kết nối TV...</span>
     </header>
 

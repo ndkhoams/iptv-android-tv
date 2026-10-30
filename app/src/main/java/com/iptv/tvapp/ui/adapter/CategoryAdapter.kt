@@ -20,6 +20,16 @@ class CategoryAdapter(
         notifyDataSetChanged()
     }
 
+    fun setSelectedCategory(category: Category) {
+        val index = categories.indexOfFirst { it.name == category.name }
+        if (index != -1 && index != selectedIndex) {
+            val old = selectedIndex
+            selectedIndex = index
+            notifyItemChanged(old)
+            notifyItemChanged(selectedIndex)
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
         val binding = ItemCategoryBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -49,12 +59,12 @@ class CategoryAdapter(
                 }
             }
 
-            // Hỗ trợ chọn nhanh khi dùng remote TV lướt qua
+            // Hiệu ứng TV Focus chuẩn FPT Play
             binding.root.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {
-                    view.animate().scaleX(1.05f).scaleY(1.05f).setDuration(150).start()
+                    view.animate().scaleX(1.04f).scaleY(1.04f).setDuration(120).start()
                 } else {
-                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
                 }
             }
         }

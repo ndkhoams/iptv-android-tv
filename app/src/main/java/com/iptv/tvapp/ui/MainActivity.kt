@@ -12,6 +12,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.android.exoplayer2.DefaultLoadControl
 import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.google.android.exoplayer2.ExoPlayer
@@ -34,8 +36,12 @@ import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
+import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -54,11 +60,21 @@ class MainActivity : AppCompatActivity() {
     private var allChannels = mutableListOf<Channel>()
     private var currentCategoryChannels = mutableListOf<Channel>()
     private var currentPlayingChannel: Channel? = null
+    private var currentFocusedChannel: Channel? = null
     private var currentSelectedCategory: Category? = null
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideOverlayRunnable = Runnable { hideOverlay() }
     private val hideQuickBannerRunnable = Runnable { binding.quickChannelInfo.visibility = View.GONE }
+
+    private val clockHandler = Handler(Looper.getMainLooper())
+    private val clockRunnable = object : Runnable {
+        override fun run() {
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            binding.tvDigitalClock.text = timeFormat.format(Date())
+            clockHandler.postDelayed(this, 10000)
+        }
+    }
 
     private var backPressedTime = 0L
 
@@ -74,7 +90,12 @@ class MainActivity : AppCompatActivity() {
         initViews()
         initPlayer()
         initWebServer()
+        startClock()
         loadPlaylist(forceRefresh = false)
+    }
+
+    private fun startClock() {
+        clockHandler.post(clockRunnable)
     }
 
     /**
@@ -111,11 +132,86 @@ class MainActivity : AppCompatActivity() {
             },
             onChannelLongClick = { channel ->
                 showChannelActionDialog(channel)
+            },
+            onChannelFocused = { channel ->
+                updateSpotlight(channel)
             }
         )
         binding.rvChannels.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = channelAdapter
+        }
+
+        // Spotlight Action Buttons
+        binding.btnSpotlightPlay.setOnClickListener {
+            currentFocusedChannel?.let { ch ->
+                playChannel(ch)
+                hideHandler.postDelayed({ hideOverlay() }, 800)
+            }
+        }
+
+        binding.btnSpotlightFav.setOnClickListener {
+            currentFocusedChannel?.let { ch ->
+                val isFav = prefs.toggleFavorite(ch.streamUrl)
+                ch.isFavorite = isFav
+                channelAdapter.updateChannelItem(ch)
+                updateSpotlight(ch)
+                Toast.makeText(this, if (isFav) "Đã thêm [${ch.name}] vào Yêu Thích ★" else "Đã xóa khỏi Yêu Thích", Toast.LENGTH_SHORT).show()
+                refreshChannelsState()
+            }
+        }
+
+        binding.btnSpotlightDefault.setOnClickListener {
+            currentFocusedChannel?.let { ch ->
+                if (ch.isDefaultStartup) {
+                    prefs.defaultStartupChannelUrl = null
+                    ch.isDefaultStartup = false
+                    Toast.makeText(this, "Đã hủy kênh mặc định khởi động", Toast.LENGTH_SHORT).show()
+                } else {
+                    prefs.defaultStartupChannelUrl = ch.streamUrl
+                    prefs.startupMode = PreferencesHelper.MODE_FIXED_CHANNEL
+                    allChannels.forEach { it.isDefaultStartup = (it.streamUrl == ch.streamUrl) }
+                    Toast.makeText(this, "Đã đặt [${ch.name}] làm kênh mặc định khi mở app", Toast.LENGTH_SHORT).show()
+                }
+                channelAdapter.notifyDataSetChanged()
+                updateSpotlight(ch)
+            }
+        }
+
+        // Sidebar Navigation Buttons
+        binding.navLiveTv.setOnClickListener {
+            val allCat = allCategories.firstOrNull { it.name == "Tất cả" }
+            if (allCat != null) {
+                currentSelectedCategory = allCat
+                categoryAdapter.setSelectedCategory(allCat)
+                displayCategoryChannels(allCat)
+                binding.rvChannels.requestFocus()
+            }
+        }
+
+        binding.navFavorites.setOnClickListener {
+            val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
+            if (favCat != null) {
+                currentSelectedCategory = favCat
+                categoryAdapter.setSelectedCategory(favCat)
+                displayCategoryChannels(favCat)
+                binding.rvChannels.requestFocus()
+            } else {
+                Toast.makeText(this, "Chưa có kênh yêu thích nào. Hãy bấm phím Yêu thích ★ ở kênh bạn muốn lưu!", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        binding.navPlaylists.setOnClickListener {
+            showSettingsDialog()
+        }
+
+        binding.navPhoneRemote.setOnClickListener {
+            val ip = NetworkUtils.getLocalIpAddress() ?: "127.0.0.1"
+            Toast.makeText(this, "Mở trình duyệt trên điện thoại cùng Wi-Fi: http://$ip:8080", Toast.LENGTH_LONG).show()
+        }
+
+        binding.navSidebarSettings.setOnClickListener {
+            showSettingsDialog()
         }
 
         binding.btnSettings.setOnClickListener {
@@ -274,7 +370,7 @@ class MainActivity : AppCompatActivity() {
                     override fun onPlayerError(error: PlaybackException) {
                         binding.layoutBuffering.visibility = View.GONE
                         binding.tvErrorMessage.visibility = View.VISIBLE
-                        binding.tvErrorMessage.text = "Lỗi phát kênh: ${error.errorCodeName}\nBấm ▲ ▼ để đổi kênh khác"
+                        binding.tvErrorDetail.text = "Lỗi phát kênh: ${error.errorCodeName}\nBấm ▲ ▼ để đổi kênh khác"
                     }
                 })
             }
@@ -324,13 +420,13 @@ class MainActivity : AppCompatActivity() {
                     playChannel(targetChannel)
                 }
 
-                binding.rvCategories.requestFocus()
+                binding.rvChannels.requestFocus()
                 resetOverlayTimer()
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
                 binding.tvErrorMessage.visibility = View.VISIBLE
-                binding.tvErrorMessage.text = getString(R.string.load_failed) + "\n" + (e.localizedMessage ?: "")
+                binding.tvErrorDetail.text = getString(R.string.load_failed) + "\n" + (e.localizedMessage ?: "")
             }
         }
     }
@@ -342,6 +438,59 @@ class MainActivity : AppCompatActivity() {
         binding.tvCategoryHeader.text = category.name
         binding.tvChannelCount.text = getString(R.string.channels_count, category.channels.size)
         channelAdapter.submitList(currentCategoryChannels)
+
+        if (currentCategoryChannels.isNotEmpty()) {
+            updateSpotlight(currentCategoryChannels[0])
+        }
+    }
+
+    private fun updateSpotlight(channel: Channel) {
+        currentFocusedChannel = channel
+        binding.tvSpotlightName.text = channel.name
+
+        // Logo chính hãng FPT CDN hoặc M3U
+        val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
+        if (resolvedLogo.isNotBlank()) {
+            Glide.with(this)
+                .load(resolvedLogo)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.ic_tv_placeholder)
+                .error(R.drawable.ic_tv_placeholder)
+                .into(binding.ivSpotlightLogo)
+        } else {
+            binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
+        }
+
+        // Độ phân giải
+        val upperName = channel.name.uppercase()
+        when {
+            upperName.contains("4K") -> binding.tvSpotlightResolution.text = "4K UHD"
+            upperName.contains("FHD") || upperName.contains("1080") -> binding.tvSpotlightResolution.text = "FHD 1080i"
+            upperName.contains("HD") || upperName.contains("720") -> binding.tvSpotlightResolution.text = "HD 720p"
+            else -> binding.tvSpotlightResolution.text = "SD 576i"
+        }
+
+        binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "IPTV"
+
+        val isPlaying = channel.streamUrl == currentPlayingChannel?.streamUrl
+        binding.tvSpotlightStatus.visibility = if (isPlaying) View.VISIBLE else View.GONE
+
+        // Giao thức
+        val protocol = when {
+            channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast (FPT IPTV khử 1080i)"
+            channel.streamUrl.startsWith("rtp", ignoreCase = true) -> "RTP Multicast (FPT IPTV khử 1080i)"
+            channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS Streaming / CDN"
+            else -> "HTTP/TS Stream"
+        }
+        binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol"
+
+        // Lịch phát sóng
+        binding.tvSpotlightEpgNow.text = "● Đang phát: ${channel.name} Trực tiếp"
+        binding.tvSpotlightEpgNext.text = "○ Kế tiếp: Bản tin thời sự & Phim truyện đặc sắc"
+
+        // Nút trạng thái
+        binding.btnSpotlightFav.text = if (channel.isFavorite) "★ BỎ THÍCH" else "☆ YÊU THÍCH"
+        binding.btnSpotlightDefault.text = if (channel.isDefaultStartup) "✓ ĐÃ ĐẶT" else "⚡ MẶC ĐỊNH"
     }
 
     private fun playChannel(channel: Channel) {
@@ -349,7 +498,7 @@ class MainActivity : AppCompatActivity() {
         prefs.lastChannelUrl = channel.streamUrl
 
         channelAdapter.setPlayingChannel(channel)
-        binding.tvCurrentPlayingTitle.text = "Đang phát: [${String.format("%02d", channel.number)}] ${channel.name}"
+        updateSpotlight(channel)
 
         showQuickChannelInfo(channel)
 
@@ -375,13 +524,26 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             binding.layoutBuffering.visibility = View.GONE
             binding.tvErrorMessage.visibility = View.VISIBLE
-            binding.tvErrorMessage.text = "Không thể phát luồng này: ${e.localizedMessage}"
+            binding.tvErrorDetail.text = "Không thể phát luồng này: ${e.localizedMessage}"
         }
     }
 
     private fun showQuickChannelInfo(channel: Channel) {
         binding.tvQuickNumber.text = String.format("%02d", channel.number)
         binding.tvQuickName.text = channel.name
+
+        val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
+        if (resolvedLogo.isNotBlank()) {
+            Glide.with(this)
+                .load(resolvedLogo)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.ic_tv_placeholder)
+                .error(R.drawable.ic_tv_placeholder)
+                .into(binding.ivQuickLogo)
+        } else {
+            binding.ivQuickLogo.setImageResource(R.drawable.ic_tv_placeholder)
+        }
+
         binding.quickChannelInfo.visibility = View.VISIBLE
 
         hideHandler.removeCallbacks(hideQuickBannerRunnable)
@@ -525,6 +687,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         hideHandler.removeCallbacksAndMessages(null)
+        clockHandler.removeCallbacksAndMessages(null)
         webServer?.stop()
         webServer = null
         try {

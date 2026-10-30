@@ -9,10 +9,12 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.iptv.tvapp.R
 import com.iptv.tvapp.databinding.ItemChannelBinding
 import com.iptv.tvapp.model.Channel
+import com.iptv.tvapp.util.FptLogoHelper
 
 class ChannelAdapter(
     private val onChannelClick: (Channel) -> Unit,
-    private val onChannelLongClick: ((Channel) -> Unit)? = null
+    private val onChannelLongClick: ((Channel) -> Unit)? = null,
+    private val onChannelFocused: ((Channel) -> Unit)? = null
 ) : RecyclerView.Adapter<ChannelAdapter.ChannelViewHolder>() {
 
     private val channels = mutableListOf<Channel>()
@@ -76,12 +78,16 @@ class ChannelAdapter(
                 }
             }
 
-            // Hiệu ứng phóng to nhẹ khi Remote focus vào item trên Android TV
+            // Hiệu ứng TV Focus chuẩn FPT Play G2
             binding.root.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {
-                    view.animate().scaleX(1.03f).scaleY(1.03f).setDuration(150).start()
+                    view.animate().scaleX(1.02f).scaleY(1.02f).setDuration(120).start()
+                    val pos = adapterPosition
+                    if (pos != RecyclerView.NO_POSITION && pos < channels.size) {
+                        onChannelFocused?.invoke(channels[pos])
+                    }
                 } else {
-                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
                 }
             }
         }
@@ -96,10 +102,31 @@ class ChannelAdapter(
             binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE
             binding.root.isSelected = isPlaying
 
-            // Load logo kênh bằng Glide
-            if (!channel.logoUrl.isNullOrBlank()) {
+            // Phân giải chất lượng từ tên kênh
+            val upperName = channel.name.uppercase()
+            when {
+                upperName.contains("4K") -> {
+                    binding.tvResolutionBadge.visibility = View.VISIBLE
+                    binding.tvResolutionBadge.text = "4K"
+                }
+                upperName.contains("FHD") || upperName.contains("1080") -> {
+                    binding.tvResolutionBadge.visibility = View.VISIBLE
+                    binding.tvResolutionBadge.text = "FHD"
+                }
+                upperName.contains("HD") || upperName.contains("720") -> {
+                    binding.tvResolutionBadge.visibility = View.VISIBLE
+                    binding.tvResolutionBadge.text = "HD"
+                }
+                else -> {
+                    binding.tvResolutionBadge.visibility = View.GONE
+                }
+            }
+
+            // Tự động phân giải CDN Logo FPT Play nếu URL rỗng hoặc link thông thường
+            val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
+            if (resolvedLogo.isNotBlank()) {
                 Glide.with(binding.ivChannelLogo.context)
-                    .load(channel.logoUrl)
+                    .load(resolvedLogo)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.ic_tv_placeholder)
                     .error(R.drawable.ic_tv_placeholder)
