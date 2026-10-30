@@ -22,7 +22,6 @@ import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.video.VideoSize
-import org.videolan.libvlc.interfaces.IVLCVout
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.extractor.ts.DefaultTsPayloadReaderFactory
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
@@ -373,27 +372,6 @@ class MainActivity : AppCompatActivity() {
             vlcPlayer = VlcMediaPlayer(libVLC).apply {
                 attachViews(binding.vlcVideoLayout, null, false, false)
 
-                // Lắng nghe kích thước khung hình giải mã thực tế từ VLC
-                vlcVout.addCallback(object : IVLCVout.Callback {
-                    override fun onSurfacesCreated(vlcVout: IVLCVout?) {}
-                    override fun onSurfacesDestroyed(vlcVout: IVLCVout?) {}
-                    override fun onNewLayout(
-                        vlcVout: IVLCVout?,
-                        width: Int,
-                        height: Int,
-                        visibleWidth: Int,
-                        visibleHeight: Int,
-                        sarNum: Int,
-                        sarDen: Int
-                    ) {
-                        if (width > 0 && height > 0) {
-                            runOnUiThread {
-                                updateDynamicResolutionBadge(width, height)
-                            }
-                        }
-                    }
-                })
-
                 setEventListener { event ->
                     runOnUiThread {
                         when (event.type) {
@@ -404,7 +382,9 @@ class MainActivity : AppCompatActivity() {
                                     binding.layoutBuffering.visibility = View.GONE
                                 }
                             }
-                            VlcMediaPlayer.Event.Playing -> {
+                            VlcMediaPlayer.Event.Playing,
+                            VlcMediaPlayer.Event.Vout,
+                            VlcMediaPlayer.Event.ESSelected -> {
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
                                 currentVideoTrack?.let { track ->
@@ -458,7 +438,6 @@ class MainActivity : AppCompatActivity() {
         val trackSelector = DefaultTrackSelector(this).apply {
             parameters = buildUponParameters()
                 .setForceHighestSupportedBitrate(true)
-                .setViewportSizeToPhysicalDisplaySize(false) // Không giới hạn theo màn hình 720p!
                 .setExceedRendererCapabilitiesIfNecessary(true)
                 .setExceedVideoConstraintsIfNecessary(true)
                 .setMaxVideoSize(3840, 2160)
