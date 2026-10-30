@@ -309,6 +309,7 @@ class PreferencesHelper(context: Context) {
         private const val KEY_UDPXY_SERVER = "key_udpxy_server"
 
         const val ENGINE_VLC = "VLC"
+        const val ENGINE_VLC_SW = "VLC_SW"
         const val ENGINE_EXOPLAYER = "EXOPLAYER"
 
         const val MODE_LAST_WATCHED = "LAST_WATCHED"

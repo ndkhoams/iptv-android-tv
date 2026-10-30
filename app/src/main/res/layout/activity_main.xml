@@ -150,13 +150,25 @@
                 android:textStyle="bold"
                 android:text="● Đang phát: Bản tin Thời sự" />
 
+            <!-- Dòng 3: Độ phân giải luồng, FPS, Bitrate -->
             <TextView
                 android:id="@+id/tvQuickResolution"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="1920x1080 @ 50fps • 8.0 Mbps • FHD 1080"
+                android:textColor="#38BDF8"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <!-- Dòng 4: Thông tin Audio (Codec, Kênh âm thanh Stereo/5.1, Tần số lấy mẫu) -->
+            <TextView
+                android:id="@+id/tvQuickAudioBitrate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
-                android:text="FHD 1080 • TV Play Live"
-                android:textColor="@color/text_secondary"
+                android:text="Âm thanh: AAC Stereo 2.0 (48kHz)"
+                android:textColor="#94A3B8"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>

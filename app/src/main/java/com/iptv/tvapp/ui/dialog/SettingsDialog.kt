@@ -256,10 +256,10 @@ class SettingsDialog(
     }
 
     private fun initPlayerEngineSettings() {
-        if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
-            binding.rbPlayerExo.isChecked = true
-        } else {
-            binding.rbPlayerVlc.isChecked = true
+        when (prefs.playerEngine) {
+            PreferencesHelper.ENGINE_EXOPLAYER -> binding.rbPlayerExo.isChecked = true
+            PreferencesHelper.ENGINE_VLC_SW -> binding.rbPlayerVlcSw.isChecked = true
+            else -> binding.rbPlayerVlc.isChecked = true
         }
     }
 
@@ -281,10 +281,10 @@ class SettingsDialog(
     }
 
     private fun saveSettings() {
-        val selectedEngine = if (binding.rbPlayerExo.isChecked) {
-            PreferencesHelper.ENGINE_EXOPLAYER
-        } else {
-            PreferencesHelper.ENGINE_VLC
+        val selectedEngine = when {
+            binding.rbPlayerExo.isChecked -> PreferencesHelper.ENGINE_EXOPLAYER
+            binding.rbPlayerVlcSw.isChecked -> PreferencesHelper.ENGINE_VLC_SW
+            else -> PreferencesHelper.ENGINE_VLC
         }
 
         if (selectedEngine != prefs.playerEngine) {

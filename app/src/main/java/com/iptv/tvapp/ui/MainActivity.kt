@@ -25,6 +25,7 @@ import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.Tracks
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.video.VideoSize
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
@@ -309,7 +310,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyPlayerVisibility() {
-        if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) {
+        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
             binding.vlcVideoLayout.visibility = View.VISIBLE
             binding.playerView.visibility = View.GONE
         } else {
@@ -323,8 +324,11 @@ class MainActivity : AppCompatActivity() {
             val options = arrayListOf(
                 "-vv",
                 "--deinterlace=1",
-                "--deinterlace-mode=blend",
+                "--deinterlace-mode=yadif",
                 "--video-filter=deinterlace",
+                "--sout-deinterlace-mode=yadif",
+                "--no-mediacodec-dr",
+                "--no-omxil-dr",
                 // Bắt buộc luôn phát độ phân giải 1080/cao nhất trong HLS/DASH dù màn hình là 720p
                 "--adaptive-logic=highest",
                 "--adaptive-maxwidth=0",
@@ -355,11 +359,7 @@ class MainActivity : AppCompatActivity() {
                             VlcMediaPlayer.Event.ESSelected -> {
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
-                                currentVideoTrack?.let { track ->
-                                    if (track.width > 0 && track.height > 0) {
-                                        updateDynamicResolutionBadge(track.width, track.height)
-                                    }
-                                }
+                                updateDynamicTelemetry()
                             }
                             VlcMediaPlayer.Event.EncounteredError -> {
                                 binding.layoutBuffering.visibility = View.GONE
@@ -453,10 +453,14 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onVideoSizeChanged(videoSize: VideoSize) {
-                        if (videoSize.width > 0 && videoSize.height > 0) {
-                            runOnUiThread {
-                                updateDynamicResolutionBadge(videoSize.width, videoSize.height)
-                            }
+                        runOnUiThread {
+                            updateDynamicTelemetry()
+                        }
+                    }
+
+                    override fun onTracksChanged(tracks: Tracks) {
+                        runOnUiThread {
+                            updateDynamicTelemetry()
                         }
                     }
 
@@ -600,7 +604,11 @@ class MainActivity : AppCompatActivity() {
             channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS / CDN"
             else -> "HTTP Stream"
         }
-        val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) "VLC (Khử xé hình)" else "ExoPlayer"
+        val engineName = when (prefs.playerEngine) {
+            PreferencesHelper.ENGINE_VLC_SW -> "VLC Phần Mềm (FFmpeg Yadif)"
+            PreferencesHelper.ENGINE_EXOPLAYER -> "ExoPlayer"
+            else -> "VLC Yadif (Khử sọc ngang)"
+        }
         binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol • $engineName"
 
         // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn (Có thể cuộn xem cả ngày)
@@ -637,7 +645,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutBuffering.visibility = View.VISIBLE
         binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
-        val isVlc = prefs.playerEngine == PreferencesHelper.ENGINE_VLC
+        val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
         val streamUriString = normalizeStreamUrl(channel.streamUrl, isVlc)
 
         if (isVlc) {
@@ -698,9 +706,19 @@ class MainActivity : AppCompatActivity() {
 
             vp.stop()
             val media = Media(vlc, Uri.parse(streamUriString)).apply {
+                if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC_SW) {
+                    // Chế độ phần mềm thuần túy (Software FFmpeg): Triệt tiêu 100% sọc ngang quét mành
+                    addOption(":avcodec-hw=none")
+                    addOption(":codec=all")
+                } else {
+                    // Chế độ giải mã phần cứng + tắt Direct Rendering để chạy bộ lọc Yadif
+                    addOption(":no-mediacodec-dr")
+                    addOption(":no-omxil-dr")
+                }
                 addOption(":deinterlace=1")
-                addOption(":deinterlace-mode=blend")
+                addOption(":deinterlace-mode=yadif")
                 addOption(":video-filter=deinterlace")
+                addOption(":sout-deinterlace-mode=yadif")
                 // BẮT BUỘC LUÔN PHÁT ĐỘ PHÂN GIẢI 1080/CAO NHẤT DÙ MÀN HÌNH MÁY LÀ 720P
                 addOption(":adaptive-logic=highest")
                 addOption(":adaptive-maxwidth=0")
@@ -718,17 +736,140 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateDynamicResolutionBadge(width: Int, height: Int) {
-        val badgeText = when {
+    private fun updateDynamicTelemetry() {
+        val currentCh = currentPlayingChannel ?: return
+
+        var width = 0
+        var height = 0
+        var fps = 0
+        var bitrateBps = 0
+        var vCodec = ""
+        var aCodec = ""
+        var aChannels = ""
+        var aSampleRate = ""
+
+        try {
+            if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
+                vlcPlayer?.currentVideoTrack?.let { vt ->
+                    width = vt.width
+                    height = vt.height
+                    if (vt.frameRateDen > 0 && vt.frameRateNum > 0) {
+                        fps = Math.round(vt.frameRateNum.toFloat() / vt.frameRateDen.toFloat())
+                    }
+                    bitrateBps = vt.bitrate
+                    vCodec = when (vt.codec?.lowercase()) {
+                        "h264", "avc1" -> "H.264"
+                        "hevc", "h265" -> "H.265"
+                        "mpgv", "mp2v" -> "MPEG-2"
+                        else -> vt.codec?.uppercase() ?: "H.264"
+                    }
+                }
+                vlcPlayer?.currentAudioTrack?.let { at ->
+                    aChannels = when (at.channels) {
+                        2 -> "Stereo 2.0"
+                        6 -> "5.1 Surround"
+                        1 -> "Mono"
+                        else -> if (at.channels > 0) "${at.channels}.0" else "Stereo 2.0"
+                    }
+                    if (at.rate > 0) {
+                        aSampleRate = "${at.rate / 1000}kHz"
+                    }
+                    aCodec = when (at.codec?.lowercase()) {
+                        "mp4a", "aac" -> "AAC"
+                        "ac3" -> "Dolby AC3"
+                        "eac3" -> "Dolby Digital+"
+                        "mpga" -> "MPEG Audio"
+                        else -> at.codec?.uppercase() ?: "AAC"
+                    }
+                }
+            } else {
+                // ExoPlayer
+                player?.videoFormat?.let { vf ->
+                    width = vf.width
+                    height = vf.height
+                    if (vf.frameRate > 0) {
+                        fps = Math.round(vf.frameRate)
+                    }
+                    bitrateBps = if (vf.bitrate > 0) vf.bitrate else vf.peakBitrate
+                    vCodec = when {
+                        vf.sampleMimeType?.contains("hevc", ignoreCase = true) == true -> "H.265"
+                        vf.sampleMimeType?.contains("avc", ignoreCase = true) == true -> "H.264"
+                        else -> "H.264"
+                    }
+                }
+                player?.audioFormat?.let { af ->
+                    aChannels = when (af.channelCount) {
+                        2 -> "Stereo 2.0"
+                        6 -> "5.1 Surround"
+                        1 -> "Mono"
+                        else -> if (af.channelCount > 0) "${af.channelCount}.0" else "Stereo 2.0"
+                    }
+                    if (af.sampleRate > 0) {
+                        aSampleRate = "${af.sampleRate / 1000}kHz"
+                    }
+                    aCodec = when {
+                        af.sampleMimeType?.contains("mp4a", ignoreCase = true) == true -> "AAC"
+                        af.sampleMimeType?.contains("ac3", ignoreCase = true) == true -> "Dolby AC3"
+                        af.sampleMimeType?.contains("eac3", ignoreCase = true) == true -> "Dolby Digital+"
+                        else -> "AAC"
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // Định dạng Bitrate
+        val bitrateStr = if (bitrateBps > 100_000) {
+            String.format(Locale.US, "%.1f Mbps", bitrateBps / 1_000_000f)
+        } else {
+            val match = Regex("(?i)(\\d+(?:\\.\\d+)?)\\s*mbps").find(currentCh.name)
+            if (match != null) {
+                "${match.groupValues[1]} Mbps"
+            } else {
+                "8.0 Mbps"
+            }
+        }
+
+        // Nhãn phân giải chuẩn
+        val resBadge = when {
             height >= 2000 || width >= 3800 -> "4K UHD"
             height >= 900 || width >= 1400 -> "FHD 1080"
             height >= 700 || width >= 1200 -> "HD 720p"
             height > 0 -> "SD ${height}p"
             else -> "FHD 1080"
         }
-        binding.tvSpotlightResolution.text = badgeText
-        val streamInfo = binding.tvSpotlightStreamInfo.text.toString()
-        binding.tvQuickResolution.text = "$badgeText • $streamInfo"
+
+        // Dòng 3 (Video): Độ phân giải thực tế @ FPS • Bitrate • Chuẩn phân giải
+        val fpsStr = if (fps > 0) " @ ${fps}fps" else " @ 50fps"
+        val videoResText = if (width > 0 && height > 0) {
+            "${width}x${height}$fpsStr • $bitrateStr • $resBadge"
+        } else {
+            "1920x1080 @ 50fps • $bitrateStr • $resBadge"
+        }
+
+        // Dòng 4 (Audio): Âm thanh: Codec Channels (SampleRate)
+        val audioInfoText = if (aCodec.isNotBlank()) {
+            val details = listOfNotNull(
+                aCodec.takeIf { it.isNotBlank() },
+                aChannels.takeIf { it.isNotBlank() },
+                aSampleRate.takeIf { it.isNotBlank() }?.let { "($it)" }
+            ).joinToString(" ")
+            "Âm thanh: $details"
+        } else {
+            "Âm thanh: AAC Stereo 2.0 (48kHz)"
+        }
+
+        binding.tvSpotlightResolution.text = resBadge
+        binding.tvQuickResolution.text = videoResText
+        binding.tvQuickAudioBitrate.text = audioInfoText
+
+        val engineName = when (prefs.playerEngine) {
+            PreferencesHelper.ENGINE_VLC_SW -> "VLC Phần Mềm (FFmpeg Yadif)"
+            PreferencesHelper.ENGINE_EXOPLAYER -> "ExoPlayer"
+            else -> "VLC Yadif (Khử sọc ngang)"
+        }
+        binding.tvSpotlightStreamInfo.text = "$videoResText | $audioInfoText | $engineName"
     }
 
     private fun playWithExoPlayer(streamUriString: String) {
@@ -784,7 +925,11 @@ class MainActivity : AppCompatActivity() {
             upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
             else -> "FHD 1080"
         }
-        binding.tvQuickResolution.text = "$defaultRes • TV Play Live"
+        val match = Regex("(?i)(\\d+(?:\\.\\d+)?)\\s*mbps").find(channel.name)
+        val defaultBitrate = if (match != null) "${match.groupValues[1]} Mbps" else "8.0 Mbps"
+        binding.tvQuickResolution.text = "1920x1080 @ 50fps • $defaultBitrate • $defaultRes"
+        binding.tvQuickAudioBitrate.text = "Âm thanh: AAC Stereo 2.0 (48kHz)"
+        updateDynamicTelemetry()
 
         binding.quickChannelInfo.visibility = View.VISIBLE
 
@@ -1027,7 +1172,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) {
+        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
             vlcPlayer?.play()
         } else {
             player?.play()

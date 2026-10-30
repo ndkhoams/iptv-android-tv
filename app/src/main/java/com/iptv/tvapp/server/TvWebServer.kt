@@ -266,28 +266,6 @@ class TvWebServer(
                 val resp = JSONObject().apply { put("success", true) }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
-            method == "GET" && (path == "/playlist.m3u" || path == "/api/playlist/download" || path == "/api/playlist/tivimate") -> {
-                val sb = StringBuilder()
-                sb.append("#EXTM3U url-tvg=\"https://epg.io.vn/epgc.xml\" x-tvg-url=\"https://epg.io.vn/epgc.xml,http://lichphatsong.io.vn/epg.xml.gz\"\n")
-                val channels = channelProvider()
-                for (ch in channels) {
-                    val logoAttr = if (!ch.logoUrl.isNullOrBlank()) " tvg-logo=\"${ch.logoUrl}\"" else ""
-                    val groupAttr = if (ch.groupTitle.isNotBlank()) " group-title=\"${ch.groupTitle}\"" else ""
-                    val idAttr = if (ch.id.isNotBlank()) " tvg-id=\"${ch.id}\"" else ""
-                    sb.append("#EXTINF:-1${idAttr} tvg-name=\"${ch.name}\"${logoAttr}${groupAttr},${ch.name}\n")
-                    sb.append("${ch.streamUrl}\n")
-                }
-                val bytes = sb.toString().toByteArray(Charsets.UTF_8)
-                val header = "HTTP/1.1 200 OK\r\n" +
-                        "Content-Type: audio/x-mpegurl; charset=utf-8\r\n" +
-                        "Content-Disposition: attachment; filename=\"tvplay_tivimate.m3u\"\r\n" +
-                        "Content-Length: ${bytes.size}\r\n" +
-                        "Access-Control-Allow-Origin: *\r\n" +
-                        "Connection: close\r\n\r\n"
-                output.write(header.toByteArray(Charsets.UTF_8))
-                output.write(bytes)
-                output.flush()
-            }
             method == "GET" && path == "/api/backup" -> {
                 val json = prefs.createBackupJson()
                 val bytes = json.toByteArray(Charsets.UTF_8)

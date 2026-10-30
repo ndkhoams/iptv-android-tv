@@ -157,19 +157,6 @@ object WebPageTemplate {
             <button class="submit-btn" style="background:#10b981;" onclick="uploadLocalPlaylist()">⬆ Tải File Lên TV</button>
         </div>
 
-        <div class="form-card">
-            <h3>📥 Xuất / Tải Playlist Cho TiviMate &amp; OTT Navigator</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tải toàn bộ danh sách kênh kèm EPG và udpxy chuẩn định dạng M3U dùng cho TiviMate, OTT Navigator, VLC.</p>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <a href="/playlist.m3u" download="tvplay_tivimate.m3u" class="submit-btn" style="text-align:center; text-decoration:none; background:#8B5CF6; display:block;">
-                    📥 Tải File M3U (Chuẩn TiviMate / OTT Navigator)
-                </a>
-                <p style="font-size:11px; color:#94A3B8; margin:0;">
-                    💡 <b>Mẹo nhập link trực tiếp:</b> Trong TiviMate / OTT Navigator, bạn có thể nhập URL M3U trực tiếp là: <code style="color:var(--accent); font-weight:bold;" id="lblTiviMateUrl">http://.../playlist.m3u</code>
-                </p>
-            </div>
-        </div>
-
         <h3 style="font-size:15px; margin-bottom:10px; color:var(--text-main);">Danh Sách Playlist Đã Có:</h3>
         <div id="playlistsContainer">Đang tải...</div>
     </div>
@@ -288,10 +275,6 @@ object WebPageTemplate {
             .then(function(data) {
                 document.getElementById('bannerChName').innerText = data.nowPlaying || 'Chưa phát kênh';
                 document.getElementById('tvIpBadge').innerText = 'TV: ' + data.ip;
-                var tiviMateEl = document.getElementById('lblTiviMateUrl');
-                if (tiviMateEl) {
-                    tiviMateEl.innerText = window.location.origin + '/playlist.m3u';
-                }
             }).catch(function() {});
         }
 

@@ -191,15 +191,21 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- CỘT PHẢI: CÀI ĐẶT TRÌNH PHÁT (KHỬ XÉ HÌNH) & KHỞI ĐỘNG -->
-        <LinearLayout
+        <!-- CỘT PHẢI: CÀI ĐẶT TRÌNH PHÁT (KHỬ XÉ HÌNH) & KHỞI ĐỘNG (Hỗ trợ cuộn ScrollView trên TV) -->
+        <ScrollView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:orientation="vertical"
             android:background="@drawable/bg_fpt_glass_panel"
             android:padding="14dp"
-            android:layout_marginStart="8dp">
+            android:layout_marginStart="8dp"
+            android:fillViewport="true"
+            android:scrollbars="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
             <!-- PHẦN A: BỘ GIẢI MÃ VIDEO (KHỬ RĂNG CƯA 1080i) -->
             <TextView
@@ -222,8 +228,20 @@
                     android:id="@+id/rbPlayerVlc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="LibVLC (Khử răng cưa/xé hình 1080i FPT - Khuyên dùng)"
+                    android:text="LibVLC Yadif (Khử sọc ngang 1080i phần cứng - Khuyên dùng)"
                     android:textColor="#34D399"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <RadioButton
+                    android:id="@+id/rbPlayerVlcSw"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="LibVLC Phần Mềm (FFmpeg Yadif - Triệt để 100% sọc ngang)"
+                    android:textColor="#F59E0B"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:focusable="true"
@@ -234,7 +252,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="ExoPlayer (Bộ giải mã Google MediaCodec)"
+                    android:text="ExoPlayer (Google MediaCodec - Nhẹ máy)"
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:nextFocusLeft="@+id/etNewPlaylistUrl"
@@ -343,7 +361,7 @@
                     android:singleLine="true"
                     android:imeOptions="actionDone"
                     android:nextFocusUp="@+id/rbFixedChannel"
-                    android:nextFocusDown="@+id/btnCloseSettings"
+                    android:nextFocusDown="@+id/btnBackupConfig"
                     android:nextFocusLeft="@+id/btnAddPlaylist"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
@@ -361,7 +379,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:text="5. Sao Lưu &amp; Khôi Phục Cấu Hình:"
                 android:textColor="@color/fpt_orange"
                 android:textSize="14sp"
@@ -391,6 +409,9 @@
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:background="@drawable/selector_button_tv"
+                        android:nextFocusUp="@+id/etUdpxyServer"
+                        android:nextFocusRight="@+id/btnRestoreConfig"
+                        android:nextFocusDown="@+id/btnCloseSettings"
                         android:focusable="true"
                         android:focusableInTouchMode="true" />
 
@@ -405,6 +426,9 @@
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:background="@drawable/selector_button_tv"
+                        android:nextFocusUp="@+id/etUdpxyServer"
+                        android:nextFocusLeft="@+id/btnBackupConfig"
+                        android:nextFocusDown="@+id/btnCloseSettings"
                         android:focusable="true"
                         android:focusableInTouchMode="true" />
                 </LinearLayout>
@@ -419,26 +443,24 @@
                     android:textSize="10sp" />
             </LinearLayout>
 
-            <!-- Khoảng trống đẩy nút Đóng xuống cuối -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
             <!-- Nút Đóng & Áp Dụng -->
             <Button
                 android:id="@+id/btnCloseSettings"
                 android:layout_width="match_parent"
                 android:layout_height="38dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
                 android:text="✓  ĐÓNG &amp; ÁP DỤNG"
                 android:textColor="#FFFFFF"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:background="@drawable/selector_button_tv"
+                android:nextFocusUp="@+id/btnBackupConfig"
                 android:nextFocusLeft="@+id/btnAddPlaylist"
                 android:focusable="true"
                 android:focusableInTouchMode="true" />
-        </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
     </LinearLayout>
 
 </LinearLayout>
