@@ -32,17 +32,17 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --info
+      run: ./gradlew assembleDebug
 
-    - name: Push Error Log to Branch if Failed
+    - name: Push Full Compile Log if Failed
       if: failure()
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git checkout -B build-error-log
-        ./gradlew assembleDebug --info 2>&1 | grep -C 5 "e: " > error_report.txt || true
+        ./gradlew compileDebugKotlin --stacktrace 2>&1 | tail -n 60 > error_report.txt || true
         git add error_report.txt
-        git commit -m "Auto report: exact kotlin error"
+        git commit -m "Full kotlin compiler error report"
         git push origin build-error-log --force
 
     - name: Upload APK Artifact
