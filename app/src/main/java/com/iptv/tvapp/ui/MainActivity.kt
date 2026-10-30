@@ -678,7 +678,6 @@ class MainActivity : AppCompatActivity() {
             binding.tvEpgEmpty.text = if (epgManager.isLoaded) "Chưa có lịch phát sóng" else "Đang tải lịch phát sóng..."
         }
     }
-    }
 
     private fun playChannel(channel: Channel) {
         currentPlayingChannel = channel
