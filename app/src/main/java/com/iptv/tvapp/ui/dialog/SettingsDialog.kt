@@ -3,6 +3,8 @@ package com.iptv.tvapp.ui.dialog
 import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,7 +17,7 @@ import java.util.UUID
 
 class SettingsDialog(
     context: Context,
-    private val onPlaylistChanged: () -> Unit
+    private val onSettingsChanged: (playlistChanged: Boolean, engineChanged: Boolean) -> Unit
 ) : Dialog(context, R.style.TvDialogTheme) {
 
     private lateinit var binding: DialogSettingsBinding
@@ -23,6 +25,7 @@ class SettingsDialog(
     private lateinit var adapter: PlaylistSourceAdapter
     private var playlistList = mutableListOf<PlaylistSource>()
     private var hasChangedPlaylist = false
+    private var hasChangedEngine = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +34,9 @@ class SettingsDialog(
         setContentView(binding.root)
 
         initPlaylistsList()
+        initPlayerEngineSettings()
         initBootSettings()
+        initFocusNavigation()
 
         binding.btnAddPlaylist.setOnClickListener {
             val name = binding.etNewPlaylistName.text.toString().trim()
@@ -58,11 +63,60 @@ class SettingsDialog(
         }
 
         binding.btnCloseSettings.setOnClickListener {
-            saveBootSettings()
-            if (hasChangedPlaylist) {
-                onPlaylistChanged()
-            }
+            saveSettings()
+            onSettingsChanged(hasChangedPlaylist, hasChangedEngine)
             dismiss()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        window?.let { w ->
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            w.setBackgroundDrawableResource(R.color.fpt_bg_dark)
+        }
+    }
+
+    private fun initFocusNavigation() {
+        // Khắc phục bẫy focus của bàn phím TV trên trường nhập văn bản
+        binding.etNewPlaylistName.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        binding.etNewPlaylistUrl.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.rvPlaylists.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        binding.rbPlayerVlc.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+
+        binding.etNewPlaylistUrl.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        binding.btnAddPlaylist.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.etNewPlaylistName.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        binding.rbPlayerVlc.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
         }
     }
 
@@ -99,6 +153,14 @@ class SettingsDialog(
         adapter.submitList(playlistList.toList())
     }
 
+    private fun initPlayerEngineSettings() {
+        if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
+            binding.rbPlayerExo.isChecked = true
+        } else {
+            binding.rbPlayerVlc.isChecked = true
+        }
+    }
+
     private fun initBootSettings() {
         binding.cbAutoStartOnBoot.isChecked = prefs.autoStartOnBoot
 
@@ -116,7 +178,18 @@ class SettingsDialog(
         }
     }
 
-    private fun saveBootSettings() {
+    private fun saveSettings() {
+        val selectedEngine = if (binding.rbPlayerExo.isChecked) {
+            PreferencesHelper.ENGINE_EXOPLAYER
+        } else {
+            PreferencesHelper.ENGINE_VLC
+        }
+
+        if (selectedEngine != prefs.playerEngine) {
+            prefs.playerEngine = selectedEngine
+            hasChangedEngine = true
+        }
+
         prefs.autoStartOnBoot = binding.cbAutoStartOnBoot.isChecked
         prefs.startupMode = if (binding.rbFixedChannel.isChecked) {
             PreferencesHelper.MODE_FIXED_CHANNEL

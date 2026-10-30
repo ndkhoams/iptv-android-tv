@@ -1,193 +1,306 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="650dp"
-    android:layout_height="wrap_content"
-    android:background="@drawable/bg_item_normal"
-    android:padding="20dp">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/fpt_bg_dark"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp">
 
+    <!-- Tiêu đề Dialog Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
 
-        <!-- Tiêu đề Dialog -->
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cài Đặt Ứng Dụng &amp; Danh Sách M3U"
-            android:textColor="@color/accent"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+            android:text="fpt"
+            android:textColor="@color/fpt_orange"
+            android:textSize="22sp"
+            android:textStyle="bold" />
 
-        <!-- PHẦN 1: CÁC DANH SÁCH M3U ĐÃ THÊM -->
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="1. Danh Sách M3U (Chọn danh sách để xem):"
+            android:text="play"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="• CÀI ĐẶT HỆ THỐNG &amp; NGUỒN PHÁT"
             android:textColor="@color/text_primary"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvPlaylists"
-            android:layout_width="match_parent"
-            android:layout_height="140dp"
-            android:background="#0F172A"
-            android:padding="6dp"
-            android:clipToPadding="false"
-            android:focusable="true"
-            android:focusableInTouchMode="true" />
+    <!-- Thân Dialog: 2 Cột chuẩn Android TV Full Screen -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
 
-        <!-- Form thêm danh sách M3U mới -->
+        <!-- CỘT TRÁI: QUẢN LÝ DANH SÁCH M3U -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
             android:orientation="vertical"
-            android:background="#131D2E"
-            android:padding="10dp"
-            android:layout_marginTop="8dp">
+            android:background="@drawable/bg_fpt_glass_panel"
+            android:padding="14dp"
+            android:layout_marginEnd="8dp">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Thêm nguồn M3U mới:"
-                android:textColor="@color/accent"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/etNewPlaylistName"
-                android:layout_width="match_parent"
-                android:layout_height="42dp"
-                android:layout_marginTop="6dp"
-                android:background="#0A0E17"
-                android:paddingHorizontal="10dp"
-                android:hint="Tên danh sách (Ví dụ: Thể Thao, Kênh Nhà Mạng...)"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_muted"
-                android:textSize="13sp"
-                android:singleLine="true"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
-
-            <EditText
-                android:id="@+id/etNewPlaylistUrl"
-                android:layout_width="match_parent"
-                android:layout_height="42dp"
-                android:layout_marginTop="6dp"
-                android:background="#0A0E17"
-                android:paddingHorizontal="10dp"
-                android:hint="Đường link URL (http://... hoặc https://...)"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_muted"
-                android:textSize="13sp"
-                android:inputType="textUri"
-                android:singleLine="true"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
-
-            <Button
-                android:id="@+id/btnAddPlaylist"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_gravity="end"
-                android:layout_marginTop="8dp"
-                android:paddingHorizontal="18dp"
-                android:text="+ Thêm Danh Sách"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:background="@drawable/selector_button_tv"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#334155"
-            android:layout_marginVertical="16dp" />
-
-        <!-- PHẦN 2: CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="2. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
-            android:textColor="@color/text_primary"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Checkbox tự mở khi bật TV -->
-        <CheckBox
-            android:id="@+id/cbAutoStartOnBoot"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Tự động mở ứng dụng ngay khi Android TV khởi động"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Lựa chọn kênh mở khi khởi động -->
-        <RadioGroup
-            android:id="@+id/rgStartupMode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <RadioButton
-                android:id="@+id/rbLastWatched"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Vào lại kênh vừa xem gần nhất"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
-
-            <RadioButton
-                android:id="@+id/rbFixedChannel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Luôn mở một kênh cố định:"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
-        </RadioGroup>
-
-        <TextView
-            android:id="@+id/tvCurrentFixedChannel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_marginTop="2dp"
-            android:text="Chưa thiết lập (Bấm giữ OK trên kênh bất kỳ để đặt làm mặc định)"
-            android:textColor="@color/accent"
-            android:textSize="13sp" />
-
-        <!-- Nút Đóng -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end"
-            android:layout_marginTop="20dp">
-
-            <Button
-                android:id="@+id/btnCloseSettings"
-                android:layout_width="140dp"
-                android:layout_height="44dp"
-                android:text="Đóng &amp; Áp Dụng"
-                android:textColor="#FFFFFF"
+                android:text="1. Danh Sách M3U Đang Có:"
+                android:textColor="@color/fpt_orange"
                 android:textSize="14sp"
                 android:textStyle="bold"
+                android:layout_marginBottom="6dp" />
+
+            <!-- Danh sách các nguồn M3U -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPlaylists"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="#151329"
+                android:padding="6dp"
+                android:clipToPadding="false"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:nextFocusDown="@+id/etNewPlaylistName" />
+
+            <!-- Form thêm nguồn M3U mới -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1B1930"
+                android:padding="10dp"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Thêm nguồn M3U mới:"
+                    android:textColor="#38BDF8"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/etNewPlaylistName"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="6dp"
+                    android:background="#0F0E1D"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:hint="Tên danh sách (Ví dụ: FPT IPTV, Thể Thao...)"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_muted"
+                    android:textSize="12sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionNext"
+                    android:nextFocusUp="@+id/rvPlaylists"
+                    android:nextFocusDown="@+id/etNewPlaylistUrl"
+                    android:nextFocusRight="@+id/rbPlayerVlc"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <EditText
+                    android:id="@+id/etNewPlaylistUrl"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:layout_marginTop="6dp"
+                    android:background="#0F0E1D"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:hint="Đường link URL (http://... hoặc https://...)"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_muted"
+                    android:textSize="12sp"
+                    android:inputType="textUri"
+                    android:singleLine="true"
+                    android:imeOptions="actionDone"
+                    android:nextFocusUp="@+id/etNewPlaylistName"
+                    android:nextFocusDown="@+id/btnAddPlaylist"
+                    android:nextFocusRight="@+id/rbPlayerVlc"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <Button
+                    android:id="@+id/btnAddPlaylist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="6dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="+ Thêm Danh Sách"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/selector_button_tv"
+                    android:nextFocusUp="@+id/etNewPlaylistUrl"
+                    android:nextFocusRight="@+id/btnCloseSettings"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- CỘT PHẢI: CÀI ĐẶT TRÌNH PHÁT (KHỬ XÉ HÌNH) & KHỞI ĐỘNG -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="@drawable/bg_fpt_glass_panel"
+            android:padding="14dp"
+            android:layout_marginStart="8dp">
+
+            <!-- PHẦN A: BỘ GIẢI MÃ VIDEO (KHỬ RĂNG CƯA 1080i) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="2. Bộ Giải Mã Video &amp; Khử Xé Hình (Deinterlace):"
+                android:textColor="@color/fpt_orange"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgPlayerEngine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="#1B1930"
+                android:padding="8dp">
+
+                <RadioButton
+                    android:id="@+id/rbPlayerVlc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="LibVLC (Khử răng cưa/xé hình 1080i FPT - Khuyên dùng)"
+                    android:textColor="#34D399"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:nextFocusLeft="@+id/etNewPlaylistName"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <RadioButton
+                    android:id="@+id/rbPlayerExo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="ExoPlayer (Bộ giải mã Google MediaCodec)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:nextFocusLeft="@+id/etNewPlaylistUrl"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+            </RadioGroup>
+
+            <!-- PHẦN B: CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="3. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
+                android:textColor="@color/fpt_orange"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1B1930"
+                android:padding="8dp"
+                android:layout_marginTop="6dp">
+
+                <!-- Checkbox tự mở khi bật TV -->
+                <CheckBox
+                    android:id="@+id/cbAutoStartOnBoot"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tự động mở ứng dụng ngay khi Android TV khởi động"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <!-- Lựa chọn kênh mở khi khởi động -->
+                <RadioGroup
+                    android:id="@+id/rgStartupMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+
+                    <RadioButton
+                        android:id="@+id/rbLastWatched"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Vào lại kênh vừa xem gần nhất"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+
+                    <RadioButton
+                        android:id="@+id/rbFixedChannel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Luôn mở một kênh cố định:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+                </RadioGroup>
+
+                <TextView
+                    android:id="@+id/tvCurrentFixedChannel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:layout_marginTop="1dp"
+                    android:text="Chưa thiết lập (Bấm giữ OK trên kênh bất kỳ để đặt làm mặc định)"
+                    android:textColor="@color/fpt_orange"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Khoảng trống đẩy nút Đóng xuống cuối -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- Nút Đóng & Áp Dụng -->
+            <Button
+                android:id="@+id/btnCloseSettings"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:text="✓  ĐÓNG &amp; ÁP DỤNG"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
                 android:background="@drawable/selector_button_tv"
+                android:nextFocusLeft="@+id/btnAddPlaylist"
                 android:focusable="true"
                 android:focusableInTouchMode="true" />
         </LinearLayout>
-
     </LinearLayout>
-</ScrollView>
+
+</LinearLayout>

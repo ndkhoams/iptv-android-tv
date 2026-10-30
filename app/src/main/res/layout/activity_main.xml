@@ -7,14 +7,22 @@
     android:background="@color/fpt_bg_dark"
     android:keepScreenOn="true">
 
-    <!-- 1. Video Player Fullscreen -->
+    <!-- 1. Trình phát VLC khử xé hình 1080i (Mặc định) -->
+    <org.videolan.libvlc.util.VLCVideoLayout
+        android:id="@+id/vlcVideoLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible" />
+
+    <!-- 1b. Trình phát ExoPlayer (Dự phòng) -->
     <com.google.android.exoplayer2.ui.StyledPlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:use_controller="false"
         app:surface_type="surface_view"
-        app:resize_mode="fit" />
+        app:resize_mode="fit"
+        android:visibility="gone" />
 
     <!-- 2. Loading / Buffering Spinner Cam FPT -->
     <LinearLayout
@@ -587,7 +595,7 @@
                             android:id="@+id/tvEpgSourceTag"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="epg.io.vn"
+                            android:text="lichphatsong.io.vn"
                             android:textColor="@color/text_muted"
                             android:textSize="9sp" />
                     </LinearLayout>

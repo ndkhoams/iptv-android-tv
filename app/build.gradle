@@ -56,6 +56,9 @@ dependencies {
     // Leanback support for Android TV
     implementation 'androidx.leanback:leanback:1.0.0'
 
+    // LibVLC for deinterlacing live TV & IPTV (Khử hoàn toàn xé hình/răng cưa 1080i)
+    implementation 'org.videolan.android:libvlc-all:3.5.1'
+
     // ExoPlayer (Support Android 5.0+, API 21)
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.19.1'

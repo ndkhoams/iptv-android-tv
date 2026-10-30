@@ -40,7 +40,12 @@ import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.videolan.libvlc.LibVLC
+import org.videolan.libvlc.Media
+import org.videolan.libvlc.MediaPlayer as VlcMediaPlayer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +58,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var epgManager: EpgManager
 
     private var player: ExoPlayer? = null
+    private var libVLC: LibVLC? = null
+    private var vlcPlayer: VlcMediaPlayer? = null
     private var webServer: TvWebServer? = null
     private var multicastLock: WifiManager.MulticastLock? = null
 
@@ -103,7 +110,10 @@ class MainActivity : AppCompatActivity() {
     private fun loadEpgData() {
         lifecycleScope.launch {
             epgManager.loadEpg()
-            currentFocusedChannel?.let { updateSpotlight(it) }
+            withContext(Dispatchers.Main) {
+                currentFocusedChannel?.let { updateSpotlight(it) }
+                    ?: currentPlayingChannel?.let { updateSpotlight(it) }
+            }
         }
     }
 
@@ -323,7 +333,68 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayer() {
-        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder khử sọc ngang răng cưa 1080i FPT
+        initVlcPlayer()
+        initExoPlayer()
+        applyPlayerVisibility()
+    }
+
+    private fun applyPlayerVisibility() {
+        if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) {
+            binding.vlcVideoLayout.visibility = View.VISIBLE
+            binding.playerView.visibility = View.GONE
+        } else {
+            binding.vlcVideoLayout.visibility = View.GONE
+            binding.playerView.visibility = View.VISIBLE
+        }
+    }
+
+    private fun initVlcPlayer() {
+        try {
+            val options = arrayListOf(
+                "-vv",
+                "--deinterlace=1",
+                "--deinterlace-mode=blend",
+                "--video-filter=deinterlace",
+                "--network-caching=2000",
+                "--live-caching=2000",
+                "--clock-jitter=0",
+                "--clock-synchro=0",
+                "--drop-late-frames",
+                "--skip-frames"
+            )
+            libVLC = LibVLC(this, options)
+            vlcPlayer = VlcMediaPlayer(libVLC).apply {
+                attachViews(binding.vlcVideoLayout, null, false, false)
+                setEventListener { event ->
+                    runOnUiThread {
+                        when (event.type) {
+                            VlcMediaPlayer.Event.Buffering -> {
+                                if (event.buffering < 100f) {
+                                    binding.layoutBuffering.visibility = View.VISIBLE
+                                } else {
+                                    binding.layoutBuffering.visibility = View.GONE
+                                }
+                            }
+                            VlcMediaPlayer.Event.Playing -> {
+                                binding.layoutBuffering.visibility = View.GONE
+                                binding.tvErrorMessage.visibility = View.GONE
+                            }
+                            VlcMediaPlayer.Event.EncounteredError -> {
+                                binding.layoutBuffering.visibility = View.GONE
+                                binding.tvErrorMessage.visibility = View.VISIBLE
+                                binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun initExoPlayer() {
+        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder
         val renderersFactory = DefaultRenderersFactory(this).apply {
             setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             setEnableDecoderFallback(true) // Cho phép chuyển codec dự phòng nếu codec phần cứng lỗi 1080i
@@ -499,14 +570,15 @@ class MainActivity : AppCompatActivity() {
         // Giao thức
         val protocol = when {
             channel.streamUrl.contains("udpxy=", ignoreCase = true) -> "HTTP Proxy (udpxy FPT)"
-            channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast (FPT IPTV khử 1080i)"
-            channel.streamUrl.startsWith("rtp", ignoreCase = true) -> "RTP Multicast (FPT IPTV khử 1080i)"
+            channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast (FPT IPTV)"
+            channel.streamUrl.startsWith("rtp", ignoreCase = true) -> "RTP Multicast (FPT IPTV)"
             channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS Streaming / CDN"
             else -> "HTTP/TS Stream"
         }
-        binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol"
+        val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) "VLC (Khử xé hình)" else "ExoPlayer"
+        binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol • $engineName"
 
-        // Lịch phát sóng EPG dạng list time-line từ epg.io.vn
+        // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn
         val timeline = epgManager.getTimelineForChannel(channel.id, channel.name)
         if (timeline.isNotEmpty()) {
             binding.rvSpotlightEpg.visibility = View.VISIBLE
@@ -536,16 +608,59 @@ class MainActivity : AppCompatActivity() {
         binding.layoutBuffering.visibility = View.VISIBLE
         binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
+        val streamUriString = normalizeStreamUrl(channel.streamUrl)
+
+        if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) {
+            playWithVlc(streamUriString)
+        } else {
+            playWithExoPlayer(streamUriString)
+        }
+    }
+
+    private fun normalizeStreamUrl(rawUrl: String): String {
+        var streamUriString = rawUrl.trim()
+        if (streamUriString.startsWith("udp://@", ignoreCase = true)) {
+            streamUriString = "udp://" + streamUriString.substring(7)
+        } else if (streamUriString.startsWith("rtp://@", ignoreCase = true)) {
+            streamUriString = "udp://" + streamUriString.substring(7)
+        } else if (streamUriString.startsWith("rtp://", ignoreCase = true)) {
+            streamUriString = "udp://" + streamUriString.substring(6)
+        }
+        return streamUriString
+    }
+
+    private fun playWithVlc(streamUriString: String) {
         try {
-            // Chuẩn hóa đường dẫn stream: Hỗ trợ link UDP / RTP multicast từ FPT (@225.x.x.x) và udpxy
-            var streamUriString = channel.streamUrl.trim()
-            if (streamUriString.startsWith("udp://@", ignoreCase = true)) {
-                streamUriString = "udp://" + streamUriString.substring(7)
-            } else if (streamUriString.startsWith("rtp://@", ignoreCase = true)) {
-                streamUriString = "udp://" + streamUriString.substring(7)
-            } else if (streamUriString.startsWith("rtp://", ignoreCase = true)) {
-                streamUriString = "udp://" + streamUriString.substring(6)
+            player?.pause()
+            binding.playerView.visibility = View.GONE
+            binding.vlcVideoLayout.visibility = View.VISIBLE
+
+            val vlc = libVLC ?: return
+            val vp = vlcPlayer ?: return
+
+            vp.stop()
+            val media = Media(vlc, Uri.parse(streamUriString)).apply {
+                addOption(":deinterlace=1")
+                addOption(":deinterlace-mode=blend")
+                addOption(":video-filter=deinterlace")
+                addOption(":network-caching=2000")
+                addOption(":live-caching=2000")
             }
+            vp.media = media
+            media.release()
+            vp.play()
+        } catch (e: Exception) {
+            binding.layoutBuffering.visibility = View.GONE
+            binding.tvErrorMessage.visibility = View.VISIBLE
+            binding.tvErrorDetail.text = "Không thể phát qua VLC: ${e.localizedMessage}"
+        }
+    }
+
+    private fun playWithExoPlayer(streamUriString: String) {
+        try {
+            vlcPlayer?.stop()
+            binding.vlcVideoLayout.visibility = View.GONE
+            binding.playerView.visibility = View.VISIBLE
 
             val mediaItem = MediaItem.fromUri(Uri.parse(streamUriString))
             player?.setMediaItem(mediaItem)
@@ -554,7 +669,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             binding.layoutBuffering.visibility = View.GONE
             binding.tvErrorMessage.visibility = View.VISIBLE
-            binding.tvErrorDetail.text = "Không thể phát luồng này: ${e.localizedMessage}"
+            binding.tvErrorDetail.text = "Không thể phát qua ExoPlayer: ${e.localizedMessage}"
         }
     }
 
@@ -711,20 +826,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSettingsDialog() {
         resetOverlayTimer()
-        val dialog = SettingsDialog(this) {
-            loadPlaylist(forceRefresh = false)
-            loadEpgData()
+        val dialog = SettingsDialog(this) { playlistChanged, engineChanged ->
+            if (playlistChanged) {
+                loadPlaylist(forceRefresh = true)
+                loadEpgData()
+            }
+            if (engineChanged) {
+                applyPlayerVisibility()
+                currentPlayingChannel?.let { playChannel(it) }
+            }
         }
         dialog.show()
     }
 
     override fun onResume() {
         super.onResume()
-        player?.play()
+        if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) {
+            vlcPlayer?.play()
+        } else {
+            player?.play()
+        }
     }
 
     override fun onPause() {
         super.onPause()
+        vlcPlayer?.pause()
+        player?.pause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        vlcPlayer?.stop()
         player?.pause()
     }
 
@@ -740,6 +872,20 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {}
         multicastLock = null
+
+        try {
+            vlcPlayer?.apply {
+                stop()
+                detachViews()
+                release()
+            }
+            vlcPlayer = null
+            libVLC?.release()
+            libVLC = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         player?.release()
         player = null
     }
