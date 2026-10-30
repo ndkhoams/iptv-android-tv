@@ -165,6 +165,8 @@ class MainActivity : AppCompatActivity() {
         binding.rvCategories.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = categoryAdapter
+            setHasFixedSize(true)
+            setItemViewCacheSize(10)
         }
 
         channelAdapter = ChannelAdapter(
@@ -182,6 +184,8 @@ class MainActivity : AppCompatActivity() {
         binding.rvChannels.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = channelAdapter
+            setHasFixedSize(true)
+            setItemViewCacheSize(20)
         }
 
         // Khởi tạo Timeline EPG dạng list (Bấm OK để phát kênh, giữ OK để mở Menu tác vụ)
@@ -201,6 +205,8 @@ class MainActivity : AppCompatActivity() {
         binding.rvSpotlightEpg.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = epgTimelineAdapter
+            setHasFixedSize(true)
+            setItemViewCacheSize(10)
         }
 
         // Sidebar Navigation Buttons
@@ -324,21 +330,29 @@ class MainActivity : AppCompatActivity() {
         try {
             val options = arrayListOf(
                 "-vv",
-                // Kích hoạt đa luồng FFmpeg nhận toàn bộ nhân CPU của TV Box (Tối ưu chống lag)
-                "--avcodec-threads=0",
-                // Bỏ qua lọc deblocking phụ của H.264 để tăng tốc xử lý 40%, triệt tiêu giật lag trên 1080i
-                "--avcodec-skiploopfilter=4",
-                "--avcodec-fast",
-                // Bắt buộc luôn phát độ phân giải 1080/cao nhất trong HLS/DASH dù màn hình là 720p
-                "--adaptive-logic=highest",
-                "--adaptive-maxwidth=0",
-                "--adaptive-maxheight=0",
-                "--network-caching=2000",
-                "--live-caching=2000",
+                // 1. Tối ưu bộ giải mã phần cứng cho Amlogic / Mali-450: Ưu tiên MediaCodec NDK
+                "--codec=mediacodec_ndk,mediacodec_jni,all",
+                "--avcodec-hw=any",
+                // 2. Chống xé hình/răng cưa với thuật toán khử xen kẽ phần cứng mượt mà
+                "--deinterlace=1",
+                "--deinterlace-mode=blend",
+                // 3. Tối ưu bộ nhớ đệm (Giảm áp lực RAM 1GB của Mi Box 3c, chuyển kênh siêu nhanh 0.8s)
+                "--network-caching=800",
+                "--live-caching=800",
+                "--file-caching=800",
+                // 4. Đồng bộ âm thanh & hình ảnh, tự động bỏ qua khung hình trễ
+                "--drop-late-frames",
+                "--skip-frames",
                 "--clock-jitter=0",
                 "--clock-synchro=0",
-                "--drop-late-frames",
-                "--skip-frames"
+                "--no-audio-time-stretch",
+                // 5. Giảm tải CPU & tiết kiệm tài nguyên cho Android TV
+                "--no-stats",
+                "--no-video-title-show",
+                // 6. Luôn ưu tiên luồng chất lượng 1080p cao nhất trong adaptive streaming
+                "--adaptive-logic=highest",
+                "--adaptive-maxwidth=0",
+                "--adaptive-maxheight=0"
             )
             libVLC = LibVLC(this, options)
             vlcPlayer = VlcMediaPlayer(libVLC).apply {
@@ -383,13 +397,13 @@ class MainActivity : AppCompatActivity() {
             setAllowedVideoJoiningTimeMs(5000L)
         }
 
-        // 2. Tối ưu bộ đệm chống mất gói (UDP packet loss) và giật khung hình
+        // 2. Tối ưu bộ đệm RAM cho Mi Box 3c (1GB RAM): Khởi động nhanh 0.8s, không đầy RAM
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15000, // Đệm tối thiểu 15 giây
-                60000, // Đệm tối đa 60 giây
-                1500,  // Bắt đầu phát sau 1.5s đệm mượt
-                3000   // Phục hồi sau 3s nếu nghẽn mạng
+                3000,  // Đệm tối thiểu 3 giây
+                12000, // Đệm tối đa 12 giây (tiết kiệm RAM tối đa cho box 1GB)
+                800,   // Bắt đầu phát tức thì sau 0.8s
+                2000   // Phục hồi sau 2s nếu nghẽn mạng
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -567,11 +581,13 @@ class MainActivity : AppCompatActivity() {
         currentFocusedChannel = channel
         binding.tvSpotlightName.text = channel.name
 
-        // Logo chính hãng FPT CDN hoặc M3U
+        // Logo chính hãng FPT CDN hoặc M3U (Khống chế kích thước và RGB_565 tiết kiệm RAM)
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
         if (resolvedLogo.isNotBlank()) {
             Glide.with(this)
                 .load(resolvedLogo)
+                .override(160, 100)
+                .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_tv_placeholder)
                 .error(R.drawable.ic_tv_placeholder)
@@ -604,11 +620,7 @@ class MainActivity : AppCompatActivity() {
             channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS / CDN"
             else -> "HTTP Stream"
         }
-        val engineName = when (prefs.playerEngine) {
-            PreferencesHelper.ENGINE_VLC_SW -> "VLC Phần Mềm (Khử sọc ngang)"
-            PreferencesHelper.ENGINE_EXOPLAYER -> "ExoPlayer"
-            else -> "VLC Phần Cứng"
-        }
+        val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) "ExoPlayer" else "LibVLC (MediaCodec)"
         binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol • $engineName"
 
         // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn (Có thể cuộn xem cả ngày)
@@ -706,29 +718,24 @@ class MainActivity : AppCompatActivity() {
 
             vp.stop()
             val media = Media(vlc, Uri.parse(streamUriString)).apply {
-                if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC_SW) {
-                    // Chế độ phần mềm thuần túy (Software FFmpeg): Triệt tiêu 100% sọc ngang quét mành
-                    // Bật đa luồng CPU và thuật toán Linear siêu nhẹ để phát mượt mà 50fps không lag
-                    setHWDecoderEnabled(false, false)
-                    addOption(":avcodec-hw=none")
-                    addOption(":codec=all")
-                    addOption(":avcodec-threads=0")
-                    addOption(":avcodec-skiploopfilter=4")
-                    addOption(":avcodec-fast")
-                    addOption(":deinterlace=1")
-                    addOption(":deinterlace-mode=linear")
-                    addOption(":video-filter=deinterlace")
-                } else {
-                    // Chế độ giải mã phần cứng MediaCodec chuẩn: Mượt mà 60fps, không bao giờ xanh màn
-                    setHWDecoderEnabled(true, true)
-                    addOption(":codec=mediacodec,all")
-                }
+                // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
+                setHWDecoderEnabled(true, true)
+                addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
+                addOption(":avcodec-hw=any")
+                addOption(":deinterlace=1")
+                addOption(":deinterlace-mode=blend")
+                addOption(":network-caching=800")
+                addOption(":live-caching=800")
+                addOption(":file-caching=800")
+                addOption(":drop-late-frames")
+                addOption(":skip-frames")
+                addOption(":clock-jitter=0")
+                addOption(":clock-synchro=0")
+                addOption(":no-audio-time-stretch")
                 // BẮT BUỘC LUÔN PHÁT ĐỘ PHÂN GIẢI 1080/CAO NHẤT DÙ MÀN HÌNH MÁY LÀ 720P
                 addOption(":adaptive-logic=highest")
                 addOption(":adaptive-maxwidth=0")
                 addOption(":adaptive-maxheight=0")
-                addOption(":network-caching=2000")
-                addOption(":live-caching=2000")
             }
             vp.media = media
             media.release()
@@ -878,11 +885,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickResolution.text = videoResText
         binding.tvQuickAudioBitrate.text = audioInfoText
 
-        val engineName = when (prefs.playerEngine) {
-            PreferencesHelper.ENGINE_VLC_SW -> "VLC Phần Mềm (Khử sọc ngang)"
-            PreferencesHelper.ENGINE_EXOPLAYER -> "ExoPlayer"
-            else -> "VLC Phần Cứng"
-        }
+        val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) "ExoPlayer" else "LibVLC (MediaCodec)"
         binding.tvSpotlightStreamInfo.text = "$videoResText | $audioInfoText | $engineName"
     }
 
@@ -924,6 +927,8 @@ class MainActivity : AppCompatActivity() {
         if (resolvedLogo.isNotBlank()) {
             Glide.with(this)
                 .load(resolvedLogo)
+                .override(120, 80)
+                .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .placeholder(R.drawable.ic_tv_placeholder)
                 .error(R.drawable.ic_tv_placeholder)

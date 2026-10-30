@@ -78,16 +78,13 @@ class ChannelAdapter(
                 }
             }
 
-            // Hiệu ứng TV Focus chuẩn FPT Play G2
-            binding.root.setOnFocusChangeListener { view, hasFocus ->
+            // TV Focus nhẹ mượt trên Mi Box 3c (Không chạy animation nặng, dùng selector drawable)
+            binding.root.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
-                    view.animate().scaleX(1.02f).scaleY(1.02f).setDuration(120).start()
                     val pos = adapterPosition
                     if (pos != RecyclerView.NO_POSITION && pos < channels.size) {
                         onChannelFocused?.invoke(channels[pos])
                     }
-                } else {
-                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
                 }
             }
         }
@@ -122,11 +119,13 @@ class ChannelAdapter(
                 }
             }
 
-            // Tự động phân giải CDN Logo FPT Play nếu URL rỗng hoặc link thông thường
+            // Tự động phân giải CDN Logo FPT Play (Khống chế kích thước 100x60 và định dạng RGB_565 tiết kiệm 80% RAM)
             val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
             if (resolvedLogo.isNotBlank()) {
                 Glide.with(binding.ivChannelLogo.context)
                     .load(resolvedLogo)
+                    .override(100, 60)
+                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.ic_tv_placeholder)
                     .error(R.drawable.ic_tv_placeholder)

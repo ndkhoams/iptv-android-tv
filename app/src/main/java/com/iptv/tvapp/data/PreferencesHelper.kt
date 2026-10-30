@@ -153,9 +153,12 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getString(KEY_DEFAULT_STARTUP_NAME, null)
         set(value) = prefs.edit().putString(KEY_DEFAULT_STARTUP_NAME, value).apply()
 
-    // Trình phát video: VLC (Khử răng cưa 1080i) hoặc EXOPLAYER
+    // Trình phát video: VLC hoặc EXOPLAYER (Mặc định VLC tối ưu phần cứng cho Android TV)
     var playerEngine: String
-        get() = prefs.getString(KEY_PLAYER_ENGINE, ENGINE_VLC) ?: ENGINE_VLC
+        get() {
+            val v = prefs.getString(KEY_PLAYER_ENGINE, ENGINE_VLC) ?: ENGINE_VLC
+            return if (v == ENGINE_EXOPLAYER) ENGINE_EXOPLAYER else ENGINE_VLC
+        }
         set(value) = prefs.edit().putString(KEY_PLAYER_ENGINE, value).apply()
 
     // ===== CÀI ĐẶT MÁY CHỦ UDPXY (SERVER:PORT) =====
