@@ -54,21 +54,23 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.11' }}
-        name: v1.9.11 - Đo Bitrate Thực Tế Thời Gian Thực, Tái Cấu Trúc Bố Cục Thẻ OSD Góc Dưới
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.12' }}
+        name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.12' }} - Đo độ phân giải video thực tế từ Decoder phần cứng
         body: |
-          ### Bản cập nhật v1.9.11 cho TV Play Android TV:
-          - **Đo lường Bitrate thực tế thời gian thực qua Kernel Linux TrafficStats:**
-            - Chấm dứt triệt để tình trạng mọi video đều hiện cố định 8.0 Mbps.
-            - Đo đạc chính xác lưu lượng byte mạng tức thời (TrafficStats & LibVLC Stats), áp dụng thuật toán làm mượt (EMA) giúp con số hiển thị chính xác theo từng kênh (từ 1.8 Mbps SD, 3-5 Mbps HD đến 8-15 Mbps FHD/4K).
-            - Bộ đếm chỉ chạy khi hiển thị banner OSD/Overlay để tiết kiệm 100% tài nguyên CPU khi xem toàn màn hình.
-          - **Tái cấu trúc bố cục 3 dòng thẻ OSD thông tin nhanh góc dưới:**
-            - **Dòng 1:** Số thứ tự kênh + Logo kênh + Tên kênh (Ví dụ: `01 [Logo] VTV1 (HD 8Mbps)`).
-            - **Dòng 2 (Màu cam):** Lịch phát sóng EPG thời gian thực (`● Đang phát: Bản tin Thời sự (20:00 - 21:00)`).
-            - **Dòng 3 (Màu xanh Cyan):** Kích thước độ phân giải @ FPS • Bitrate đo thực tế • Thông tin Audio chi tiết (`1920x1080 @ 50fps • 8.4 Mbps • AAC Stereo 2.0 (48kHz)`).
-          - **Kế thừa toàn bộ tối ưu mượt mà từ v1.9.10:**
-            - Khóa tiêu điểm D-pad bằng `TvLinearLayoutManager`, cuộn nhanh không bao giờ mất focus.
-            - Máy chủ udpxy ở mục số 2 đầu trang không bị bàn phím che khuất.
+          ### Bản cập nhật v1.9.12 cho TV Play Android TV:
+          - **Đo kích thước độ phân giải thực tế từ bộ giải mã phần cứng (Hardware Decoder):**
+            - Chấm dứt triệt để tình trạng mọi kênh đều hiển thị cố định `1920x1080 @ 50fps`.
+            - LibVLC: Tự động trích xuất thông số khung hình từ `IMedia.VideoTrack` và lắng nghe sự kiện `ESAdded` khi luồng video bắt đầu giải mã.
+            - ExoPlayer: Kết hợp đọc kích thước chính xác từ `videoFormat` và `videoSize`.
+            - Hiển thị đúng từng độ phân giải thực tế: `720x576 @ 50fps` (SD), `1280x720 @ 50fps` (HD), `1920x1080 @ 50fps` (FHD), `3840x2160 @ 50fps` (4K).
+            - Trạng thái nhận diện trung thực trong khoảnh khắc đầu nạp luồng: `Đang nhận diện video... • --- Mbps`.
+          - **Kế thừa các tính năng nổi bật từ v1.9.11:**
+            - Đo bitrate thời gian thực qua TrafficStats của Linux Kernel.
+            - Bố cục OSD góc dưới 3 dòng rõ ràng: Tên kênh/Logo, EPG đang phát (màu cam), và Thông số kỹ thuật (màu cyan).
+            - Khóa tiêu điểm D-pad không mất focus, máy chủ udpxy không bị bàn phím che khuất.
+        files: app/build/outputs/apk/debug/app-debug.apk
+        prerelease: false
+        make_latest: true
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
