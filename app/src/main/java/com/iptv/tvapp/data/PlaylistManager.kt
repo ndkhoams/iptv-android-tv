@@ -43,17 +43,19 @@ class PlaylistManager(private val context: Context) {
         .build()
 
     companion object {
-        // Danh sách các User-Agent mô phỏng điện thoại và trình phát phổ biến
+        // Danh sách các User-Agent xoay vòng: Mặc định ưu tiên TiviMate và OTT Navigator
         val USER_AGENTS = listOf(
-            // 1. Mobile Android Chrome (Trình duyệt điện thoại Android chính thống)
+            // 1. TiviMate IPTV Player (Mặc định danh tính chuẩn IPTV Android TV phổ biến nhất)
+            "TiviMate/5.0.4 (Android TV)",
+            // 2. OTT Navigator IPTV Player (Danh tính chuẩn trình phát IPTV OTT Navigator)
+            "OTT Navigator/1.6.9.1 (Android TV; Android 12; arm64-v8a)",
+            // 3. Mobile Android Chrome (Trình duyệt điện thoại Android chính thống)
             "Mozilla/5.0 (Linux; Android 14; Mobile; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-            // 2. Mobile iOS Safari (Trình duyệt điện thoại iPhone)
+            // 4. Mobile iOS Safari (Trình duyệt điện thoại iPhone)
             "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
-            // 3. VLC Media Player (Đầu phát đa phương tiện IPTV chuẩn)
+            // 5. VLC Media Player (Đầu phát đa phương tiện IPTV chuẩn)
             "VLC/3.0.18 LibVLC/3.0.18",
-            // 4. TiviMate IPTV Player (Ứng dụng IPTV Android TV phổ biến)
-            "TiviMate/4.7.0 (Android TV)",
-            // 5. Desktop Chrome (Dự phòng cho các link yêu cầu desktop)
+            // 6. Desktop Chrome (Dự phòng cho các link yêu cầu desktop)
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
     }

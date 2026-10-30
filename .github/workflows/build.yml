@@ -54,15 +54,16 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.2' }}
-        name: v1.9.2 - Tương thích nguồn Playlist Di động & Bóc tách M3U
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.3' }}
+        name: v1.9.3 - Sao Lưu Cấu Hình, Khắc Phục Cài Đè APK & Tối Ưu EPG
         body: |
-          ### Bản cập nhật v1.9.2 cho TV Play Android TV:
-          - **Tương thích nguồn Playlist Di động:** Chuyển đổi User-Agent mặc định sang Mobile Android Chrome & iOS Safari kèm bộ Header di động đầy đủ (sec-ch-ua-mobile, Accept stream), giúp tải mượt mà các link M3U được bảo vệ hoặc chỉ trả dữ liệu cho trình duyệt điện thoại (như Cloudflare Pages `thtt.pages.dev/ttt.m3u`).
-          - **Cơ chế xoay vòng User-Agent tự động:** Tự động thử qua nhiều danh tính (Mobile Chrome, Safari, VLC, TiviMate, Desktop) nếu server chặn hoặc trả về trang web mẫu.
-          - **Tự động bóc tách link M3U nhúng trong HTML:** Nhận diện và tự động chuyển hướng theo các thẻ meta refresh, thẻ `<a href="...m3u">` hoặc mã M3U nhúng trong trang web.
-          - **Bộ nhớ Cookie tự động (CookieJar):** Duy trì cookie phiên qua các lần redirect để vượt qua trang xác thực.
-          - **Bao gồm các cải tiến trước:** Giao diện EPG toàn màn hình mượt mà, bấm OK trên EPG để phát, logo TV viền cam, thẻ dài Android TV, chuẩn FHD 1080 và thẻ OSD 10s khi Back.
+          ### Bản cập nhật v1.9.3 cho TV Play Android TV:
+          - **Khắc phục lỗi không cài đè được APK:** Đóng gói chữ ký số cố định vĩnh viễn (RSA 2048-bit, thời hạn 27 năm), giải quyết triệt để lỗi xung đột chữ ký ngẫu nhiên của máy ảo GitHub Actions. Từ bản này trở đi, người dùng luôn có thể cài đè trực tiếp cập nhật trên TV Box mà không cần gỡ ứng dụng và giữ nguyên toàn bộ cấu hình.
+          - **Tính năng Sao Lưu & Khôi Phục Cấu Hình (Backup & Restore):** Hỗ trợ xuất và nạp lại toàn bộ danh sách M3U, kênh yêu thích, server udpxy và cài đặt hệ thống ra/vào file `tvplay_backup.json` qua cả menu TV và Web Remote (`:8080`). Tự động sao lưu dự phòng kép (Auto-Backup Mirror) và tự động nhận diện khôi phục khi cài lại.
+          - **Sửa triệt để lỗi đè chữ ở Lịch phát sóng (EPG):** Giới hạn viewport RecyclerView chuẩn xác, loại bỏ lỗi tràn biên đồ họa làm chữ chương trình đè lên tiêu đề EPG và footer udpxy.
+          - **Ưu tiên danh tính TiviMate & OTT Navigator:** Mặc định gửi danh tính TiviMate và OTT Navigator khi tải playlist để tương thích hoàn hảo với các nguồn IPTV có bảo vệ, kèm cơ chế Multi-UA fallback tự động.
+          - **Chuẩn hóa link mặc định:** Đổi link mặc định thành `https://121124.xyz/tv/fpt`, tự động xử lý và gắn cổng udpxy theo máy chủ người dùng đã cấu hình.
+          - **Xuất / Tải Playlist chuẩn TiviMate & OTT Navigator:** Bổ sung nút tải file `.m3u` và endpoint trực tiếp `http://[IP]:8080/playlist.m3u` trên Web Remote.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

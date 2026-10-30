@@ -157,6 +157,19 @@ object WebPageTemplate {
             <button class="submit-btn" style="background:#10b981;" onclick="uploadLocalPlaylist()">⬆ Tải File Lên TV</button>
         </div>
 
+        <div class="form-card">
+            <h3>📥 Xuất / Tải Playlist Cho TiviMate &amp; OTT Navigator</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tải toàn bộ danh sách kênh kèm EPG và udpxy chuẩn định dạng M3U dùng cho TiviMate, OTT Navigator, VLC.</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <a href="/playlist.m3u" download="tvplay_tivimate.m3u" class="submit-btn" style="text-align:center; text-decoration:none; background:#8B5CF6; display:block;">
+                    📥 Tải File M3U (Chuẩn TiviMate / OTT Navigator)
+                </a>
+                <p style="font-size:11px; color:#94A3B8; margin:0;">
+                    💡 <b>Mẹo nhập link trực tiếp:</b> Trong TiviMate / OTT Navigator, bạn có thể nhập URL M3U trực tiếp là: <code style="color:var(--accent); font-weight:bold;" id="lblTiviMateUrl">http://.../playlist.m3u</code>
+                </p>
+            </div>
+        </div>
+
         <h3 style="font-size:15px; margin-bottom:10px; color:var(--text-main);">Danh Sách Playlist Đã Có:</h3>
         <div id="playlistsContainer">Đang tải...</div>
     </div>
@@ -193,6 +206,19 @@ object WebPageTemplate {
                 <input type="text" id="txtUdpxyServer" class="form-input" placeholder="Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022">
             </div>
             <button class="submit-btn" onclick="updateUdpxySettings()">Lưu Cấu Hình udpxy</button>
+        </div>
+
+        <div class="form-card">
+            <h3>💾 Sao Lưu &amp; Khôi Phục Cấu Hình</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, kênh yêu thích, udpxy và thiết lập về điện thoại/máy tính hoặc khôi phục lại.</p>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <button class="submit-btn" style="flex:1; background:#38BDF8;" onclick="downloadBackup()">📥 Tải File Sao Lưu (.json)</button>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+                <label>Khôi phục từ file sao lưu trên máy:</label>
+                <input type="file" id="fileRestore" accept=".json" class="form-input" style="padding:6px;">
+            </div>
+            <button class="submit-btn" style="background:#10B981;" onclick="restoreBackupFromFile()">📤 Khôi Phục Cấu Hình</button>
         </div>
     </div>
 
@@ -262,6 +288,10 @@ object WebPageTemplate {
             .then(function(data) {
                 document.getElementById('bannerChName').innerText = data.nowPlaying || 'Chưa phát kênh';
                 document.getElementById('tvIpBadge').innerText = 'TV: ' + data.ip;
+                var tiviMateEl = document.getElementById('lblTiviMateUrl');
+                if (tiviMateEl) {
+                    tiviMateEl.innerText = window.location.origin + '/playlist.m3u';
+                }
             }).catch(function() {});
         }
 
@@ -433,7 +463,6 @@ object WebPageTemplate {
             }).then(function() {
                 showToast('Đã chuyển playlist trên TV!');
                 loadPlaylists();
-                fetchStatus();
             }).catch(function() {});
         }
 
@@ -486,6 +515,40 @@ object WebPageTemplate {
             }).catch(function() {
                 showToast('Lỗi lưu server udpxy!');
             });
+        }
+
+        function downloadBackup() {
+            window.location.href = '/api/backup';
+        }
+
+        function restoreBackupFromFile() {
+            var fileInput = document.getElementById('fileRestore');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast('Vui lòng chọn file .json để khôi phục!');
+                return;
+            }
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var content = e.target.result;
+                fetch('/api/restore', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: content
+                }).then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        showToast('Đã khôi phục thành công toàn bộ cài đặt!');
+                        loadPlaylists();
+                        loadSettings();
+                    } else {
+                        showToast('Lỗi: File sao lưu không hợp lệ!');
+                    }
+                }).catch(function() {
+                    showToast('Lỗi khôi phục cấu hình!');
+                });
+            };
+            reader.readAsText(file);
         }
 
         fetchStatus();

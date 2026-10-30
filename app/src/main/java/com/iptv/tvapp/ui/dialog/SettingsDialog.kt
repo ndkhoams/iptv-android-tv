@@ -2,6 +2,7 @@ package com.iptv.tvapp.ui.dialog
 
 import android.app.Dialog
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.ViewGroup
@@ -77,6 +78,43 @@ class SettingsDialog(
             binding.etNewPlaylistName.text?.clear()
             binding.etNewPlaylistUrl.text?.clear()
             Toast.makeText(context, "Đã thêm danh sách thành công!", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnBackupConfig.setOnClickListener {
+            val file = prefs.saveAutoBackup()
+            if (file != null) {
+                binding.tvBackupStatus.text = "✓ Đã sao lưu thành công: ${file.name}"
+                binding.tvBackupStatus.setTextColor(Color.parseColor("#34D399"))
+                Toast.makeText(context, "Đã sao lưu cấu hình: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "Lỗi khi sao lưu dữ liệu!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnRestoreConfig.setOnClickListener {
+            val picker = LocalFilePickerDialog(
+                context = context,
+                onFileSelected = { file ->
+                    try {
+                        val content = file.readText(Charsets.UTF_8)
+                        if (prefs.restoreFromBackupJson(content)) {
+                            hasChangedPlaylist = true
+                            initPlaylistsList()
+                            initPlayerEngineSettings()
+                            initBootSettings()
+                            initUdpxySettings()
+                            binding.tvBackupStatus.text = "✓ Đã khôi phục thành công từ file: ${file.name}"
+                            binding.tvBackupStatus.setTextColor(Color.parseColor("#34D399"))
+                            Toast.makeText(context, "Đã khôi phục thành công từ: ${file.name}", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "File sao lưu không đúng định dạng!", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Lỗi đọc file: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+            picker.show()
         }
 
         binding.btnCloseSettings.setOnClickListener {

@@ -11,16 +11,29 @@ android {
         applicationId "com.iptv.tvapp"
         minSdk 21
         targetSdk 34
-        versionCode 11
-        versionName "1.9.2"
+        versionCode 12
+        versionName "1.9.3"
 
         multiDexEnabled true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        tvAppSign {
+            storeFile file("tvapp.keystore")
+            storePassword "tvapp123"
+            keyAlias "tvapp"
+            keyPassword "tvapp123"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.tvAppSign
+        }
         release {
+            signingConfig signingConfigs.tvAppSign
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

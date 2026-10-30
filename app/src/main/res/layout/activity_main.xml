@@ -516,15 +516,14 @@
                     android:layout_marginTop="8dp"
                     android:orientation="vertical"
                     android:background="#151329"
-                    android:clipChildren="false"
-                    android:clipToPadding="false"
                     android:padding="8dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="4dp">
 
                         <TextView
                             android:layout_width="0dp"
@@ -544,15 +543,14 @@
                             android:textSize="9sp" />
                     </LinearLayout>
 
-                    <!-- Danh sách timeline EPG -->
+                    <!-- Danh sách timeline EPG (Được giới hạn khung nhìn chuẩn xác, không tràn đè chữ) -->
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvSpotlightEpg"
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="1"
-                        android:layout_marginTop="4dp"
-                        android:clipChildren="false"
-                        android:clipToPadding="false"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="4dp"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
                         android:descendantFocusability="afterDescendants"
