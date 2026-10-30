@@ -32,7 +32,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: ./gradlew assembleDebug --info
 
     - name: Push Error Log to Branch if Failed
       if: failure()
@@ -40,9 +40,9 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git checkout -B build-error-log
-        ./gradlew assembleDebug --stacktrace 2>&1 | tail -n 80 > error_report.txt || true
+        ./gradlew assembleDebug --info 2>&1 | grep -C 5 "e: " > error_report.txt || true
         git add error_report.txt
-        git commit -m "Auto report: build error details"
+        git commit -m "Auto report: exact kotlin error"
         git push origin build-error-log --force
 
     - name: Upload APK Artifact
