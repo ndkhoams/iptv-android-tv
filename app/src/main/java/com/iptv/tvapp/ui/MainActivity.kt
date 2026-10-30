@@ -231,7 +231,6 @@ class MainActivity : AppCompatActivity() {
                 DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
                 DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO
             )
-            setTsExtractorTimestampSearchBytes(188 * 1024)
         }
 
         // 4. Hỗ trợ đầy đủ HTTP / HTTPS và giao thức luồng mạng UDP multicast
