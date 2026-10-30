@@ -32,9 +32,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Debug APK
-      id: build_apk
-      run: |
-        ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log
+      run: ./gradlew assembleDebug --stacktrace
 
     - name: Push Error Log to Branch if Failed
       if: failure()
@@ -42,7 +40,7 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git checkout -B build-error-log
-        grep -i -E "error:|exception:|failed|e: " -C 2 build.log | tail -n 100 > error_report.txt || tail -n 100 build.log > error_report.txt
+        ./gradlew assembleDebug --stacktrace 2>&1 | tail -n 80 > error_report.txt || true
         git add error_report.txt
         git commit -m "Auto report: build error details"
         git push origin build-error-log --force
