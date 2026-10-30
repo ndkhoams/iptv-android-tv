@@ -54,8 +54,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.12' }}
-        name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.12' }} - Đo độ phân giải video thực tế từ Decoder phần cứng
+        tag_name: ${{ github.ref_name }}
+        name: "v1.9.12 - Đo độ phân giải video thực tế từ Decoder phần cứng"
         body: |
           ### Bản cập nhật v1.9.12 cho TV Play Android TV:
           - **Đo kích thước độ phân giải thực tế từ bộ giải mã phần cứng (Hardware Decoder):**
@@ -68,9 +68,6 @@ jobs:
             - Đo bitrate thời gian thực qua TrafficStats của Linux Kernel.
             - Bố cục OSD góc dưới 3 dòng rõ ràng: Tên kênh/Logo, EPG đang phát (màu cam), và Thông số kỹ thuật (màu cyan).
             - Khóa tiêu điểm D-pad không mất focus, máy chủ udpxy không bị bàn phím che khuất.
-        files: app/build/outputs/apk/debug/app-debug.apk
-        prerelease: false
-        make_latest: true
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
