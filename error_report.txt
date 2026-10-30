@@ -1,0 +1,16 @@
+./app/build/intermediates/symbol_list_with_package_name/debug/package-aware-r.txt
+./app/build/intermediates/runtime_symbol_list/debug/R.txt
+./app/build/intermediates/source_set_path_map/debug/file-map.txt
+./app/build/intermediates/stable_resource_ids_file/debug/stableIds.txt
+./app/build/intermediates/manifest_merge_blame_file/debug/manifest-merger-blame-debug-report.txt
+./app/build/intermediates/local_only_symbol_list/debug/R-def.txt
+./app/build/outputs/logs/manifest-merger-debug-report.txt
+./app/build/kotlin/compileDebugKotlin/cacheable/dirty-sources.txt
+./error_report.txt
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///home/runner/work/iptv-android-tv/iptv-android-tv/app/src/main/java/com/iptv/tvapp/ui/MainActivity.kt:232:47 Unresolved reference: FLAG_IGNORE_SPLICE_INFO
+
+FAILURE: Build failed with an exception.
+
