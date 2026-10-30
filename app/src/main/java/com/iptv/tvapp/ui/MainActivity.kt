@@ -206,20 +206,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayer() {
-        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder chống lỗi sọc ngang răng cưa
+        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder khử sọc ngang răng cưa 1080i FPT
         val renderersFactory = DefaultRenderersFactory(this).apply {
             setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             setEnableDecoderFallback(true) // Cho phép chuyển codec dự phòng nếu codec phần cứng lỗi 1080i
-            setAllowedVideoJoiningTimeMs(5000)
+            setAllowedVideoJoiningTimeMs(5000L)
         }
 
         // 2. Tối ưu bộ đệm chống mất gói (UDP packet loss) và giật khung hình
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15_000, // Đệm tối thiểu 15 giây
-                60_000, // Đệm tối đa 60 giây
-                1_500,  // Bắt đầu phát sau 1.5s đệm mượt
-                3_000   // Phục hồi sau 3s nếu nghẽn mạng
+                15000, // Đệm tối thiểu 15 giây
+                60000, // Đệm tối đa 60 giây
+                1500,  // Bắt đầu phát sau 1.5s đệm mượt
+                3000   // Phục hồi sau 3s nếu nghẽn mạng
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -241,7 +241,8 @@ class MainActivity : AppCompatActivity() {
             .setAllowCrossProtocolRedirects(true)
 
         val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
-        val mediaSourceFactory = DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(this, extractorsFactory)
+            .setDataSourceFactory(defaultDataSourceFactory)
 
         player = ExoPlayer.Builder(this)
             .setRenderersFactory(renderersFactory)
