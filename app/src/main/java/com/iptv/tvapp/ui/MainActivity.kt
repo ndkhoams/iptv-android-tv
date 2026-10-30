@@ -649,25 +649,37 @@ class MainActivity : AppCompatActivity() {
         binding.layoutBuffering.visibility = View.VISIBLE
         binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
-        val streamUriString = normalizeStreamUrl(channel.streamUrl)
+        val isVlc = prefs.playerEngine == PreferencesHelper.ENGINE_VLC
+        val streamUriString = normalizeStreamUrl(channel.streamUrl, isVlc)
 
-        if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) {
+        if (isVlc) {
             playWithVlc(streamUriString)
         } else {
             playWithExoPlayer(streamUriString)
         }
     }
 
-    private fun normalizeStreamUrl(rawUrl: String): String {
-        var streamUriString = rawUrl.trim()
-        if (streamUriString.startsWith("udp://@", ignoreCase = true)) {
-            streamUriString = "udp://" + streamUriString.substring(7)
-        } else if (streamUriString.startsWith("rtp://@", ignoreCase = true)) {
-            streamUriString = "udp://" + streamUriString.substring(7)
-        } else if (streamUriString.startsWith("rtp://", ignoreCase = true)) {
-            streamUriString = "udp://" + streamUriString.substring(6)
+    private fun normalizeStreamUrl(rawUrl: String, isVlc: Boolean): String {
+        val trimmed = rawUrl.trim()
+        return if (isVlc) {
+            // LibVLC chuẩn Multicast: BẮT BUỘC phải có '@' trước IP Multicast (ví dụ: udp://@225.1.2.249:30120)
+            // Ký tự '@' là cú pháp chuẩn của VLC để kích hoạt socket bind và gửi bản tin IGMP Join tới nhóm multicast.
+            when {
+                trimmed.startsWith("udp://@", ignoreCase = true) -> trimmed
+                trimmed.startsWith("udp://", ignoreCase = true) -> "udp://@" + trimmed.substring(6)
+                trimmed.startsWith("rtp://@", ignoreCase = true) -> trimmed
+                trimmed.startsWith("rtp://", ignoreCase = true) -> "rtp://@" + trimmed.substring(6)
+                else -> trimmed
+            }
+        } else {
+            // ExoPlayer: Chuẩn Java URI không chấp nhận '@' trong host name
+            when {
+                trimmed.startsWith("udp://@", ignoreCase = true) -> "udp://" + trimmed.substring(7)
+                trimmed.startsWith("rtp://@", ignoreCase = true) -> "udp://" + trimmed.substring(7)
+                trimmed.startsWith("rtp://", ignoreCase = true) -> "udp://" + trimmed.substring(6)
+                else -> trimmed
+            }
         }
-        return streamUriString
     }
 
     private fun playWithVlc(streamUriString: String) {
