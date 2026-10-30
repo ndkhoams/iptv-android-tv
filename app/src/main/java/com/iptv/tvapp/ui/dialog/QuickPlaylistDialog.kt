@@ -92,21 +92,41 @@ class QuickPlaylistDialog(
                 binding.root.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
                         v.animate().scaleX(1.02f).scaleY(1.02f).setDuration(100).start()
+                        binding.tvPlaylistName.setTextColor(Color.parseColor("#111827"))
+                        val pos = adapterPosition
+                        if (pos != RecyclerView.NO_POSITION && !items[pos].isSelected) {
+                            binding.tvRadioIcon.setTextColor(Color.parseColor("#475569"))
+                        }
                     } else {
                         v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
+                        val pos = adapterPosition
+                        if (pos != RecyclerView.NO_POSITION) {
+                            if (items[pos].isSelected) {
+                                binding.tvPlaylistName.setTextColor(Color.parseColor("#FF6500"))
+                                binding.tvRadioIcon.setTextColor(Color.parseColor("#FF6500"))
+                            } else {
+                                binding.tvPlaylistName.setTextColor(Color.parseColor("#F8FAFC"))
+                                binding.tvRadioIcon.setTextColor(Color.parseColor("#64748B"))
+                            }
+                        } else {
+                            binding.tvPlaylistName.setTextColor(Color.parseColor("#F8FAFC"))
+                        }
                     }
                 }
             }
 
             fun bind(item: PlaylistSource) {
                 binding.tvPlaylistName.text = item.name
+                val isFocused = binding.root.hasFocus()
                 if (item.isSelected) {
                     binding.tvRadioIcon.text = "◉"
                     binding.tvRadioIcon.setTextColor(Color.parseColor("#FF6500"))
+                    binding.tvPlaylistName.setTextColor(if (isFocused) Color.parseColor("#111827") else Color.parseColor("#FF6500"))
                     binding.tvActiveBadge.visibility = View.VISIBLE
                 } else {
                     binding.tvRadioIcon.text = "○"
                     binding.tvRadioIcon.setTextColor(Color.parseColor("#64748B"))
+                    binding.tvPlaylistName.setTextColor(if (isFocused) Color.parseColor("#111827") else Color.parseColor("#F8FAFC"))
                     binding.tvActiveBadge.visibility = View.GONE
                 }
             }

@@ -600,12 +600,12 @@ class MainActivity : AppCompatActivity() {
             binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
         }
 
-        // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), tự động cập nhật chính xác từ luồng phát thực tế
+        // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), các kênh HD tại Việt Nam là 1080i/1080p
         val upperName = channel.name.uppercase()
         binding.tvSpotlightResolution.text = when {
             upperName.contains("4K") -> "4K UHD"
-            upperName.contains("FHD") || upperName.contains("1080") -> "FHD 1080"
-            upperName.contains("HD") || upperName.contains("720") -> "HD 720p"
+            upperName.contains("720") -> "HD 720p"
+            upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
             else -> "FHD 1080"
         }
 
@@ -749,7 +749,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateDynamicResolutionBadge(width: Int, height: Int) {
         val badgeText = when {
             height >= 2000 || width >= 3800 -> "4K UHD"
-            height >= 1000 || width >= 1900 -> "FHD 1080"
+            height >= 900 || width >= 1400 -> "FHD 1080"
             height >= 700 || width >= 1200 -> "HD 720p"
             height > 0 -> "SD ${height}p"
             else -> "FHD 1080"
@@ -808,8 +808,8 @@ class MainActivity : AppCompatActivity() {
         val upperName = channel.name.uppercase()
         val defaultRes = when {
             upperName.contains("4K") -> "4K UHD"
-            upperName.contains("FHD") || upperName.contains("1080") -> "FHD 1080"
-            upperName.contains("HD") || upperName.contains("720") -> "HD 720p"
+            upperName.contains("720") -> "HD 720p"
+            upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
             else -> "FHD 1080"
         }
         binding.tvQuickResolution.text = "$defaultRes • TV Play Live"
@@ -817,13 +817,18 @@ class MainActivity : AppCompatActivity() {
         binding.quickChannelInfo.visibility = View.VISIBLE
 
         hideHandler.removeCallbacks(hideQuickBannerRunnable)
-        hideHandler.postDelayed(hideQuickBannerRunnable, 4000)
+        hideHandler.postDelayed(hideQuickBannerRunnable, 10000L)
     }
 
     private fun showChannelActionDialog(channel: Channel) {
         resetOverlayTimer()
         val dialog = ChannelActionDialog(this, channel) {
             refreshChannelsState()
+        }
+        dialog.setOnDismissListener {
+            if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                currentPlayingChannel?.let { showQuickChannelInfo(it) }
+            }
         }
         dialog.show()
     }
@@ -928,6 +933,7 @@ class MainActivity : AppCompatActivity() {
                         finish()
                     } else {
                         backPressedTime = System.currentTimeMillis()
+                        currentPlayingChannel?.let { showQuickChannelInfo(it) }
                         Toast.makeText(this, "Bấm QUAY LẠI lần nữa để thoát ứng dụng", Toast.LENGTH_SHORT).show()
                         return true
                     }
@@ -999,12 +1005,18 @@ class MainActivity : AppCompatActivity() {
                 showSettingsDialog()
             }
         )
+        dialog.setOnDismissListener {
+            if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                currentPlayingChannel?.let { showQuickChannelInfo(it) }
+            }
+        }
         dialog.show()
     }
 
     private fun hideOverlay() {
         binding.channelGuideOverlay.visibility = View.GONE
         hideHandler.removeCallbacks(hideOverlayRunnable)
+        currentPlayingChannel?.let { showQuickChannelInfo(it) }
     }
 
     private fun toggleOverlay() {
@@ -1032,6 +1044,11 @@ class MainActivity : AppCompatActivity() {
             if (engineChanged) {
                 applyPlayerVisibility()
                 currentPlayingChannel?.let { playChannel(it) }
+            }
+        }
+        dialog.setOnDismissListener {
+            if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                currentPlayingChannel?.let { showQuickChannelInfo(it) }
             }
         }
         dialog.show()

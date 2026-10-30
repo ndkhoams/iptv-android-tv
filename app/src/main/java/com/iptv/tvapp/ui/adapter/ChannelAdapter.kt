@@ -102,20 +102,20 @@ class ChannelAdapter(
             binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE
             binding.root.isSelected = isPlaying
 
-            // Phân giải chất lượng từ tên kênh
+            // Phân giải chất lượng từ tên kênh: Kênh HD tại VN là FHD 1080i/1080p
             val upperName = channel.name.uppercase()
             when {
                 upperName.contains("4K") -> {
                     binding.tvResolutionBadge.visibility = View.VISIBLE
                     binding.tvResolutionBadge.text = "4K"
                 }
-                upperName.contains("FHD") || upperName.contains("1080") -> {
+                upperName.contains("720") -> {
+                    binding.tvResolutionBadge.visibility = View.VISIBLE
+                    binding.tvResolutionBadge.text = "720p"
+                }
+                upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> {
                     binding.tvResolutionBadge.visibility = View.VISIBLE
                     binding.tvResolutionBadge.text = "FHD"
-                }
-                upperName.contains("HD") || upperName.contains("720") -> {
-                    binding.tvResolutionBadge.visibility = View.VISIBLE
-                    binding.tvResolutionBadge.text = "HD"
                 }
                 else -> {
                     binding.tvResolutionBadge.visibility = View.GONE

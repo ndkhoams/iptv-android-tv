@@ -19,6 +19,7 @@
         android:text="◉"
         android:textColor="@color/fpt_orange"
         android:textSize="14sp"
+        android:duplicateParentState="true"
         android:layout_marginEnd="10dp" />
 
     <TextView
@@ -27,7 +28,8 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="FPT IPTV"
-        android:textColor="@color/text_primary"
+        android:textColor="@color/selector_fpt_channel_text"
+        android:duplicateParentState="true"
         android:textSize="13sp"
         android:textStyle="bold"
         android:singleLine="true"

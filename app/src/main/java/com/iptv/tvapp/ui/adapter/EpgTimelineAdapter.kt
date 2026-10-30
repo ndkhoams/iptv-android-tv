@@ -43,10 +43,12 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
         init {
             binding.root.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {
-                    view.animate().scaleX(1.03f).scaleY(1.03f).setDuration(120).start()
+                    view.scaleX = 1.0f
+                    view.scaleY = 1.0f
                     view.setBackgroundResource(R.drawable.selector_epg_item)
                 } else {
-                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+                    view.scaleX = 1.0f
+                    view.scaleY = 1.0f
                     val pos = adapterPosition
                     if (pos != RecyclerView.NO_POSITION && pos < programs.size) {
                         val prog = programs[pos]

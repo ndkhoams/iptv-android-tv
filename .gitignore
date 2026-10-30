@@ -16,3 +16,4 @@ local.properties
 source.zip
 *.zip
 *.apk
+.vscode/

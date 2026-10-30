@@ -3,16 +3,84 @@
     android:height="180dp"
     android:viewportWidth="320"
     android:viewportHeight="180">
-    <!-- Background -->
+    <!-- Nền Dark Navy thẻ dài Leanback -->
+    <path
+        android:fillColor="#0D0E1A"
+        android:pathData="M0,0h320v180h-320z" />
+
+    <!-- Dải viền màu Cam FPT đáy thẻ -->
+    <path
+        android:fillColor="#FF6500"
+        android:pathData="M0,172h320v8h-320z" />
+
+    <!-- Khung TV bên trái kèm chân đế -->
+    <path
+        android:fillColor="#FF6500"
+        android:pathData="M110,40H30c-5.5,0 -10,4.5 -10,10v60c0,5.5 4.5,10 10,10h26v8h-16v6h50v-6H74v-8h26c5.5,0 10,-4.5 10,-10V50c0,-5.5 -4.5,-10 -10,-10zM104,114H36V48h68v66z" />
+
+    <!-- Nền màn hình TV tối -->
+    <path
+        android:fillColor="#121324"
+        android:pathData="M36,48h68v66h-68z" />
+
+    <!-- Chữ 'T' ở giữa màn hình TV (Trắng nổi bật) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,64h18v5h-6.5v22h-5v-22H48z" />
+
+    <!-- Chữ 'V' ở giữa màn hình TV (Trắng nổi bật) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,64l5.5,0 4.5,16 4.5,-16 5.5,0 -7,27 -6,0z" />
+
+    <!-- Đèn tín hiệu xanh lá TV -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M100,110a2,2 0 1,0 0.01,0z" />
+
+    <!-- Nhãn chữ 'TV' màu Cam FPT bên phải -->
+    <!-- Chữ T lớn -->
+    <path
+        android:fillColor="#FF6500"
+        android:pathData="M135,55h32v9h-11.5v41h-9v-41H135z" />
+
+    <!-- Chữ V lớn -->
+    <path
+        android:fillColor="#FF6500"
+        android:pathData="M172,55l9.5,0 7.5,30 7.5,-30 9.5,0 -12,50 -10.5,0z" />
+
+    <!-- Chữ PLAY màu Trắng bên cạnh -->
+    <!-- P -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M214,65h16c5.5,0 9.5,3.5 9.5,9s-4,9 -9.5,9h-9v17h-7zM221,77h8c2.5,0 4,-1.5 4,-3.5s-1.5,-3.5 -4,-3.5h-8z" />
+    <!-- L -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M243,65h7v28h13v7h-20z" />
+    <!-- A -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M266,100l9,-35h7l9,35h-7l-2,-9h-9l-2,9zM276,85h6l-3,-13z" />
+    <!-- Y -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M294,65l6,18 6,-18h7l-9.5,21v14h-7v-14l-9.5,-21z" />
+
+    <!-- Huy hiệu IPTV -->
+    <path
+        android:fillColor="#FF6500"
+        android:pathData="M135,122h64c3,0 6,3 6,6v14c0,3 -3,6 -6,6h-64c-3,0 -6,-3 -6,-6v-14c0,-3 3,-6 6,-6z" />
+    <!-- Chữ IPTV trong huy hiệu -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M141,128h4v14h-4zM148,128h8c2.5,0 4.5,1.5 4.5,4s-2,4 -4.5,4h-4v6h-4zM152,133h3c1,0 1.8,-0.5 1.8,-1.5s-0.8,-1.5 -1.8,-1.5h-3zM163,128h13v3.5h-4.5v10.5h-4v-10.5h-4.5zM178,128l3.5,0 3,9 3,-9 3.5,0 -4.5,14 -4,0z" />
+
+    <!-- Phụ đề: TRUYỀN HÌNH TRỰC TUYẾN • FULL HD -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M214,127h52c2,0 4,2 4,4v10c0,2 -2,4 -4,4h-52c-2,0 -4,-2 -4,-4v-10c0,-2 2,-4 4,-4z" />
     <path
         android:fillColor="#0F172A"
-        android:pathData="M0,0h320v180h-320z" />
-    <!-- Gradient / Accent glow -->
-    <path
-        android:fillColor="#2563EB"
-        android:pathData="M0,170h320v10h-320z" />
-    <!-- TV Icon in center -->
-    <path
-        android:fillColor="#00E5FF"
-        android:pathData="M190,45H130c-5.5,0 -10,4.5 -10,10v60c0,5.5 4.5,10 10,10h25v10h-20v8h50v-8h-20v-10h25c5.5,0 10,-4.5 10,-10V55c0,-5.5 -4.5,-10 -10,-10zM188,115H132V57h56v58z" />
+        android:pathData="M220,131h7v2h-2.5v7h-2v-7h-2.5zM229,131h6c1.5,0 2.5,0.8 2.5,2s-1,2 -2.5,2h-3v4h-2zM232,133.5h2.5c0.6,0 1,-0.3 1,-0.8s-0.4,-0.8 -1,-0.8h-2.5zM239,131h2v6h4v2h-6zM247,131h2v9h-2zM250,131h2.5l2.5,5 2.5,-5h2.5v9h-2v-5.5l-2.2,4.5h-1.6l-2.2,-4.5v5.5h-2z" />
 </vector>

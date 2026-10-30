@@ -516,6 +516,8 @@
                     android:layout_marginTop="8dp"
                     android:orientation="vertical"
                     android:background="#151329"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
                     android:padding="8dp">
 
                     <LinearLayout
@@ -549,6 +551,7 @@
                         android:layout_height="0dp"
                         android:layout_weight="1"
                         android:layout_marginTop="4dp"
+                        android:clipChildren="false"
                         android:clipToPadding="false"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
