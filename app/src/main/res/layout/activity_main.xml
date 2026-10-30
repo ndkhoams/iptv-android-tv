@@ -556,8 +556,7 @@
                         android:focusable="true"
                         android:focusableInTouchMode="true"
                         android:descendantFocusability="afterDescendants"
-                        android:nextFocusLeft="@+id/rvChannels"
-                        android:nextFocusDown="@+id/btnSpotlightPlay" />
+                        android:nextFocusLeft="@+id/rvChannels" />
 
                     <!-- Thông báo khi chưa có EPG -->
                     <TextView
@@ -581,68 +580,6 @@
                         android:textSize="9sp"
                         android:singleLine="true"
                         android:ellipsize="middle" />
-                </LinearLayout>
-
-                <!-- Các nút thao tác Spotlight -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="vertical">
-
-                    <!-- Nút Xem kênh ngay -->
-                    <Button
-                        android:id="@+id/btnSpotlightPlay"
-                        android:layout_width="match_parent"
-                        android:layout_height="34dp"
-                        android:text="▶  PHÁT KÊNH NÀY"
-                        android:textColor="#FFFFFF"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/selector_button_tv"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"
-                        android:nextFocusUp="@+id/rvSpotlightEpg"
-                        android:nextFocusLeft="@+id/rvChannels"
-                        android:nextFocusDown="@+id/btnSpotlightFav" />
-
-                    <!-- Hàng nút Yêu thích & Mặc định -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:orientation="horizontal">
-
-                        <Button
-                            android:id="@+id/btnSpotlightFav"
-                            android:layout_width="0dp"
-                            android:layout_height="32dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="3dp"
-                            android:text="★ YÊU THÍCH"
-                            android:textColor="@color/text_primary"
-                            android:textSize="10sp"
-                            android:background="@drawable/selector_button_tv"
-                            android:focusable="true"
-                            android:focusableInTouchMode="true"
-                            android:nextFocusLeft="@+id/rvChannels"
-                            android:nextFocusUp="@+id/btnSpotlightPlay" />
-
-                        <Button
-                            android:id="@+id/btnSpotlightDefault"
-                            android:layout_width="0dp"
-                            android:layout_height="32dp"
-                            android:layout_weight="1"
-                            android:layout_marginStart="3dp"
-                            android:text="⚡ MẶC ĐỊNH"
-                            android:textColor="@color/text_primary"
-                            android:textSize="10sp"
-                            android:background="@drawable/selector_button_tv"
-                            android:focusable="true"
-                            android:focusableInTouchMode="true"
-                            android:nextFocusLeft="@+id/btnSpotlightFav"
-                            android:nextFocusUp="@+id/btnSpotlightPlay" />
-                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

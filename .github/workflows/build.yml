@@ -54,16 +54,14 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.0' }}
-        name: v1.9.0 - Logo TV mới, Banner thẻ dài, Sửa tương phản & Viền EPG, Ưu tiên FHD 1080
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.1' }}
+        name: v1.9.1 - Tối ưu toàn màn hình EPG & Bỏ các nút thừa điều hướng
         body: |
-          ### Bản cập nhật v1.9.0 cho TV Play Android TV:
-          - **Thiết kế lại Logo & Icon App:** Ở giữa màn hình TV là chữ **TV** màu trắng đậm nét trên khung viền cam FPT và nền Dark Navy sang trọng; loại bỏ nút tam giác play cũ.
-          - **Bổ sung Banner dạng thẻ dài (Android TV Leanback Launcher):** Cung cấp banner tỉ lệ 16:9 (640x360 px) với logo TV, thương hiệu TV Play IPTV và dải phụ đề "TRUYỀN HÌNH TRỰC TUYẾN • FULL HD" bắt mắt.
-          - **Sửa tương phản chữ trong Danh sách phát nhanh:** Ô được highlight chuyển sang chữ đen than `#111827` trên nền trắng sáng, rõ nét và dễ nhìn.
-          - **Sửa viền box Lịch phát sóng (EPG):** Loại bỏ giãn ngang gây tràn khung, thêm margin an toàn và vô hiệu hóa clip layout giúp viền bo cam hiển thị trọn vẹn 100% hai bên trái phải.
-          - **Ưu tiên nhãn FHD 1080:** Các kênh HD phát sóng tại Việt Nam (VTV, HTV, FPT, v.v.) hiển thị chuẩn **FHD 1080** (nhãn rút gọn **FHD** trong danh sách), tách biệt rõ ràng với luồng 720p.
-          - **Thẻ tên chương trình 10s & hiển thị khi Back về:** Tăng thời lượng hiển thị thẻ OSD góc trái lên 10 giây; mỗi khi nhấn Quay lại (Back) từ Cài đặt, Danh sách kênh hay Playlist nhanh về toàn màn hình đều tự động hiện thẻ thông tin kênh và chương trình đang phát.
+          ### Bản cập nhật v1.9.1 cho TV Play Android TV:
+          - **Tối ưu hiển thị EPG toàn diện:** Loại bỏ 3 nút thừa bên dưới lịch phát sóng (Phát kênh, Yêu thích, Mặc định), giải phóng 100% không gian chiều cao để hiển thị thêm nhiều chương trình trong ngày.
+          - **Điều hướng Remote mượt mà:** Khắc phục triệt để lỗi bị mắc kẹt khi cuộn lịch phát sóng; cuộn lên / xuống thoải mái từ đầu đến cuối ngày không bị cản trở.
+          - **Tích hợp thao tác trực tiếp trên EPG:** Bấm OK vào bất kỳ chương trình nào trong danh sách EPG để phát ngay kênh đó; nhấn giữ OK để mở Menu tác vụ (Yêu thích, Đặt kênh mặc định khởi động, v.v.).
+          - **Bao gồm các cải tiến v1.9.0:** Logo TV viền cam mới, Banner Android TV Leanback thẻ dài, sửa tương phản danh sách phát nhanh, chuẩn FHD 1080 và thẻ thông tin kênh 10s khi Back.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

@@ -12,7 +12,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder>() {
+class EpgTimelineAdapter(
+    private val onItemClick: ((EpgProgram) -> Unit)? = null,
+    private val onItemLongClick: ((EpgProgram) -> Unit)? = null
+) : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder>() {
 
     private val programs = mutableListOf<EpgProgram>()
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -41,6 +44,19 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
+            binding.root.setOnClickListener {
+                val pos = adapterPosition
+                if (pos != RecyclerView.NO_POSITION && pos < programs.size) {
+                    onItemClick?.invoke(programs[pos])
+                }
+            }
+            binding.root.setOnLongClickListener {
+                val pos = adapterPosition
+                if (pos != RecyclerView.NO_POSITION && pos < programs.size) {
+                    onItemLongClick?.invoke(programs[pos])
+                    true
+                } else false
+            }
             binding.root.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {
                     view.scaleX = 1.0f

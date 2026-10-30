@@ -182,47 +182,23 @@ class MainActivity : AppCompatActivity() {
             adapter = channelAdapter
         }
 
-        // Khởi tạo Timeline EPG dạng list
-        epgTimelineAdapter = EpgTimelineAdapter()
+        // Khởi tạo Timeline EPG dạng list (Bấm OK để phát kênh, giữ OK để mở Menu tác vụ)
+        epgTimelineAdapter = EpgTimelineAdapter(
+            onItemClick = {
+                currentFocusedChannel?.let { ch ->
+                    playChannel(ch)
+                    hideHandler.postDelayed({ hideOverlay() }, 800)
+                }
+            },
+            onItemLongClick = {
+                currentFocusedChannel?.let { ch ->
+                    showChannelActionDialog(ch)
+                }
+            }
+        )
         binding.rvSpotlightEpg.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = epgTimelineAdapter
-        }
-
-        // Spotlight Action Buttons
-        binding.btnSpotlightPlay.setOnClickListener {
-            currentFocusedChannel?.let { ch ->
-                playChannel(ch)
-                hideHandler.postDelayed({ hideOverlay() }, 800)
-            }
-        }
-
-        binding.btnSpotlightFav.setOnClickListener {
-            currentFocusedChannel?.let { ch ->
-                val isFav = prefs.toggleFavorite(ch.streamUrl)
-                ch.isFavorite = isFav
-                channelAdapter.updateChannelItem(ch)
-                updateSpotlight(ch)
-                Toast.makeText(this, if (isFav) "Đã thêm [${ch.name}] vào Yêu Thích ★" else "Đã xóa khỏi Yêu Thích", Toast.LENGTH_SHORT).show()
-                refreshChannelsState()
-            }
-        }
-
-        binding.btnSpotlightDefault.setOnClickListener {
-            currentFocusedChannel?.let { ch ->
-                if (ch.isDefaultStartup) {
-                    prefs.defaultStartupChannelUrl = null
-                    ch.isDefaultStartup = false
-                    Toast.makeText(this, "Đã hủy kênh mặc định khởi động", Toast.LENGTH_SHORT).show()
-                } else {
-                    prefs.defaultStartupChannelUrl = ch.streamUrl
-                    prefs.startupMode = PreferencesHelper.MODE_FIXED_CHANNEL
-                    allChannels.forEach { it.isDefaultStartup = (it.streamUrl == ch.streamUrl) }
-                    Toast.makeText(this, "Đã đặt [${ch.name}] làm kênh mặc định khi mở app", Toast.LENGTH_SHORT).show()
-                }
-                channelAdapter.notifyDataSetChanged()
-                updateSpotlight(ch)
-            }
         }
 
         // Sidebar Navigation Buttons
@@ -646,10 +622,6 @@ class MainActivity : AppCompatActivity() {
             binding.tvEpgEmpty.visibility = View.VISIBLE
             binding.tvEpgEmpty.text = if (epgManager.isLoaded) "Chưa có lịch phát sóng" else "Đang tải lịch phát sóng..."
         }
-
-        // Nút trạng thái
-        binding.btnSpotlightFav.text = if (channel.isFavorite) "★ BỎ THÍCH" else "☆ YÊU THÍCH"
-        binding.btnSpotlightDefault.text = if (channel.isDefaultStartup) "✓ ĐÃ ĐẶT" else "⚡ MẶC ĐỊNH"
     }
 
     private fun playChannel(channel: Channel) {
@@ -921,8 +893,7 @@ class MainActivity : AppCompatActivity() {
                     val focused = currentFocus
                     if (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
                                 focused.id == R.id.navFavorites || focused.id == R.id.navPlaylists ||
-                                focused.id == R.id.navSidebarSettings || focused.id == R.id.btnSpotlightPlay ||
-                                focused.id == R.id.btnSpotlightFav || focused.id == R.id.btnSpotlightDefault)) {
+                                focused.id == R.id.navSidebarSettings)) {
                         focusPlayingChannel()
                         return true
                     }
