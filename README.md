@@ -1,29 +1,30 @@
 # Ứng Dụng IPTV Player Cho Android TV 5.0+ (Lollipop, API 21)
 
-Dự án ứng dụng xem truyền hình IPTV được thiết kế và tối ưu đặc thù cho các dòng **Android TV / Android TV Box chạy Android 5.0, 5.1 (API Level 21/22)** trở lên, tương thích tốt với điều khiển từ xa (Remote / D-Pad) và hỗ trợ **Quản lý / Điều khiển từ Điện thoại qua Web**.
+Dự án ứng dụng xem truyền hình IPTV được thiết kế và tối ưu đặc thù cho các dòng **Android TV / Android TV Box chạy Android 5.0, 5.1 (API Level 21/22)** trở lên, tương thích tốt với điều khiển từ xa (Remote / D-Pad), hỗ trợ **Quản lý / Điều khiển từ Điện thoại qua Web** và **Tối ưu hóa luồng UDP Multicast (FPT / VNPT / Viettel) chống sọc ngang 1080i**.
 
 ---
 
 ## 🌟 Các Tính Năng Nổi Bật
 
-1. **📱 Điều Khiển & Quản Lý Từ Điện Thoại (Web Remote Dashboard)**:
+1. **⚡ Tối Ưu Hóa Luồng UDP Multicast & Chống Sọc Ngang (Deinterlace 1080i)**:
+   - **Wi-Fi Multicast Lock (`CHANGE_WIFI_MULTICAST_STATE`)**: Kích hoạt khóa Multicast phần cứng, ngăn chip Wi-Fi của Android TV lọc bỏ gói tin UDP dẫn đến mất gói, rách hình và vỡ pixel.
+   - **Tối ưu bộ giải mã & Deinterlace**: Bật chế độ deinterlacing và `setEnableDecoderFallback(true)` để khử răng cưa/sọc ngang của luồng phát truyền hình 1080i (như VTV1 HD của FPT).
+   - **Bộ đệm UDP chống rớt gói**: Mở rộng dung lượng đệm nhận luồng TS (15s - 60s) để xử lý hoàn hảo hiện tượng giật lag khi mạng biến động.
+   - **Tối ưu bộ phân tích MPEG-TS**: Tự động nhận diện Access Units, bỏ qua thông tin splice lỗi và xử lý khung hình Non-IDR để luồng video luôn mượt mà.
+   - **Hỗ trợ định dạng link UDP**: Tự động nhận diện và chuẩn hóa các dạng link `udp://@225.x.x.x:port`, `rtp://@225.x.x.x:port`, `udp://...` và luồng qua Udpxy `http://.../udp/...`.
+
+2. **📱 Điều Khiển & Quản Lý Từ Điện Thoại (Web Remote Dashboard)**:
    - Tích hợp sẵn Web Server mini ngay trong ứng dụng (chạy cổng `8080`).
-   - Mở trình duyệt trên điện thoại (cùng mạng Wi-Fi với TV), gõ địa chỉ: `http://<IP_TV>:8080` (địa chỉ này hiển thị rõ ràng trên thanh trên cùng của app).
-   - **Giao diện Web trên điện thoại cho phép**:
-     - **Remote cảm ứng**: Phím điều hướng D-Pad (Lên/Xuống/Trái/Phải/OK), Quay lại, Menu, Chuyển kênh.
-     - **Dán Link M3U siêu nhanh**: Không còn cảnh phải dùng remote TV gõ từng chữ URL dài dằng dặc; chỉ cần copy link M3U trên điện thoại và dán vào web để lưu thẳng vào TV!
-     - **Danh sách kênh & Tìm kiếm**: Xem toàn bộ kênh TV trên màn hình điện thoại, bấm vào kênh nào là TV lập tức phát kênh đó.
-     - **Cài đặt khởi động**: Bật/tắt tự mở app khi TV khởi động ngay trên điện thoại.
-2. **Quản Lý Nhiều Danh Sách M3U (Multi-Playlist)**:
+   - Mở trình duyệt trên điện thoại (cùng mạng Wi-Fi với TV), gõ: `http://<IP_TV>:8080` (hiển thị trên thanh OSD của TV).
+   - Remote D-Pad cảm ứng, tìm kiếm kênh, bấm phát trên TV tức thì, dán link M3U siêu nhanh.
+
+3. **Quản Lý Nhiều Danh Sách M3U (Multi-Playlist)**:
    - Thêm không giới hạn các link M3U / M3U8 từ nhiều nguồn khác nhau.
    - Dễ dàng chuyển đổi qua lại chỉ với 1 thao tác.
-3. **Kênh Yêu Thích (Favorites) ★**:
-   - Nhấn giữ phím **OK** trên bất kỳ kênh nào để Thêm hoặc Xóa khỏi mục Yêu Thích.
-   - Nhóm danh mục **★ KÊNH YÊU THÍCH** tự động ưu tiên xuất hiện đầu tiên.
-4. **Kênh Mặc Định Khi Khởi Động**:
-   - Tùy chọn: **Vào lại kênh vừa xem gần nhất** hoặc **Luôn mở một kênh cố định**.
-5. **Tự Động Mở App Khi Bật TV (Auto-start on Boot)**:
-   - Tích hợp `BootReceiver` tự động kích hoạt app ngay khi Android TV vừa khởi động xong.
+
+4. **Kênh Yêu Thích (Favorites) ★ & Kênh Mặc Định Khởi Động**:
+   - Nhấn giữ phím **OK** trên bất kỳ kênh nào để Thêm/Xóa mục Yêu Thích hoặc Đặt làm kênh mở mặc định.
+   - Tự động mở ứng dụng ngay khi bật TV (`BootReceiver`).
 
 ---
 

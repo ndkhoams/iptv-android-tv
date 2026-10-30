@@ -1,6 +1,8 @@
 package com.iptv.tvapp.ui
 
+import android.content.Context
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -10,11 +12,16 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.exoplayer2.DefaultLoadControl
+import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
+import com.google.android.exoplayer2.extractor.ts.DefaultTsPayloadReaderFactory
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.iptv.tvapp.R
 import com.iptv.tvapp.data.PlaylistManager
@@ -38,6 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     private var player: ExoPlayer? = null
     private var webServer: TvWebServer? = null
+    private var multicastLock: WifiManager.MulticastLock? = null
 
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var channelAdapter: ChannelAdapter
@@ -62,10 +70,27 @@ class MainActivity : AppCompatActivity() {
         prefs = PreferencesHelper(this)
         playlistManager = PlaylistManager(this)
 
+        acquireMulticastLock()
         initViews()
         initPlayer()
         initWebServer()
         loadPlaylist(forceRefresh = false)
+    }
+
+    /**
+     * Mở khóa Multicast Wi-Fi trên Android TV để nhận luồng UDP/RTP từ nhà mạng (FPT, VNPT)
+     * mà không bị chip Wi-Fi lọc bỏ gói tin dẫn đến sọc ngang và vỡ hạt hình.
+     */
+    private fun acquireMulticastLock() {
+        try {
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            multicastLock = wifiManager?.createMulticastLock("iptv_udp_multicast_lock")?.apply {
+                setReferenceCounted(true)
+                acquire()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun initViews() {
@@ -181,16 +206,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayer() {
+        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder chống lỗi sọc ngang răng cưa
+        val renderersFactory = DefaultRenderersFactory(this).apply {
+            setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            setEnableDecoderFallback(true) // Cho phép chuyển codec dự phòng nếu codec phần cứng lỗi 1080i
+            setAllowedVideoJoiningTimeMs(5000)
+        }
+
+        // 2. Tối ưu bộ đệm chống mất gói (UDP packet loss) và giật khung hình
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                15_000, // Đệm tối thiểu 15 giây
+                60_000, // Đệm tối đa 60 giây
+                1_500,  // Bắt đầu phát sau 1.5s đệm mượt
+                3_000   // Phục hồi sau 3s nếu nghẽn mạng
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
+        // 3. Tối ưu cấu hình phân tích luồng MPEG-TS từ đài truyền hình
+        val extractorsFactory = DefaultExtractorsFactory().apply {
+            setTsExtractorFlags(
+                DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+                DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
+                DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO
+            )
+            setTsExtractorTimestampSearchBytes(188 * 1024)
+        }
+
+        // 4. Hỗ trợ đầy đủ HTTP / HTTPS và giao thức luồng mạng UDP multicast
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0 (SmartTV; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) ExoPlayer")
             .setConnectTimeoutMs(15000)
             .setReadTimeoutMs(20000)
             .setAllowCrossProtocolRedirects(true)
 
-        val mediaSourceFactory = DefaultMediaSourceFactory(httpDataSourceFactory)
+        val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
 
-        player = ExoPlayer.Builder(this)
+        player = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
             .build()
             .apply {
                 binding.playerView.player = this
@@ -303,7 +359,17 @@ class MainActivity : AppCompatActivity() {
         binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
         try {
-            val mediaItem = MediaItem.fromUri(Uri.parse(channel.streamUrl))
+            // Chuẩn hóa đường dẫn stream: Hỗ trợ link UDP / RTP multicast từ FPT (@225.x.x.x)
+            var streamUriString = channel.streamUrl.trim()
+            if (streamUriString.startsWith("udp://@", ignoreCase = true)) {
+                streamUriString = "udp://" + streamUriString.substring(7)
+            } else if (streamUriString.startsWith("rtp://@", ignoreCase = true)) {
+                streamUriString = "udp://" + streamUriString.substring(7)
+            } else if (streamUriString.startsWith("rtp://", ignoreCase = true)) {
+                streamUriString = "udp://" + streamUriString.substring(6)
+            }
+
+            val mediaItem = MediaItem.fromUri(Uri.parse(streamUriString))
             player?.setMediaItem(mediaItem)
             player?.prepare()
             player?.play()
@@ -462,6 +528,12 @@ class MainActivity : AppCompatActivity() {
         hideHandler.removeCallbacksAndMessages(null)
         webServer?.stop()
         webServer = null
+        try {
+            if (multicastLock?.isHeld == true) {
+                multicastLock?.release()
+            }
+        } catch (e: Exception) {}
+        multicastLock = null
         player?.release()
         player = null
     }
