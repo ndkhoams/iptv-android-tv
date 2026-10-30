@@ -54,21 +54,19 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.8' }}
-        name: v1.9.8 - Sửa Lỗi Đen Màn Hình VLC, Bàn Phím Ảo udpxy & Hiển Thị Đang Phát EPG
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.9' }}
+        name: v1.9.9 - Khắc Phục Lỗi Văng App (Crash) Khi Mở, Tối Ưu Quản Lý Bề Mặt Vẽ LibVLC
         body: |
-          ### Bản cập nhật v1.9.8 cho TV Play Android TV:
-          - **Khắc phục triệt để hiện tượng đen màn hình nhưng vẫn có tiếng:**
-            - Quản lý chuẩn xác vòng đời bề mặt vẽ LibVLC: Gọi `attachViews()` trong `onStart()`, giải phóng an toàn `detachViews()` trong `onStop()`.
-            - Khi mở lại ứng dụng từ màn hình Home hoặc chế độ nghỉ màn hình, hình ảnh được vẽ lại tức thì mà không bị mất surface.
-            - Hỗ trợ giải mã fallback linh hoạt `setHWDecoderEnabled(true, false)` và đảm bảo cửa sổ đo đạc hoàn tất trước khi phát kênh khởi động.
-          - **Sửa lỗi không bật được bàn phím ảo khi nhập máy chủ udpxy:**
-            - Bổ sung `android:inputType="text"` và bắt sự kiện phím giữa (DPAD_CENTER / ENTER / Click) để tự động gọi bàn phím ảo TV hiện lên ngay lập tức.
-            - Tự động ẩn bàn phím và chuyển tiêu điểm xuống nút "Sao Lưu" khi bấm Hoàn tất (Done).
-          - **Sửa lỗi hiển thị trùng lặp nhiều huy hiệu "Đang phát" trên Lịch phát sóng (EPG):**
-            - Khóa duy nhất 1 chương trình thực tế đang phát trên dòng thời gian, ngăn chặn hoàn toàn việc hiện nhiều nhãn `[ĐANG PHÁT]` cùng lúc do nhà đài lệch giờ.
-            - Tự động lọc bỏ các chương trình cũ đã kết thúc quá 1 giờ trong quá khứ và loại bỏ trùng lặp thời gian.
-          - **Bao gồm toàn bộ nâng cấp từ v1.9.7:** Khắc phục kẹt phím D-pad, Web Remote Kênh yêu thích, Thẻ Logo phong cách Dark Navy tối giản.
+          ### Bản cập nhật vá khẩn cấp v1.9.9 cho TV Play Android TV:
+          - **Khắc phục triệt để lỗi văng app khi khởi động:**
+            - Triệt tiêu lỗi `IllegalStateException: already attached` do `attachViews()` bị gọi lặp lại trong cả `onCreate` và `onStart`.
+            - Bổ sung chốt kiểm tra an toàn `areViewsAttached()` và bọc `try-catch` toàn bộ các điểm gắn/nhả bề mặt vẽ LibVLC (`onStart`, `onStop`, `playWithVlc`, `onDestroy`).
+            - Kiểm tra `!isFinishing && !isDestroyed` và trạng thái kênh trước khi resume stream.
+          - **Giữ nguyên toàn bộ tính năng và bản sửa lỗi từ v1.9.8:**
+            - Khắc phục lỗi đen màn hình vẫn có tiếng lúc mở app/thoát ra vào lại.
+            - Bật bàn phím ảo tức thì khi bấm chọn ô Máy chủ udpxy bằng remote TV.
+            - Khóa duy nhất 1 huy hiệu "Đang phát" trên Lịch phát sóng EPG, lọc sạch lịch cũ.
+            - Khắc phục kẹt phím D-pad, Web Remote Kênh yêu thích, Thẻ Logo Dark Navy mới.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

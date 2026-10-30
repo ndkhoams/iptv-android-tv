@@ -377,8 +377,6 @@ class MainActivity : AppCompatActivity() {
             )
             libVLC = LibVLC(this, options)
             vlcPlayer = VlcMediaPlayer(libVLC).apply {
-                attachViews(binding.vlcVideoLayout, null, false, false)
-
                 setEventListener { event ->
                     runOnUiThread {
                         when (event.type) {
@@ -550,9 +548,11 @@ class MainActivity : AppCompatActivity() {
 
                 if (targetChannel != null) {
                     binding.vlcVideoLayout.post {
-                        playChannel(targetChannel)
-                        // Tự động phát kênh mặc định ngay, ẩn giao diện cài đặt/danh mục để xem toàn màn hình
-                        hideOverlay()
+                        if (!isFinishing && !isDestroyed) {
+                            playChannel(targetChannel)
+                            // Tự động phát kênh mặc định ngay, ẩn giao diện cài đặt/danh mục để xem toàn màn hình
+                            hideOverlay()
+                        }
                     }
                 } else {
                     showOverlay()
@@ -752,6 +752,14 @@ class MainActivity : AppCompatActivity() {
             val vlc = libVLC ?: return
             val vp = vlcPlayer ?: return
 
+            try {
+                if (!vp.vlcVout.areViewsAttached()) {
+                    vp.attachViews(binding.vlcVideoLayout, null, false, false)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
             vp.stop()
             val media = Media(vlc, Uri.parse(streamUriString)).apply {
                 // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
@@ -927,7 +935,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun playWithExoPlayer(streamUriString: String) {
         try {
-            vlcPlayer?.stop()
+            vlcPlayer?.apply {
+                stop()
+                try {
+                    if (vlcVout.areViewsAttached()) {
+                        detachViews()
+                    }
+                } catch (e: Exception) {}
+            }
             binding.vlcVideoLayout.visibility = View.GONE
             binding.playerView.visibility = View.VISIBLE
 
@@ -1228,7 +1243,15 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            vlcPlayer?.attachViews(binding.vlcVideoLayout, null, false, false)
+            vlcPlayer?.let { vp ->
+                try {
+                    if (!vp.vlcVout.areViewsAttached()) {
+                        vp.attachViews(binding.vlcVideoLayout, null, false, false)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -1236,12 +1259,12 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
             if (currentPlayingChannel != null && vlcPlayer?.isPlaying == false) {
-                playChannel(currentPlayingChannel!!)
-            } else {
                 vlcPlayer?.play()
             }
         } else {
-            player?.play()
+            if (currentPlayingChannel != null && player?.isPlaying == false) {
+                player?.play()
+            }
         }
     }
 
@@ -1254,8 +1277,16 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            vlcPlayer?.stop()
-            vlcPlayer?.detachViews()
+            vlcPlayer?.let { vp ->
+                try {
+                    vp.stop()
+                    if (vp.vlcVout.areViewsAttached()) {
+                        vp.detachViews()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
         player?.pause()
     }
@@ -1277,7 +1308,11 @@ class MainActivity : AppCompatActivity() {
         try {
             vlcPlayer?.apply {
                 stop()
-                detachViews()
+                try {
+                    if (vlcVout.areViewsAttached()) {
+                        detachViews()
+                    }
+                } catch (e: Exception) {}
                 release()
             }
             vlcPlayer = null
