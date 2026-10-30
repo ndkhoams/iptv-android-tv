@@ -3,6 +3,8 @@ name: Build Android TV APK
 on:
   push:
     branches: [ main, master ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -48,23 +50,24 @@ jobs:
         name: AndroidTV-IPTV-debug
         path: app/build/outputs/apk/debug/app-debug.apk
 
-    - name: Create or Update Pre-Release
+    - name: Publish Official Release
       uses: softprops/action-gh-release@v2
-      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: latest
-        name: TV Play Android TV - Bản mới nhất
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.8.0' }}
+        name: v1.8.0 - Tối ưu Remote 4 nút, udpxy, Playlist Local & Cuộn EPG
         body: |
-          Bản cập nhật TV Play Android TV mới nhất:
-          - Tự động phát kênh mặc định ngay khi mở app
-          - Highlight kênh đang phát khi bấm phím OK
-          - Cấu hình server:port udpxy trực tiếp trong Cài đặt và Web Remote
-          - Rút gọn sidebar còn Yêu thích, Chọn playlist nhanh và Cài đặt
-          - Cho phép cuộn xem toàn bộ lịch phát sóng EPG
-          - Tương thích tốt với các playlist Cloudflare Pages / M3U
-          - Bổ sung tính năng chọn playlist từ file local (bộ nhớ trong, USB) và tải file qua Web Remote
-          - Tối ưu hóa toàn diện cho Remote 4 nút TV
+          ### Bản cập nhật v1.8.0 cho TV Play Android TV:
+          - **Tự động phát kênh mặc định:** Khi khởi động app, tự động phát ngay kênh mặc định/xem gần nhất toàn màn hình, không mở màn hình cài đặt.
+          - **Highlight chuẩn kênh đang phát khi bấm OK:** Mở danh mục chứa kênh đang phát và di chuyển con trỏ highlight trực tiếp vào kênh đang chạy.
+          - **Cấu hình udpxy Server:Port tiện lợi:** Tự động chuyển đổi các luồng UDP/RTP multicast qua udpxy trực tiếp trong Cài đặt & Web Remote, không cần can thiệp sửa link M3U.
+          - **Dọn dẹp giao diện Header & Sidebar:** Bỏ 2 nút "Tải lại" và "Cài đặt" thừa trên header; Sidebar rút gọn còn đúng 3 mục: *Kênh Yêu Thích*, *Chọn Playlist Nhanh* (dialog popup tiện lợi) và *Cài Đặt*.
+          - **Cuộn xem Lịch phát sóng (EPG):** Cho phép bấm phím Sang Phải từ danh sách kênh để cuộn xem toàn bộ chương trình trong ngày của kênh.
+          - **Tương thích toàn diện nguồn Playlist:** Tự động nhận diện và bóc tách UTF-8 BOM, hỗ trợ link tương đối và tương thích các playlist lưu trên Cloudflare Pages / web CDN.
+          - **Hỗ trợ Playlist từ File Local:** Duyệt và chọn file `.m3u` / `.m3u8` / `.txt` từ bộ nhớ trong TV, ổ cứng USB, hoặc truyền file trực tiếp từ điện thoại lên TV qua Wi-Fi.
+          - **Tối ưu hóa Remote 4 nút (D-pad):** Chuyển kênh bằng Lên/Xuống, mở Yêu thích bằng phím Trái, mở chọn Playlist nhanh bằng phím Phải.
         files: app/build/outputs/apk/debug/app-debug.apk
-        prerelease: true
+        prerelease: false
+        make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
