@@ -17,6 +17,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.iptv.tvapp.ui.widget.TvLinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.android.exoplayer2.DefaultLoadControl
@@ -171,7 +173,7 @@ class MainActivity : AppCompatActivity() {
             displayCategoryChannels(category)
         }
         binding.rvCategories.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
+            layoutManager = TvLinearLayoutManager(this@MainActivity) { binding.rvCategories }
             adapter = categoryAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(10)
@@ -191,7 +193,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
         binding.rvChannels.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity)
+            layoutManager = TvLinearLayoutManager(this@MainActivity) { binding.rvChannels }
             adapter = channelAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(20)
@@ -200,13 +202,49 @@ class MainActivity : AppCompatActivity() {
         binding.rvChannels.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 // Nếu bản thân container RecyclerView nhận focus ngoài ý muốn, chuyển ngay focus vào item
+                val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
                 val targetView = currentFocusedChannel?.let { ch ->
                     val idx = currentCategoryChannels.indexOfFirst { it.streamUrl == ch.streamUrl }
                     if (idx != -1) binding.rvChannels.findViewHolderForAdapterPosition(idx)?.itemView else null
+                } ?: run {
+                    val first = lm?.findFirstVisibleItemPosition() ?: 0
+                    if (first != RecyclerView.NO_POSITION) {
+                        binding.rvChannels.findViewHolderForAdapterPosition(first)?.itemView
+                    } else null
                 } ?: binding.rvChannels.layoutManager?.getChildAt(0)
                 targetView?.requestFocus()
             }
         }
+
+        // Lưới an toàn bảo toàn focus: Nếu item có focus bị detach/recycle khi cuộn nhanh
+        binding.rvChannels.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(view: View) {}
+            override fun onChildViewDetachedFromWindow(view: View) {
+                if (view.hasFocus() && binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    binding.rvChannels.post {
+                        if (!binding.rvChannels.hasFocus() && binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                            val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
+                            val first = lm?.findFirstVisibleItemPosition() ?: 0
+                            if (first != RecyclerView.NO_POSITION) {
+                                binding.rvChannels.findViewHolderForAdapterPosition(first)?.itemView?.requestFocus()
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        // Tạm dừng tải ảnh Glide khi cuộn nhanh để giải phóng 100% CPU cho luồng UI 60fps
+        binding.rvChannels.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING || newState == RecyclerView.SCROLL_STATE_SETTLING) {
+                    Glide.with(this@MainActivity).pauseRequests()
+                } else if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    Glide.with(this@MainActivity).resumeRequests()
+                }
+            }
+        })
 
         // Khởi tạo Timeline EPG dạng list (Bấm OK để phát kênh, giữ OK để mở Menu tác vụ)
         epgTimelineAdapter = EpgTimelineAdapter(

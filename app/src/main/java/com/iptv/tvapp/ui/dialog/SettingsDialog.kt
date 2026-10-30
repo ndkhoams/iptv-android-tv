@@ -161,7 +161,7 @@ class SettingsDialog(
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        binding.rbPlayerVlc.requestFocus()
+                        binding.etUdpxyServer.requestFocus()
                         true
                     }
                     else -> false
@@ -223,15 +223,14 @@ class SettingsDialog(
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        binding.btnBackupConfig.requestFocus()
+                        binding.rbPlayerVlc.requestFocus()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
-                        binding.rbFixedChannel.requestFocus()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        binding.btnAddPlaylist.requestFocus()
+                        binding.etNewPlaylistName.requestFocus()
                         true
                     }
                     else -> false
@@ -243,25 +242,25 @@ class SettingsDialog(
     private fun initUdpxySettings() {
         binding.etUdpxyServer.setText(prefs.udpxyServer)
 
-        // Tự động cuộn lên vị trí thấy rõ toàn bộ ô nhập liệu khi bàn phím ảo TV hiện lên
-        binding.etUdpxyServer.setOnFocusChangeListener { v, hasFocus ->
+        // Tự động cuộn lên vị trí đầu trang khi focus hoặc mở bàn phím ảo
+        binding.etUdpxyServer.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 binding.scrollViewSettingsRight.post {
-                    binding.scrollViewSettingsRight.smoothScrollTo(0, binding.layoutUdpxySection.top - 20)
+                    binding.scrollViewSettingsRight.smoothScrollTo(0, 0)
                 }
             }
         }
         binding.etUdpxyServer.setOnClickListener { v ->
             showSoftKeyboard(v)
             binding.scrollViewSettingsRight.post {
-                binding.scrollViewSettingsRight.smoothScrollTo(0, binding.layoutUdpxySection.top - 20)
+                binding.scrollViewSettingsRight.smoothScrollTo(0, 0)
             }
         }
         binding.etUdpxyServer.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
                 val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
                 imm?.hideSoftInputFromWindow(v.windowToken, 0)
-                binding.btnBackupConfig.requestFocus()
+                binding.rbPlayerVlc.requestFocus()
                 true
             } else false
         }

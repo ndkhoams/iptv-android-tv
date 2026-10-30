@@ -54,19 +54,21 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.9' }}
-        name: v1.9.9 - Khắc Phục Lỗi Văng App (Crash) Khi Mở, Tối Ưu Quản Lý Bề Mặt Vẽ LibVLC
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.10' }}
+        name: v1.9.10 - Triệt Tiêu Lỗi Mất Focus D-pad Khi Cuộn Nhanh, Tối Ưu Vị Trí Nhập Liệu UDPxy
         body: |
-          ### Bản cập nhật vá khẩn cấp v1.9.9 cho TV Play Android TV:
-          - **Khắc phục triệt để lỗi văng app khi khởi động:**
-            - Triệt tiêu lỗi `IllegalStateException: already attached` do `attachViews()` bị gọi lặp lại trong cả `onCreate` và `onStart`.
-            - Bổ sung chốt kiểm tra an toàn `areViewsAttached()` và bọc `try-catch` toàn bộ các điểm gắn/nhả bề mặt vẽ LibVLC (`onStart`, `onStop`, `playWithVlc`, `onDestroy`).
-            - Kiểm tra `!isFinishing && !isDestroyed` và trạng thái kênh trước khi resume stream.
-          - **Giữ nguyên toàn bộ tính năng và bản sửa lỗi từ v1.9.8:**
-            - Khắc phục lỗi đen màn hình vẫn có tiếng lúc mở app/thoát ra vào lại.
-            - Bật bàn phím ảo tức thì khi bấm chọn ô Máy chủ udpxy bằng remote TV.
-            - Khóa duy nhất 1 huy hiệu "Đang phát" trên Lịch phát sóng EPG, lọc sạch lịch cũ.
-            - Khắc phục kẹt phím D-pad, Web Remote Kênh yêu thích, Thẻ Logo Dark Navy mới.
+          ### Bản cập nhật v1.9.10 cho TV Play Android TV:
+          - **Triệt tiêu hoàn toàn lỗi mất/văng D-pad khi cuộn nhanh danh sách kênh:**
+            - Bổ sung `TvLinearLayoutManager` cho Android TV: Can thiệp `onInterceptFocusSearch()`, tự động pre-scroll đến kênh tiếp theo và khóa tiêu điểm (`trap focus`), tuyệt đối không để Android hủy focus hoặc văng ra ngoài.
+            - Lưới an toàn `ChildAttachStateChangeListener`: Tự động bắt lại và trao focus cho item hiển thị gần nhất nếu item có focus bị detach/recycle khi lướt nhanh.
+            - Tạm dừng tải ảnh Glide (`pauseRequests`) trong lúc lướt nhanh danh sách để giải phóng 100% CPU duy trì khung hình 60fps mượt mà, không giật lag.
+            - Đặt `android:focusable="false"` cho container RecyclerView để tránh focus bị rơi vào khung nền rỗng.
+          - **Tối ưu vị trí nhập liệu Máy chủ udpxy trong Cài đặt:**
+            - Chuyển mục Máy chủ udpxy lên vị trí số 2 (ngay đầu cột bên phải), nằm trọn vẹn ở nửa trên màn hình TV, hoàn toàn không bị bàn phím ảo che khuất khi nhập liệu.
+            - Điều hướng D-pad thông minh: Sang Phải từ ô tên M3U nhảy thẳng vào udpxy, phím Xuống nhảy xuống LibVLC.
+          - **Kế thừa toàn bộ tối ưu ổn định từ v1.9.9:**
+            - Khởi động an toàn, chống văng app LibVLC `already attached`.
+            - Lịch phát sóng EPG hiển thị duy nhất 1 mục Đang Phát chuẩn xác theo thời gian thực.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

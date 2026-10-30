@@ -125,7 +125,7 @@
                     android:imeOptions="actionNext"
                     android:nextFocusUp="@+id/rvPlaylists"
                     android:nextFocusDown="@+id/etNewPlaylistUrl"
-                    android:nextFocusRight="@+id/rbPlayerVlc"
+                    android:nextFocusRight="@+id/etUdpxyServer"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
 
@@ -209,112 +209,11 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-            <!-- PHẦN A: BỘ GIẢI MÃ VIDEO (KHỬ RĂNG CƯA 1080i) -->
+            <!-- PHẦN A: MÁY CHỦ UDPXY SERVER (Đặt ở vị trí 2 đầu trang bên phải để bàn phím ảo không che) -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="2. Bộ Giải Mã Video &amp; Khử Xé Hình (Deinterlace):"
-                android:textColor="@color/fpt_orange"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <RadioGroup
-                android:id="@+id/rgPlayerEngine"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="#1B1930"
-                android:padding="8dp">
-
-                <RadioButton
-                    android:id="@+id/rbPlayerVlc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="LibVLC (Phần cứng MediaCodec - Mượt mà 60fps, Không xanh màn)"
-                    android:textColor="#34D399"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true" />
-
-                <RadioButton
-                    android:id="@+id/rbPlayerExo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="ExoPlayer (Google MediaCodec - Nhẹ máy chuẩn Android TV)"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12sp"
-                    android:nextFocusLeft="@+id/etNewPlaylistUrl"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true" />
-            </RadioGroup>
-
-            <!-- PHẦN B: CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="3. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
-                android:textColor="@color/fpt_orange"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#1B1930"
-                android:padding="8dp"
-                android:layout_marginTop="6dp">
-
-                <!-- Lựa chọn kênh mở khi khởi động -->
-                <RadioGroup
-                    android:id="@+id/rgStartupMode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <RadioButton
-                        android:id="@+id/rbLastWatched"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Vào lại kênh vừa xem gần nhất"
-                        android:textColor="@color/text_primary"
-                        android:textSize="12sp"
-                        android:nextFocusLeft="@+id/btnAddPlaylist"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true" />
-
-                    <RadioButton
-                        android:id="@+id/rbFixedChannel"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Luôn mở một kênh cố định:"
-                        android:textColor="@color/text_primary"
-                        android:textSize="12sp"
-                        android:nextFocusLeft="@+id/btnAddPlaylist"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true" />
-                </RadioGroup>
-
-                <TextView
-                    android:id="@+id/tvCurrentFixedChannel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="24dp"
-                    android:layout_marginTop="2dp"
-                    android:text="Chưa thiết lập (Bấm giữ OK trên kênh bất kỳ để đặt làm mặc định)"
-                    android:textColor="@color/fpt_orange"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- PHẦN C: CẤU HÌNH UDPXY SERVER -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="4. Máy Chủ udpxy (Chuyển luồng UDP/RTP):"
+                android:text="2. Máy Chủ udpxy (Chuyển luồng UDP/RTP):"
                 android:textColor="@color/fpt_orange"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -342,9 +241,8 @@
                     android:inputType="text"
                     android:singleLine="true"
                     android:imeOptions="actionDone"
-                    android:nextFocusUp="@+id/rbFixedChannel"
-                    android:nextFocusDown="@+id/btnBackupConfig"
-                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:nextFocusDown="@+id/rbPlayerVlc"
+                    android:nextFocusLeft="@+id/etNewPlaylistName"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
 
@@ -355,6 +253,116 @@
                     android:text="Tự động chuyển tiếp các kênh UDP/RTP qua server udpxy mà không cần can thiệp vào link."
                     android:textColor="#94A3B8"
                     android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- PHẦN B: BỘ GIẢI MÃ VIDEO (KHỬ RĂNG CƯA 1080i) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="3. Bộ Giải Mã Video &amp; Khử Xé Hình (Deinterlace):"
+                android:textColor="@color/fpt_orange"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgPlayerEngine"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="#1B1930"
+                android:padding="8dp">
+
+                <RadioButton
+                    android:id="@+id/rbPlayerVlc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="LibVLC (Phần cứng MediaCodec - Mượt mà 60fps, Không xanh màn)"
+                    android:textColor="#34D399"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:nextFocusUp="@+id/etUdpxyServer"
+                    android:nextFocusDown="@+id/rbPlayerExo"
+                    android:nextFocusLeft="@+id/etNewPlaylistName"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <RadioButton
+                    android:id="@+id/rbPlayerExo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="ExoPlayer (Google MediaCodec - Nhẹ máy chuẩn Android TV)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:nextFocusUp="@+id/rbPlayerVlc"
+                    android:nextFocusDown="@+id/rbLastWatched"
+                    android:nextFocusLeft="@+id/etNewPlaylistUrl"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+            </RadioGroup>
+
+            <!-- PHẦN C: CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="4. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
+                android:textColor="@color/fpt_orange"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1B1930"
+                android:padding="8dp"
+                android:layout_marginTop="6dp">
+
+                <!-- Lựa chọn kênh mở khi khởi động -->
+                <RadioGroup
+                    android:id="@+id/rgStartupMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RadioButton
+                        android:id="@+id/rbLastWatched"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Vào lại kênh vừa xem gần nhất"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:nextFocusUp="@+id/rbPlayerExo"
+                        android:nextFocusDown="@+id/rbFixedChannel"
+                        android:nextFocusLeft="@+id/btnAddPlaylist"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+
+                    <RadioButton
+                        android:id="@+id/rbFixedChannel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Luôn mở một kênh cố định:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:nextFocusUp="@+id/rbLastWatched"
+                        android:nextFocusDown="@+id/btnBackupConfig"
+                        android:nextFocusLeft="@+id/btnAddPlaylist"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+                </RadioGroup>
+
+                <TextView
+                    android:id="@+id/tvCurrentFixedChannel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:layout_marginTop="2dp"
+                    android:text="Chưa thiết lập (Bấm giữ OK trên kênh bất kỳ để đặt làm mặc định)"
+                    android:textColor="@color/fpt_orange"
+                    android:textSize="11sp" />
             </LinearLayout>
 
             <!-- PHẦN D: SAO LƯU & KHÔI PHỤC CẤU HÌNH -->
@@ -391,7 +399,7 @@
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:background="@drawable/selector_button_tv"
-                        android:nextFocusUp="@+id/etUdpxyServer"
+                        android:nextFocusUp="@+id/rbFixedChannel"
                         android:nextFocusRight="@+id/btnRestoreConfig"
                         android:nextFocusDown="@+id/btnCloseSettings"
                         android:focusable="true"
@@ -408,7 +416,7 @@
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:background="@drawable/selector_button_tv"
-                        android:nextFocusUp="@+id/etUdpxyServer"
+                        android:nextFocusUp="@+id/rbFixedChannel"
                         android:nextFocusLeft="@+id/btnBackupConfig"
                         android:nextFocusDown="@+id/btnCloseSettings"
                         android:focusable="true"
