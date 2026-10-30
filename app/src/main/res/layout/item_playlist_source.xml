@@ -36,13 +36,15 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:duplicateParentState="true">
 
             <TextView
                 android:id="@+id/tvPlaylistName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/selector_fpt_channel_text"
+                android:duplicateParentState="true"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:text="Kênh Mẫu Việt Nam" />
@@ -51,7 +53,8 @@
                 android:id="@+id/tvPlaylistUrl"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_muted"
+                android:textColor="@color/selector_playlist_subtext"
+                android:duplicateParentState="true"
                 android:textSize="12sp"
                 android:singleLine="true"
                 android:ellipsize="middle"

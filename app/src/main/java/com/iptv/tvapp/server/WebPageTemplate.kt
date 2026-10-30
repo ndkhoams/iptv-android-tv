@@ -128,6 +128,12 @@ object WebPageTemplate {
         <div id="channelsContainer">Đang tải danh sách kênh...</div>
     </div>
 
+    <!-- TAB 2.5: FAVORITE CHANNELS -->
+    <div id="tab-favorites" class="tab-content">
+        <input type="text" id="favSearch" class="search-box" placeholder="🔍 Tìm kiếm trong kênh yêu thích..." oninput="filterFavorites()">
+        <div id="favoritesContainer">Đang tải danh sách yêu thích...</div>
+    </div>
+
     <!-- TAB 3: PLAYLIST MANAGER -->
     <div id="tab-playlists" class="tab-content">
         <div class="form-card">
@@ -165,20 +171,13 @@ object WebPageTemplate {
     <div id="tab-settings" class="tab-content">
         <div class="form-card">
             <h3>⚙️ Cài Đặt Khởi Động TV</h3>
-            <div style="margin-bottom:16px;">
-                <label style="display:flex; align-items:center; gap:10px; font-size:14px; color:#fff; cursor:pointer;">
-                    <input type="checkbox" id="chkAutoBoot" onchange="updateBootSettings()" style="width:18px; height:18px;">
-                    Tự động mở ứng dụng khi TV khởi động
-                </label>
-            </div>
-
-            <div style="margin-top:14px; border-top:1px solid var(--card-border); padding-top:14px;">
-                <label style="display:block; font-size:13px; color:var(--text-sub); margin-bottom:6px;">Chế độ mở kênh khi khởi động:</label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:8px;">
+            <div>
+                <label style="display:block; font-size:13px; color:var(--text-sub); margin-bottom:8px;">Chế độ mở kênh khi khởi động ứng dụng:</label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
                     <input type="radio" name="startupMode" value="LAST_WATCHED" id="optLastWatched" onchange="updateBootSettings()">
                     Vào lại kênh vừa xem gần nhất
                 </label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
                     <input type="radio" name="startupMode" value="FIXED_CHANNEL" id="optFixedChannel" onchange="updateBootSettings()">
                     Kênh cố định: <span id="lblFixedName" style="color:var(--accent); font-weight:bold;">Chưa chọn</span>
                 </label>
@@ -219,6 +218,10 @@ object WebPageTemplate {
             <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
             Kênh TV
         </button>
+        <button class="nav-btn" onclick="switchTab('favorites', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            Yêu Thích
+        </button>
         <button class="nav-btn" onclick="switchTab('playlists', this)">
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
             Playlists
@@ -251,6 +254,7 @@ object WebPageTemplate {
             btn.classList.add('active');
 
             if (tabId === 'channels') loadChannels();
+            if (tabId === 'favorites') loadFavorites();
             if (tabId === 'playlists') loadPlaylists();
             if (tabId === 'settings') loadSettings();
         }
@@ -325,6 +329,56 @@ object WebPageTemplate {
             renderChannels(filtered);
         }
 
+        function loadFavorites() {
+            var container = document.getElementById('favoritesContainer');
+            fetch('/api/channels').then(function(res) { return res.json(); })
+            .then(function(data) {
+                allChannels = data;
+                filterFavorites();
+            }).catch(function() {
+                container.innerHTML = 'Lỗi tải danh sách yêu thích.';
+            });
+        }
+
+        function filterFavorites() {
+            var searchEl = document.getElementById('favSearch');
+            var keyword = searchEl ? searchEl.value.toLowerCase().trim() : '';
+            var favList = allChannels.filter(function(ch) {
+                return ch.isFavorite && (!keyword || ch.name.toLowerCase().indexOf(keyword) !== -1);
+            });
+            renderFavorites(favList);
+        }
+
+        function renderFavorites(list) {
+            var container = document.getElementById('favoritesContainer');
+            if (list.length === 0) {
+                var searchEl = document.getElementById('favSearch');
+                var keyword = searchEl ? searchEl.value.trim() : '';
+                if (keyword) {
+                    container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px;">Không tìm thấy kênh yêu thích nào khớp với từ khóa.</div>';
+                } else {
+                    container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px; line-height:1.6;">Chưa có kênh yêu thích nào.<br><span style="font-size:12px; color:var(--accent);">Nhấn biểu tượng ★ ở thẻ Kênh TV để lưu kênh yêu thích vào đây.</span></div>';
+                }
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < list.length; i++) {
+                var ch = list[i];
+                var numStr = ch.number < 10 ? '0' + ch.number : '' + ch.number;
+                var encUrl = encodeURIComponent(ch.streamUrl);
+                var logoHtml = ch.logoUrl ? '<img class="channel-logo" src="' + ch.logoUrl + '" onerror="this.style.display=\'none\'">' : '';
+                html += '<div class="channel-item" onclick="playChannel(\'' + encUrl + '\')">' +
+                    '<div class="channel-left">' +
+                        '<span class="channel-num">' + numStr + '</span>' +
+                        logoHtml +
+                        '<div class="channel-title">' + ch.name + '</div>' +
+                    '</div>' +
+                    '<button class="btn-fav active" onclick="event.stopPropagation(); toggleFav(\'' + encUrl + '\')">★</button>' +
+                '</div>';
+            }
+            container.innerHTML = html;
+        }
+
         function playChannel(encodedUrl) {
             fetch('/api/play', {
                 method: 'POST',
@@ -347,7 +401,15 @@ object WebPageTemplate {
             }).then(function(res) { return res.json(); })
             .then(function(data) {
                 showToast(data.isFavorite ? 'Đã thêm Yêu Thích ★' : 'Đã bỏ Yêu Thích');
-                loadChannels();
+                var targetUrl = decodeURIComponent(encodedUrl);
+                for (var i = 0; i < allChannels.length; i++) {
+                    if (allChannels[i].streamUrl === targetUrl) {
+                        allChannels[i].isFavorite = data.isFavorite;
+                        break;
+                    }
+                }
+                filterChannels();
+                filterFavorites();
             }).catch(function() {});
         }
 
@@ -464,7 +526,6 @@ object WebPageTemplate {
         function loadSettings() {
             fetch('/api/settings').then(function(res) { return res.json(); })
             .then(function(data) {
-                document.getElementById('chkAutoBoot').checked = data.autoStartOnBoot;
                 if (data.startupMode === 'FIXED_CHANNEL') {
                     document.getElementById('optFixedChannel').checked = true;
                 } else {
@@ -476,12 +537,11 @@ object WebPageTemplate {
         }
 
         function updateBootSettings() {
-            var autoBoot = document.getElementById('chkAutoBoot').checked;
             var mode = document.querySelector('input[name="startupMode"]:checked').value;
             fetch('/api/settings/boot', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ autoStartOnBoot: autoBoot, startupMode: mode })
+                body: JSON.stringify({ startupMode: mode })
             }).then(function() {
                 showToast('Đã lưu cài đặt khởi động!');
             }).catch(function() {});

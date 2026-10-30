@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.Window
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -129,6 +130,7 @@ class SettingsDialog(
         window?.let { w ->
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             w.setBackgroundDrawableResource(R.color.fpt_bg_dark)
+            w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
     }
 
@@ -194,7 +196,7 @@ class SettingsDialog(
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        binding.btnCloseSettings.requestFocus()
+                        binding.btnBackupConfig.requestFocus()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
@@ -213,6 +215,20 @@ class SettingsDialog(
 
     private fun initUdpxySettings() {
         binding.etUdpxyServer.setText(prefs.udpxyServer)
+
+        // Tự động cuộn lên vị trí thấy rõ toàn bộ ô nhập liệu khi bàn phím ảo TV hiện lên
+        binding.etUdpxyServer.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                binding.scrollViewSettingsRight.post {
+                    binding.scrollViewSettingsRight.smoothScrollTo(0, binding.layoutUdpxySection.top - 20)
+                }
+            }
+        }
+        binding.etUdpxyServer.setOnClickListener {
+            binding.scrollViewSettingsRight.post {
+                binding.scrollViewSettingsRight.smoothScrollTo(0, binding.layoutUdpxySection.top - 20)
+            }
+        }
     }
 
     private fun initPlaylistsList() {
@@ -264,8 +280,6 @@ class SettingsDialog(
     }
 
     private fun initBootSettings() {
-        binding.cbAutoStartOnBoot.isChecked = prefs.autoStartOnBoot
-
         if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL) {
             binding.rbFixedChannel.isChecked = true
         } else {
@@ -292,7 +306,6 @@ class SettingsDialog(
             hasChangedEngine = true
         }
 
-        prefs.autoStartOnBoot = binding.cbAutoStartOnBoot.isChecked
         prefs.startupMode = if (binding.rbFixedChannel.isChecked) {
             PreferencesHelper.MODE_FIXED_CHANNEL
         } else {

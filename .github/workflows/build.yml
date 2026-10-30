@@ -54,22 +54,24 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.6' }}
-        name: v1.9.6 - Giảm 50% Dung Lượng APK, Tối Ưu Siêu Nhẹ Giao Diện & Tiết Kiệm 80% RAM Cho Mi Box 3c
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.7' }}
+        name: v1.9.7 - Khắc Phục Kẹt Phím D-Pad, Thêm Tab Yêu Thích Web Remote, Tối Ưu Bàn Phím Cài Đặt & Thẻ Logo Mới
         body: |
-          ### Bản cập nhật v1.9.6 - Siêu Tối Ưu Cho Xiaomi Mi Box 3c & Android TV RAM 1GB:
-          - **Giảm hơn 50% dung lượng APK cài đặt (từ ~97MB xuống còn ~45MB):**
-            - Loại bỏ hoàn toàn các thư viện native x86 và x86_64 không dùng đến trên Android TV.
-            - Chỉ đóng gói 2 kiến trúc vi xử lý ARM chuẩn (`armeabi-v7a` cho 32-bit như Mi Box 3c và `arm64-v8a` cho 64-bit).
-            - Loại bỏ các file metadata và dependencies thừa trong gói APK, tiết kiệm hơn 50MB bộ nhớ lưu trữ trong của TV Box.
-          - **Làm nhẹ giao diện & Giảm hơn 80% RAM tải ảnh Logo:**
-            - Khống chế kích thước ảnh logo kênh phù hợp chính xác với khung hiển thị (không nạp ảnh gốc độ phân giải lớn vào RAM).
-            - Chuyển định dạng giải mã bitmap sang `RGB_565` (tiết kiệm 50% RAM cho mỗi ảnh so với ARGB_8888 mặc định).
-            - Tối ưu danh sách kênh: Loại bỏ hiệu ứng scale animation nặng nề của GPU Mali-450, cuộn phím D-pad cực nhạy và nhẹ mượt.
-            - Kích hoạt `setHasFixedSize(true)` và `setItemViewCacheSize` cho toàn bộ RecyclerView, triệt tiêu hiện tượng lag giật khi lướt danh sách.
-          - **Tối ưu phần cứng cho Mi Box 3c:**
-            - Bỏ lựa chọn số 2 (phần mềm nặng máy).
-            - Tối ưu chuyên sâu LibVLC Phần Cứng (MediaCodec NDK) và bộ đệm RAM 800ms chuyển kênh tức thì.
+          ### Bản cập nhật v1.9.7 cho TV Play Android TV:
+          - **Khắc phục triệt để hiện tượng kẹt phím D-Pad khi lướt kênh:**
+            - Bổ sung cơ chế Debounce 120ms thông minh: Khi bấm hoặc giữ phím Lên/Xuống duyệt nhanh, ứng dụng chỉ cập nhật tên kênh tức thì (0ms) và hoãn các tác vụ nặng (tải logo, nạp lịch EPG) để giải phóng 100% tài nguyên CPU cho luồng giao diện chính.
+            - Bổ sung `descendantFocusability="afterDescendants"` và triệt tiêu `itemAnimator` giúp chuyển focus mượt mà 60fps không bị giật khựng.
+            - Thêm cơ chế tự động chuyển hướng tiêu điểm nếu khung RecyclerView container nhận focus ngoài ý muốn.
+          - **Tối ưu hiển thị bàn phím ảo & điều hướng trong Cài đặt:**
+            - Kích hoạt `SOFT_INPUT_ADJUST_RESIZE`: Tự động cuộn ô nhập Máy Chủ udpxy lên sát mép trên màn hình khi mở bàn phím ảo TV, giúp nhìn rõ từng ký tự đang gõ.
+            - Sửa lỗi điều hướng D-Pad từ ô udpxy di chuyển xuống Mục 5 (Sao Lưu & Khôi Phục) mượt mà.
+            - Gỡ bỏ tùy chọn "Tự động mở ứng dụng khi TV khởi động" theo yêu cầu.
+            - Khắc phục lỗi trùng màu chữ trắng trên nền highlight trắng ở mục 1. Danh Sách M3U.
+          - **Nâng cấp Web Remote (Điều khiển qua Điện Thoại & Máy Tính):**
+            - Bổ sung thẻ **Kênh Yêu Thích** (★) chuyên biệt trên thanh điều hướng bên dưới, tích hợp thanh tìm kiếm riêng và hỗ trợ bấm phát kênh trực tiếp lên TV.
+            - Đồng bộ trạng thái yêu thích thời gian thực giữa Web Remote và TV.
+          - **Thiết kế lại Thẻ Banner Logo ứng dụng (Màn hình chính Launcher):**
+            - Phong cách Dark Navy sang trọng, tối giản, đồng điệu tuyệt đối với các ứng dụng hiện đại trên Android TV (Stremio, Tailscale, Live Channels).
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

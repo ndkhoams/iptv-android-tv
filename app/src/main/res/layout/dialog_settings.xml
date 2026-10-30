@@ -193,6 +193,7 @@
 
         <!-- CỘT PHẢI: CÀI ĐẶT TRÌNH PHÁT (KHỬ XÉ HÌNH) & KHỞI ĐỘNG (Hỗ trợ cuộn ScrollView trên TV) -->
         <ScrollView
+            android:id="@+id/scrollViewSettingsRight"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -266,24 +267,11 @@
                 android:padding="8dp"
                 android:layout_marginTop="6dp">
 
-                <!-- Checkbox tự mở khi bật TV -->
-                <CheckBox
-                    android:id="@+id/cbAutoStartOnBoot"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Tự động mở ứng dụng ngay khi Android TV khởi động"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12sp"
-                    android:nextFocusLeft="@+id/btnAddPlaylist"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true" />
-
                 <!-- Lựa chọn kênh mở khi khởi động -->
                 <RadioGroup
                     android:id="@+id/rgStartupMode"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp">
+                    android:layout_height="wrap_content">
 
                     <RadioButton
                         android:id="@+id/rbLastWatched"
@@ -292,6 +280,7 @@
                         android:text="Vào lại kênh vừa xem gần nhất"
                         android:textColor="@color/text_primary"
                         android:textSize="12sp"
+                        android:nextFocusLeft="@+id/btnAddPlaylist"
                         android:focusable="true"
                         android:focusableInTouchMode="true" />
 
@@ -299,9 +288,11 @@
                         android:id="@+id/rbFixedChannel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
                         android:text="Luôn mở một kênh cố định:"
                         android:textColor="@color/text_primary"
                         android:textSize="12sp"
+                        android:nextFocusLeft="@+id/btnAddPlaylist"
                         android:focusable="true"
                         android:focusableInTouchMode="true" />
                 </RadioGroup>
@@ -311,7 +302,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="24dp"
-                    android:layout_marginTop="1dp"
+                    android:layout_marginTop="2dp"
                     android:text="Chưa thiết lập (Bấm giữ OK trên kênh bất kỳ để đặt làm mặc định)"
                     android:textColor="@color/fpt_orange"
                     android:textSize="11sp" />
@@ -328,6 +319,7 @@
                 android:textStyle="bold" />
 
             <LinearLayout
+                android:id="@+id/layoutUdpxySection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"

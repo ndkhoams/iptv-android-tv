@@ -374,6 +374,7 @@
                     android:layout_height="match_parent"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
+                    android:descendantFocusability="afterDescendants"
                     android:nextFocusLeft="@+id/navFavorites"
                     android:nextFocusRight="@+id/rvChannels"
                     android:clipToPadding="false" />
@@ -424,6 +425,7 @@
                     android:layout_height="match_parent"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
+                    android:descendantFocusability="afterDescendants"
                     android:nextFocusLeft="@+id/rvCategories"
                     android:nextFocusRight="@+id/rvSpotlightEpg"
                     android:clipToPadding="false" />

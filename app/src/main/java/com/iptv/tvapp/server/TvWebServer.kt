@@ -253,7 +253,9 @@ class TvWebServer(
             }
             method == "POST" && path == "/api/settings/boot" -> {
                 val json = JSONObject(body)
-                prefs.autoStartOnBoot = json.optBoolean("autoStartOnBoot", false)
+                if (json.has("autoStartOnBoot")) {
+                    prefs.autoStartOnBoot = json.getBoolean("autoStartOnBoot")
+                }
                 prefs.startupMode = json.optString("startupMode", PreferencesHelper.MODE_LAST_WATCHED)
                 val resp = JSONObject().apply { put("success", true) }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())

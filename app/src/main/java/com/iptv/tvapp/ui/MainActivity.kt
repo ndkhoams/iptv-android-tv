@@ -97,6 +97,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val spotlightHandler = Handler(Looper.getMainLooper())
+    private var pendingSpotlightChannel: Channel? = null
+    private val spotlightRunnable = Runnable {
+        pendingSpotlightChannel?.let { channel ->
+            performHeavySpotlightUpdate(channel)
+        }
+    }
+
     private var backPressedTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -167,6 +175,7 @@ class MainActivity : AppCompatActivity() {
             adapter = categoryAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(10)
+            itemAnimator = null
         }
 
         channelAdapter = ChannelAdapter(
@@ -178,7 +187,7 @@ class MainActivity : AppCompatActivity() {
                 showChannelActionDialog(channel)
             },
             onChannelFocused = { channel ->
-                updateSpotlight(channel)
+                updateSpotlight(channel, immediate = false)
             }
         )
         binding.rvChannels.apply {
@@ -186,6 +195,17 @@ class MainActivity : AppCompatActivity() {
             adapter = channelAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(20)
+            itemAnimator = null
+        }
+        binding.rvChannels.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                // Nếu bản thân container RecyclerView nhận focus ngoài ý muốn, chuyển ngay focus vào item
+                val targetView = currentFocusedChannel?.let { ch ->
+                    val idx = currentCategoryChannels.indexOfFirst { it.streamUrl == ch.streamUrl }
+                    if (idx != -1) binding.rvChannels.findViewHolderForAdapterPosition(idx)?.itemView else null
+                } ?: binding.rvChannels.layoutManager?.getChildAt(0)
+                targetView?.requestFocus()
+            }
         }
 
         // Khởi tạo Timeline EPG dạng list (Bấm OK để phát kênh, giữ OK để mở Menu tác vụ)
@@ -207,6 +227,7 @@ class MainActivity : AppCompatActivity() {
             adapter = epgTimelineAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(10)
+            itemAnimator = null
         }
 
         // Sidebar Navigation Buttons
@@ -577,9 +598,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateSpotlight(channel: Channel) {
+    private fun updateSpotlight(channel: Channel, immediate: Boolean = true) {
         currentFocusedChannel = channel
         binding.tvSpotlightName.text = channel.name
+
+        // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), các kênh HD tại Việt Nam là 1080i/1080p
+        val upperName = channel.name.uppercase()
+        binding.tvSpotlightResolution.text = when {
+            upperName.contains("4K") -> "4K UHD"
+            upperName.contains("720") -> "HD 720p"
+            upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
+            else -> "FHD 1080"
+        }
+
+        binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "IPTV"
+
+        val isPlaying = channel.streamUrl == currentPlayingChannel?.streamUrl
+        binding.tvSpotlightStatus.visibility = if (isPlaying) View.VISIBLE else View.GONE
+
+        spotlightHandler.removeCallbacks(spotlightRunnable)
+        pendingSpotlightChannel = channel
+
+        if (immediate) {
+            performHeavySpotlightUpdate(channel)
+        } else {
+            // Debounce 120ms khi duyệt nhanh phím D-pad: Giữ luồng UI 60fps mượt mà, triệt tiêu nghẽn phím
+            spotlightHandler.postDelayed(spotlightRunnable, 120L)
+        }
+    }
+
+    private fun performHeavySpotlightUpdate(channel: Channel) {
+        if (isFinishing || isDestroyed) return
 
         // Logo chính hãng FPT CDN hoặc M3U (Khống chế kích thước và RGB_565 tiết kiệm RAM)
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
@@ -595,20 +644,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
         }
-
-        // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), các kênh HD tại Việt Nam là 1080i/1080p
-        val upperName = channel.name.uppercase()
-        binding.tvSpotlightResolution.text = when {
-            upperName.contains("4K") -> "4K UHD"
-            upperName.contains("720") -> "HD 720p"
-            upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
-            else -> "FHD 1080"
-        }
-
-        binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "IPTV"
-
-        val isPlaying = channel.streamUrl == currentPlayingChannel?.streamUrl
-        binding.tvSpotlightStatus.visibility = if (isPlaying) View.VISIBLE else View.GONE
 
         // Giao thức
         val udpxy = prefs.udpxyServer.trim()
@@ -642,6 +677,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvEpgEmpty.visibility = View.VISIBLE
             binding.tvEpgEmpty.text = if (epgManager.isLoaded) "Chưa có lịch phát sóng" else "Đang tải lịch phát sóng..."
         }
+    }
     }
 
     private fun playChannel(channel: Channel) {
@@ -1214,6 +1250,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         hideHandler.removeCallbacksAndMessages(null)
         clockHandler.removeCallbacksAndMessages(null)
+        spotlightHandler.removeCallbacksAndMessages(null)
         webServer?.stop()
         webServer = null
         try {
