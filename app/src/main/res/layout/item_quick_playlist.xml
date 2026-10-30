@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="44dp"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:background="@drawable/selector_channel_item">
+
+    <TextView
+        android:id="@+id/tvRadioIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="◉"
+        android:textColor="@color/fpt_orange"
+        android:textSize="14sp"
+        android:layout_marginEnd="10dp" />
+
+    <TextView
+        android:id="@+id/tvPlaylistName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="FPT IPTV"
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/tvActiveBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_fpt_badge_live"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:text="ĐANG CHỌN"
+        android:textColor="#FFFFFF"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+</LinearLayout>
+

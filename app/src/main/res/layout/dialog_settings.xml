@@ -136,7 +136,7 @@
                     android:background="#0F0E1D"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
-                    android:hint="Đường link URL (http://... hoặc https://...)"
+                    android:hint="Đường link URL hoặc đường dẫn file local"
                     android:textColor="@color/text_primary"
                     android:textColorHint="@color/text_muted"
                     android:textSize="12sp"
@@ -144,28 +144,50 @@
                     android:singleLine="true"
                     android:imeOptions="actionDone"
                     android:nextFocusUp="@+id/etNewPlaylistName"
-                    android:nextFocusDown="@+id/btnAddPlaylist"
+                    android:nextFocusDown="@+id/btnBrowseLocalFile"
                     android:nextFocusRight="@+id/rbPlayerVlc"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
 
-                <Button
-                    android:id="@+id/btnAddPlaylist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:layout_gravity="end"
-                    android:layout_marginTop="6dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:text="+ Thêm Danh Sách"
-                    android:textColor="#FFFFFF"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/selector_button_tv"
-                    android:nextFocusUp="@+id/etNewPlaylistUrl"
-                    android:nextFocusRight="@+id/btnCloseSettings"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnBrowseLocalFile"
+                        android:layout_width="0dp"
+                        android:layout_height="34dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:text="📂 Chọn File Local/USB"
+                        android:textColor="#38BDF8"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/selector_button_tv"
+                        android:nextFocusUp="@+id/etNewPlaylistUrl"
+                        android:nextFocusRight="@+id/btnAddPlaylist"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+
+                    <Button
+                        android:id="@+id/btnAddPlaylist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:text="+ Thêm Danh Sách"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/selector_button_tv"
+                        android:nextFocusUp="@+id/etNewPlaylistUrl"
+                        android:nextFocusLeft="@+id/btnBrowseLocalFile"
+                        android:nextFocusRight="@+id/btnCloseSettings"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
 
@@ -287,6 +309,52 @@
                     android:text="Chưa thiết lập (Bấm giữ OK trên kênh bất kỳ để đặt làm mặc định)"
                     android:textColor="@color/fpt_orange"
                     android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- PHẦN C: CẤU HÌNH UDPXY SERVER -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="4. Máy Chủ udpxy (Chuyển luồng UDP/RTP):"
+                android:textColor="@color/fpt_orange"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1B1930"
+                android:padding="8dp"
+                android:layout_marginTop="4dp">
+
+                <EditText
+                    android:id="@+id/etUdpxyServer"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:background="#0F0E1D"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:hint="IP:Port (Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022)"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_muted"
+                    android:textSize="12sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionDone"
+                    android:nextFocusUp="@+id/rbFixedChannel"
+                    android:nextFocusDown="@+id/btnCloseSettings"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Tự động chuyển tiếp các kênh UDP/RTP qua server udpxy mà không cần can thiệp vào link."
+                    android:textColor="#94A3B8"
+                    android:textSize="10sp" />
             </LinearLayout>
 
             <!-- Khoảng trống đẩy nút Đóng xuống cuối -->

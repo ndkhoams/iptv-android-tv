@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="440dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_fpt_glass_panel"
+    android:padding="18dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DANH SÁCH PHÁT"
+            android:textColor="@color/fpt_orange"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bấm OK để chọn"
+            android:textColor="@color/text_muted"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Danh sách các playlist -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvQuickPlaylists"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="260dp"
+        android:clipToPadding="false"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2E2C48"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Nút Mở cài đặt chi tiết & Đóng -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <Button
+            android:id="@+id/btnManagePlaylists"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="⚙ Quản lý danh sách..."
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <Button
+            android:id="@+id/btnCloseQuickDialog"
+            android:layout_width="80dp"
+            android:layout_height="36dp"
+            android:text="Đóng"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
+
+</LinearLayout>
+

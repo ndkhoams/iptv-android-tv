@@ -145,6 +145,11 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getString(KEY_PLAYER_ENGINE, ENGINE_VLC) ?: ENGINE_VLC
         set(value) = prefs.edit().putString(KEY_PLAYER_ENGINE, value).apply()
 
+    // ===== CÀI ĐẶT MÁY CHỦ UDPXY (SERVER:PORT) =====
+    var udpxyServer: String
+        get() = prefs.getString(KEY_UDPXY_SERVER, "10.0.0.222:4022") ?: "10.0.0.222:4022"
+        set(value) = prefs.edit().putString(KEY_UDPXY_SERVER, value.trim()).apply()
+
     companion object {
         private const val PREFS_NAME = "iptv_tv_prefs"
         private const val KEY_PLAYLISTS = "key_playlists_v2"
@@ -155,6 +160,7 @@ class PreferencesHelper(context: Context) {
         private const val KEY_DEFAULT_STARTUP_URL = "key_default_startup_url"
         private const val KEY_DEFAULT_STARTUP_NAME = "key_default_startup_name"
         private const val KEY_PLAYER_ENGINE = "key_player_engine"
+        private const val KEY_UDPXY_SERVER = "key_udpxy_server"
 
         const val ENGINE_VLC = "VLC"
         const val ENGINE_EXOPLAYER = "EXOPLAYER"

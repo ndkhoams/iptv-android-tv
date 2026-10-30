@@ -7,6 +7,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,3 +47,24 @@ jobs:
       with:
         name: AndroidTV-IPTV-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Create or Update Pre-Release
+      uses: softprops/action-gh-release@v2
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        tag_name: latest
+        name: TV Play Android TV - Bản mới nhất
+        body: |
+          Bản cập nhật TV Play Android TV mới nhất:
+          - Tự động phát kênh mặc định ngay khi mở app
+          - Highlight kênh đang phát khi bấm phím OK
+          - Cấu hình server:port udpxy trực tiếp trong Cài đặt và Web Remote
+          - Rút gọn sidebar còn Yêu thích, Chọn playlist nhanh và Cài đặt
+          - Cho phép cuộn xem toàn bộ lịch phát sóng EPG
+          - Tương thích tốt với các playlist Cloudflare Pages / M3U
+          - Bổ sung tính năng chọn playlist từ file local (bộ nhớ trong, USB) và tải file qua Web Remote
+          - Tối ưu hóa toàn diện cho Remote 4 nút TV
+        files: app/build/outputs/apk/debug/app-debug.apk
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,6 @@
 package com.iptv.tvapp.server
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import com.iptv.tvapp.data.PreferencesHelper
@@ -9,6 +10,7 @@ import com.iptv.tvapp.util.NetworkUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.ServerSocket
@@ -18,6 +20,7 @@ import java.util.concurrent.Executors
 
 class TvWebServer(
     private val port: Int = 8080,
+    private val context: Context,
     private val prefs: PreferencesHelper,
     private val channelProvider: () -> List<Channel>,
     private val currentPlayingProvider: () -> Channel?,
@@ -153,6 +156,7 @@ class TvWebServer(
                     put("autoStartOnBoot", prefs.autoStartOnBoot)
                     put("startupMode", prefs.startupMode)
                     put("defaultStartupChannelName", prefs.defaultStartupChannelName ?: "")
+                    put("udpxyServer", prefs.udpxyServer)
                 }
                 sendResponse(output, "application/json; charset=utf-8", json.toString())
             }
@@ -203,6 +207,29 @@ class TvWebServer(
                 val resp = JSONObject().apply { put("success", true) }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
+            method == "POST" && path == "/api/playlist/upload" -> {
+                val json = JSONObject(body)
+                val filename = json.optString("filename", "playlist.m3u")
+                var name = json.optString("name", "").trim()
+                if (name.isBlank()) {
+                    name = filename.substringBeforeLast(".")
+                }
+                val content = json.getString("content")
+                val newId = UUID.randomUUID().toString()
+                val targetFile = File(context.filesDir, "playlist_${newId.replace("-", "_")}.m3u")
+                targetFile.writeText(content, Charsets.UTF_8)
+
+                val list = prefs.getPlaylists()
+                list.add(PlaylistSource(newId, name, "file://${targetFile.absolutePath}", false))
+                prefs.savePlaylists(list)
+                mainHandler.post { onPlaylistChanged() }
+
+                val resp = JSONObject().apply {
+                    put("success", true)
+                    put("name", name)
+                }
+                sendResponse(output, "application/json; charset=utf-8", resp.toString())
+            }
             method == "POST" && path == "/api/playlist/select" -> {
                 val json = JSONObject(body)
                 val id = json.getString("id")
@@ -228,6 +255,14 @@ class TvWebServer(
                 val json = JSONObject(body)
                 prefs.autoStartOnBoot = json.optBoolean("autoStartOnBoot", false)
                 prefs.startupMode = json.optString("startupMode", PreferencesHelper.MODE_LAST_WATCHED)
+                val resp = JSONObject().apply { put("success", true) }
+                sendResponse(output, "application/json; charset=utf-8", resp.toString())
+            }
+            method == "POST" && path == "/api/settings/udpxy" -> {
+                val json = JSONObject(body)
+                val newUdpxy = json.optString("udpxyServer", "").trim()
+                prefs.udpxyServer = newUdpxy
+                mainHandler.post { onPlaylistChanged() }
                 val resp = JSONObject().apply { put("success", true) }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }

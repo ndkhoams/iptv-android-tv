@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/fpt_bg_dark"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TV"
+            android:textColor="@color/fpt_orange"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:text="Play"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="• CHỌN FILE PLAYLIST TỪ BỘ NHỚ HOẶC USB"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/btnSysFilePicker"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="📂 Mở File Picker hệ thống"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
+
+    <!-- Đường dẫn hiện tại & Các phím truy cập nhanh -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#151329"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvCurrentPath"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#38BDF8"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="start"
+            android:text="📂 /storage/emulated/0/Download" />
+
+        <!-- Nút Lên 1 cấp -->
+        <Button
+            android:id="@+id/btnParentDir"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:text="⬆ Lên thư mục cha"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <!-- Nút Tải về -->
+        <Button
+            android:id="@+id/btnQuickDownload"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:text="📥 Download"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <!-- Nút Bộ nhớ máy -->
+        <Button
+            android:id="@+id/btnQuickInternal"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:text="📱 Bộ nhớ trong"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <!-- Nút Ổ USB -->
+        <Button
+            android:id="@+id/btnQuickUsb"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:text="💾 Ổ USB"
+            android:textColor="@color/text_primary"
+            android:textSize="11sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
+
+    <!-- Danh sách file & thư mục -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvLocalFiles"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#1B1930"
+        android:padding="6dp"
+        android:clipToPadding="false"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <!-- Thông báo thư mục rỗng -->
+    <TextView
+        android:id="@+id/tvEmptyFolder"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="Không tìm thấy file playlist (.m3u, .m3u8, .txt) nào trong thư mục này."
+        android:textColor="@color/text_muted"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- Bottom Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btnCancelFilePicker"
+            android:layout_width="120dp"
+            android:layout_height="36dp"
+            android:text="Hủy Bỏ"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:background="@drawable/selector_button_tv"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
+
+</LinearLayout>
+

@@ -172,9 +172,9 @@
         android:paddingEnd="12dp"
         android:paddingTop="10dp"
         android:paddingBottom="8dp"
-        android:visibility="visible">
+        android:visibility="gone">
 
-        <!-- Header Bar: FPT Play Logo & Slogan + Clock + IP Remote + Action Buttons -->
+        <!-- Header Bar: FPT Play Logo & Slogan + Clock + IP Remote -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -268,35 +268,6 @@
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:text="12:00" />
-
-            <!-- Nút Tải lại Playlist -->
-            <Button
-                android:id="@+id/btnReload"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:layout_marginEnd="8dp"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="@string/reload"
-                android:textColor="@color/text_primary"
-                android:textSize="11sp"
-                android:background="@drawable/selector_button_tv"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
-
-            <!-- Nút Cài đặt Playlist -->
-            <Button
-                android:id="@+id/btnSettings"
-                android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:text="@string/settings"
-                android:textColor="@color/text_primary"
-                android:textSize="11sp"
-                android:background="@drawable/selector_button_tv"
-                android:focusable="true"
-                android:focusableInTouchMode="true" />
         </LinearLayout>
 
         <!-- KHU VỰC THÂN GIAO DIỆN 3 CỘT + SIDEBAR -->
@@ -313,45 +284,30 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:paddingTop="8dp"
+                android:paddingTop="12dp"
                 android:paddingBottom="8dp">
 
-                <!-- 1. Live TV Tất cả -->
-                <ImageButton
-                    android:id="@+id/navLiveTv"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/selector_fpt_sidebar"
-                    android:src="@drawable/ic_nav_tv"
-                    android:scaleType="centerInside"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:nextFocusRight="@+id/rvCategories"
-                    android:nextFocusDown="@+id/navFavorites"
-                    android:contentDescription="Tất cả kênh" />
-
-                <!-- 2. Kênh Yêu Thích -->
+                <!-- 1. Kênh Yêu Thích -->
                 <ImageButton
                     android:id="@+id/navFavorites"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="10dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_star_filled"
                     android:scaleType="centerInside"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navLiveTv"
+                    android:nextFocusUp="@+id/navFavorites"
                     android:nextFocusRight="@+id/rvCategories"
                     android:nextFocusDown="@+id/navPlaylists"
                     android:contentDescription="Kênh yêu thích" />
 
-                <!-- 3. Quản lý Playlist -->
+                <!-- 2. Chọn Danh Sách Phát Nhanh -->
                 <ImageButton
                     android:id="@+id/navPlaylists"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="16dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_nav_playlist"
                     android:scaleType="centerInside"
@@ -359,37 +315,22 @@
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/navFavorites"
                     android:nextFocusRight="@+id/rvCategories"
-                    android:nextFocusDown="@+id/navPhoneRemote"
-                    android:contentDescription="Quản lý Playlist" />
-
-                <!-- 4. Web Remote QR / IP -->
-                <ImageButton
-                    android:id="@+id/navPhoneRemote"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/selector_fpt_sidebar"
-                    android:src="@drawable/ic_nav_phone"
-                    android:scaleType="centerInside"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navPlaylists"
-                    android:nextFocusRight="@+id/rvCategories"
                     android:nextFocusDown="@+id/navSidebarSettings"
-                    android:contentDescription="Điều khiển từ điện thoại" />
+                    android:contentDescription="Chọn danh sách phát nhanh" />
 
-                <!-- 5. Cài đặt hệ thống -->
+                <!-- 3. Cài đặt hệ thống -->
                 <ImageButton
                     android:id="@+id/navSidebarSettings"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="16dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_settings"
                     android:scaleType="centerInside"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navPhoneRemote"
+                    android:nextFocusUp="@+id/navPlaylists"
+                    android:nextFocusDown="@+id/navSidebarSettings"
                     android:nextFocusRight="@+id/rvCategories"
                     android:contentDescription="Cài đặt" />
             </LinearLayout>
@@ -421,7 +362,7 @@
                     android:layout_height="match_parent"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusLeft="@+id/navLiveTv"
+                    android:nextFocusLeft="@+id/navFavorites"
                     android:nextFocusRight="@+id/rvChannels"
                     android:clipToPadding="false" />
             </LinearLayout>
@@ -472,7 +413,7 @@
                     android:focusable="true"
                     android:focusableInTouchMode="true"
                     android:nextFocusLeft="@+id/rvCategories"
-                    android:nextFocusRight="@+id/btnSpotlightPlay"
+                    android:nextFocusRight="@+id/rvSpotlightEpg"
                     android:clipToPadding="false" />
             </LinearLayout>
 
@@ -608,7 +549,12 @@
                         android:layout_height="0dp"
                         android:layout_weight="1"
                         android:layout_marginTop="4dp"
-                        android:clipToPadding="false" />
+                        android:clipToPadding="false"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:descendantFocusability="afterDescendants"
+                        android:nextFocusLeft="@+id/rvChannels"
+                        android:nextFocusDown="@+id/btnSpotlightPlay" />
 
                     <!-- Thông báo khi chưa có EPG -->
                     <TextView
@@ -653,6 +599,7 @@
                         android:background="@drawable/selector_button_tv"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
+                        android:nextFocusUp="@+id/rvSpotlightEpg"
                         android:nextFocusLeft="@+id/rvChannels"
                         android:nextFocusDown="@+id/btnSpotlightFav" />
 

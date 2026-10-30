@@ -1,8 +1,11 @@
 package com.iptv.tvapp.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -10,6 +13,8 @@ import android.view.KeyEvent
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -39,6 +44,7 @@ import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
 import com.iptv.tvapp.ui.adapter.EpgTimelineAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
+import com.iptv.tvapp.ui.dialog.QuickPlaylistDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
@@ -101,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         epgManager = EpgManager(this)
 
         acquireMulticastLock()
+        checkStoragePermission()
         initViews()
         initPlayer()
         initWebServer()
@@ -136,6 +143,14 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun checkStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1001)
+            }
         }
     }
 
@@ -211,16 +226,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Sidebar Navigation Buttons
-        binding.navLiveTv.setOnClickListener {
-            val allCat = allCategories.firstOrNull { it.name == "Tất cả" }
-            if (allCat != null) {
-                currentSelectedCategory = allCat
-                categoryAdapter.setSelectedCategory(allCat)
-                displayCategoryChannels(allCat)
-                binding.rvChannels.requestFocus()
-            }
-        }
-
         binding.navFavorites.setOnClickListener {
             val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
             if (favCat != null) {
@@ -234,25 +239,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.navPlaylists.setOnClickListener {
-            showSettingsDialog()
-        }
-
-        binding.navPhoneRemote.setOnClickListener {
-            val ip = NetworkUtils.getLocalIpAddress() ?: "127.0.0.1"
-            Toast.makeText(this, "Mở trình duyệt trên điện thoại cùng Wi-Fi: http://$ip:8080", Toast.LENGTH_LONG).show()
+            showQuickPlaylistDialog()
         }
 
         binding.navSidebarSettings.setOnClickListener {
             showSettingsDialog()
-        }
-
-        binding.btnSettings.setOnClickListener {
-            showSettingsDialog()
-        }
-
-        binding.btnReload.setOnClickListener {
-            loadPlaylist(forceRefresh = true)
-            loadEpgData()
         }
 
         binding.rootView.setOnClickListener {
@@ -266,6 +257,7 @@ class MainActivity : AppCompatActivity() {
 
         webServer = TvWebServer(
             port = 8080,
+            context = this,
             prefs = prefs,
             channelProvider = { allChannels },
             currentPlayingProvider = { currentPlayingChannel },
@@ -543,20 +535,22 @@ class MainActivity : AppCompatActivity() {
 
                 if (targetChannel != null) {
                     playChannel(targetChannel)
+                    // Tự động phát kênh mặc định ngay, ẩn giao diện cài đặt/danh mục để xem toàn màn hình
+                    hideOverlay()
+                } else {
+                    showOverlay()
                 }
-
-                binding.rvChannels.requestFocus()
-                resetOverlayTimer()
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
                 binding.tvErrorMessage.visibility = View.VISIBLE
                 binding.tvErrorDetail.text = getString(R.string.load_failed) + "\n" + (e.localizedMessage ?: "")
+                showOverlay()
             }
         }
     }
 
-    private fun displayCategoryChannels(category: Category) {
+    private fun displayCategoryChannels(category: Category, focusChannel: Channel? = null) {
         currentCategoryChannels.clear()
         currentCategoryChannels.addAll(category.channels)
 
@@ -564,8 +558,28 @@ class MainActivity : AppCompatActivity() {
         binding.tvChannelCount.text = getString(R.string.channels_count, category.channels.size)
         channelAdapter.submitList(currentCategoryChannels)
 
-        if (currentCategoryChannels.isNotEmpty()) {
-            updateSpotlight(currentCategoryChannels[0])
+        val targetToHighlight = focusChannel ?: currentPlayingChannel?.takeIf { ch ->
+            currentCategoryChannels.any { it.streamUrl == ch.streamUrl }
+        } ?: currentCategoryChannels.firstOrNull()
+
+        if (targetToHighlight != null) {
+            updateSpotlight(targetToHighlight)
+            val index = currentCategoryChannels.indexOfFirst { it.streamUrl == targetToHighlight.streamUrl }
+            if (index != -1) {
+                binding.rvChannels.scrollToPosition(index)
+                if (focusChannel != null) {
+                    binding.rvChannels.post {
+                        val vh = binding.rvChannels.findViewHolderForAdapterPosition(index)
+                        if (vh != null) {
+                            vh.itemView.requestFocus()
+                        } else {
+                            binding.rvChannels.postDelayed({
+                                binding.rvChannels.findViewHolderForAdapterPosition(index)?.itemView?.requestFocus()
+                            }, 60)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -601,30 +615,32 @@ class MainActivity : AppCompatActivity() {
         binding.tvSpotlightStatus.visibility = if (isPlaying) View.VISIBLE else View.GONE
 
         // Giao thức
+        val udpxy = prefs.udpxyServer.trim()
         val protocol = when {
-            channel.streamUrl.contains("udpxy=", ignoreCase = true) -> "HTTP Proxy (udpxy FPT)"
-            channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast (FPT IPTV)"
-            channel.streamUrl.startsWith("rtp", ignoreCase = true) -> "RTP Multicast (FPT IPTV)"
-            channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS Streaming / CDN"
-            else -> "HTTP/TS Stream"
+            channel.streamUrl.contains("/udp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("udp", ignoreCase = true)) -> "udpxy ($udpxy)"
+            channel.streamUrl.contains("/rtp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("rtp", ignoreCase = true)) -> "udpxy ($udpxy)"
+            channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast"
+            channel.streamUrl.startsWith("rtp", ignoreCase = true) -> "RTP Multicast"
+            channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS / CDN"
+            else -> "HTTP Stream"
         }
         val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_VLC) "VLC (Khử xé hình)" else "ExoPlayer"
         binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol • $engineName"
 
-        // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn
+        // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn (Có thể cuộn xem cả ngày)
         val timeline = epgManager.getTimelineForChannel(channel.id, channel.name)
         if (timeline.isNotEmpty()) {
-            val now = System.currentTimeMillis()
-            // Lọc các chương trình chưa kết thúc (endTime > now)
-            // Nhờ đó chương trình đang phát luôn hiển thị đầu tiên, ngay dưới tiêu đề EPG mà không cần cuộn
-            var displayTimeline = timeline.filter { it.endTime > now }
-            if (displayTimeline.isEmpty()) {
-                displayTimeline = timeline.takeLast(10)
-            }
             binding.rvSpotlightEpg.visibility = View.VISIBLE
             binding.tvEpgEmpty.visibility = View.GONE
-            epgTimelineAdapter.submitList(displayTimeline)
-            binding.rvSpotlightEpg.scrollToPosition(0)
+            epgTimelineAdapter.submitList(timeline)
+
+            val now = System.currentTimeMillis()
+            val currentIndex = timeline.indexOfFirst { it.isCurrent(now) }
+            if (currentIndex != -1) {
+                binding.rvSpotlightEpg.scrollToPosition(currentIndex)
+            } else {
+                binding.rvSpotlightEpg.scrollToPosition(0)
+            }
         } else {
             binding.rvSpotlightEpg.visibility = View.GONE
             binding.tvEpgEmpty.visibility = View.VISIBLE
@@ -661,23 +677,40 @@ class MainActivity : AppCompatActivity() {
 
     private fun normalizeStreamUrl(rawUrl: String, isVlc: Boolean): String {
         val trimmed = rawUrl.trim()
+        val udpxy = prefs.udpxyServer.trim()
+
+        // Nếu đã cấu hình máy chủ udpxy (server:port), tự động chuyển đổi luồng multicast sang HTTP proxy
+        val effectiveUrl = if (udpxy.isNotBlank()) {
+            when {
+                trimmed.startsWith("udp://@", ignoreCase = true) -> "http://$udpxy/udp/" + trimmed.substring(7)
+                trimmed.startsWith("udp://", ignoreCase = true) -> "http://$udpxy/udp/" + trimmed.substring(6)
+                trimmed.startsWith("rtp://@", ignoreCase = true) -> "http://$udpxy/rtp/" + trimmed.substring(7)
+                trimmed.startsWith("rtp://", ignoreCase = true) -> "http://$udpxy/rtp/" + trimmed.substring(6)
+                trimmed.matches(Regex("(?i)^http://[^/]+/(udp|rtp)/.*")) -> {
+                    trimmed.replaceFirst(Regex("(?i)^http://[^/]+/(udp|rtp)/"), "http://$udpxy/$1/")
+                }
+                else -> trimmed
+            }
+        } else {
+            trimmed
+        }
+
         return if (isVlc) {
             // LibVLC chuẩn Multicast: BẮT BUỘC phải có '@' trước IP Multicast (ví dụ: udp://@225.1.2.249:30120)
-            // Ký tự '@' là cú pháp chuẩn của VLC để kích hoạt socket bind và gửi bản tin IGMP Join tới nhóm multicast.
             when {
-                trimmed.startsWith("udp://@", ignoreCase = true) -> trimmed
-                trimmed.startsWith("udp://", ignoreCase = true) -> "udp://@" + trimmed.substring(6)
-                trimmed.startsWith("rtp://@", ignoreCase = true) -> trimmed
-                trimmed.startsWith("rtp://", ignoreCase = true) -> "rtp://@" + trimmed.substring(6)
-                else -> trimmed
+                effectiveUrl.startsWith("udp://@", ignoreCase = true) -> effectiveUrl
+                effectiveUrl.startsWith("udp://", ignoreCase = true) -> "udp://@" + effectiveUrl.substring(6)
+                effectiveUrl.startsWith("rtp://@", ignoreCase = true) -> effectiveUrl
+                effectiveUrl.startsWith("rtp://", ignoreCase = true) -> "rtp://@" + effectiveUrl.substring(6)
+                else -> effectiveUrl
             }
         } else {
             // ExoPlayer: Chuẩn Java URI không chấp nhận '@' trong host name
             when {
-                trimmed.startsWith("udp://@", ignoreCase = true) -> "udp://" + trimmed.substring(7)
-                trimmed.startsWith("rtp://@", ignoreCase = true) -> "udp://" + trimmed.substring(7)
-                trimmed.startsWith("rtp://", ignoreCase = true) -> "udp://" + trimmed.substring(6)
-                else -> trimmed
+                effectiveUrl.startsWith("udp://@", ignoreCase = true) -> "udp://" + effectiveUrl.substring(7)
+                effectiveUrl.startsWith("rtp://@", ignoreCase = true) -> "udp://" + effectiveUrl.substring(7)
+                effectiveUrl.startsWith("rtp://", ignoreCase = true) -> "udp://" + effectiveUrl.substring(6)
+                else -> effectiveUrl
             }
         }
     }
@@ -854,12 +887,40 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                    // Phím Trái khi xem toàn màn hình: Mở nhanh danh sách Yêu Thích
+                    val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
+                    if (favCat != null) {
+                        currentSelectedCategory = favCat
+                        categoryAdapter.setSelectedCategory(favCat)
+                        displayCategoryChannels(favCat)
+                    }
+                    showOverlay()
+                    return true
+                }
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                    // Phím Phải khi xem toàn màn hình: Mở menu chọn danh sách phát nhanh
+                    showQuickPlaylistDialog()
+                    return true
+                }
+            }
             KeyEvent.KEYCODE_MENU -> {
                 showSettingsDialog()
                 return true
             }
             KeyEvent.KEYCODE_BACK -> {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    val focused = currentFocus
+                    if (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
+                                focused.id == R.id.navFavorites || focused.id == R.id.navPlaylists ||
+                                focused.id == R.id.navSidebarSettings || focused.id == R.id.btnSpotlightPlay ||
+                                focused.id == R.id.btnSpotlightFav || focused.id == R.id.btnSpotlightDefault)) {
+                        focusPlayingChannel()
+                        return true
+                    }
                     hideOverlay()
                     return true
                 } else {
@@ -879,8 +940,66 @@ class MainActivity : AppCompatActivity() {
 
     private fun showOverlay() {
         binding.channelGuideOverlay.visibility = View.VISIBLE
-        binding.rvChannels.requestFocus()
         resetOverlayTimer()
+
+        val playing = currentPlayingChannel
+        if (playing != null) {
+            // Đảm bảo danh mục đang chọn có chứa kênh đang phát
+            val inCurrentCat = currentCategoryChannels.any { it.streamUrl == playing.streamUrl }
+            if (!inCurrentCat) {
+                val matchedCat = allCategories.firstOrNull { cat ->
+                    cat.channels.any { it.streamUrl == playing.streamUrl }
+                } ?: allCategories.firstOrNull { it.name == "Tất cả" }
+
+                if (matchedCat != null) {
+                    currentSelectedCategory = matchedCat
+                    categoryAdapter.setSelectedCategory(matchedCat)
+                    displayCategoryChannels(matchedCat, focusChannel = playing)
+                    return
+                }
+            }
+
+            focusPlayingChannel()
+            return
+        }
+
+        binding.rvChannels.requestFocus()
+    }
+
+    private fun focusPlayingChannel() {
+        val playing = currentPlayingChannel ?: return
+        val playingIndex = currentCategoryChannels.indexOfFirst { it.streamUrl == playing.streamUrl }
+        if (playingIndex != -1) {
+            binding.rvChannels.scrollToPosition(playingIndex)
+            binding.rvChannels.post {
+                val vh = binding.rvChannels.findViewHolderForAdapterPosition(playingIndex)
+                if (vh != null) {
+                    vh.itemView.requestFocus()
+                } else {
+                    binding.rvChannels.postDelayed({
+                        binding.rvChannels.findViewHolderForAdapterPosition(playingIndex)?.itemView?.requestFocus()
+                    }, 60)
+                }
+            }
+            updateSpotlight(playing)
+        } else {
+            binding.rvChannels.requestFocus()
+        }
+    }
+
+    private fun showQuickPlaylistDialog() {
+        resetOverlayTimer()
+        val dialog = QuickPlaylistDialog(
+            context = this,
+            onPlaylistSelected = {
+                loadPlaylist(forceRefresh = false)
+                loadEpgData()
+            },
+            onOpenFullSettings = {
+                showSettingsDialog()
+            }
+        )
+        dialog.show()
     }
 
     private fun hideOverlay() {

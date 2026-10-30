@@ -37,7 +37,23 @@ class SettingsDialog(
         initPlaylistsList()
         initPlayerEngineSettings()
         initBootSettings()
+        initUdpxySettings()
         initFocusNavigation()
+
+        binding.btnBrowseLocalFile.setOnClickListener {
+            val picker = LocalFilePickerDialog(
+                context = context,
+                onFileSelected = { file ->
+                    if (binding.etNewPlaylistName.text.isNullOrBlank()) {
+                        binding.etNewPlaylistName.setText(file.nameWithoutExtension)
+                    }
+                    binding.etNewPlaylistUrl.setText(file.absolutePath)
+                    binding.btnAddPlaylist.requestFocus()
+                    Toast.makeText(context, "Đã chọn file: ${file.name}", Toast.LENGTH_SHORT).show()
+                }
+            )
+            picker.show()
+        }
 
         binding.btnAddPlaylist.setOnClickListener {
             val name = binding.etNewPlaylistName.text.toString().trim()
@@ -104,7 +120,7 @@ class SettingsDialog(
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        binding.btnAddPlaylist.requestFocus()
+                        binding.btnBrowseLocalFile.requestFocus()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
@@ -119,6 +135,46 @@ class SettingsDialog(
                 }
             } else false
         }
+
+        binding.btnBrowseLocalFile.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        binding.btnAddPlaylist.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.etNewPlaylistUrl.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+
+        binding.etUdpxyServer.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        binding.btnCloseSettings.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.rbFixedChannel.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        binding.btnAddPlaylist.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+    }
+
+    private fun initUdpxySettings() {
+        binding.etUdpxyServer.setText(prefs.udpxyServer)
     }
 
     private fun initPlaylistsList() {
@@ -203,6 +259,12 @@ class SettingsDialog(
             PreferencesHelper.MODE_FIXED_CHANNEL
         } else {
             PreferencesHelper.MODE_LAST_WATCHED
+        }
+
+        val newUdpxy = binding.etUdpxyServer.text.toString().trim()
+        if (newUdpxy != prefs.udpxyServer) {
+            prefs.udpxyServer = newUdpxy
+            hasChangedPlaylist = true
         }
     }
 }

@@ -3,8 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp">
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp"
+    android:layout_marginTop="1dp"
+    android:layout_marginBottom="1dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:background="@drawable/selector_epg_item">
 
     <!-- Cột chỉ báo Timeline: Điểm tròn + Vạch nối -->
     <LinearLayout

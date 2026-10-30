@@ -11,6 +11,10 @@
     <uses-permission android:name="android.permission.QUICKBOOT_POWERON" />
     <uses-permission android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
 
+    <!-- Quyền đọc bộ nhớ / USB để chọn file M3U local -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
     <!-- Android TV compatibility declarations -->
     <uses-feature
         android:name="android.software.leanback"
@@ -30,6 +34,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
         android:networkSecurityConfig="@xml/network_security_config">
 
         <activity

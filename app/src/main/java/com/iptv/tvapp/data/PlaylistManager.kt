@@ -29,30 +29,58 @@ class PlaylistManager(private val context: Context) {
     }
 
     /**
+     * Tự động thay thế hoặc bổ sung tham số udpxy=server:port nếu người dùng đã cấu hình server udpxy
+     */
+    fun resolvePlaylistUrl(rawUrl: String): String {
+        val server = prefs.udpxyServer.trim()
+        if (server.isBlank()) return rawUrl
+
+        return when {
+            rawUrl.contains("udpxy=", ignoreCase = true) -> {
+                rawUrl.replace(Regex("(?i)udpxy=[^&]+"), "udpxy=$server")
+            }
+            rawUrl.contains("121124.xyz/tv/fpt", ignoreCase = true) -> {
+                val separator = if (rawUrl.contains("?")) "&" else "?"
+                "$rawUrl${separator}udpxy=$server"
+            }
+            else -> rawUrl
+        }
+    }
+
+    /**
      * Tải danh sách kênh từ URL hoặc file cache theo PlaylistSource
      */
     suspend fun loadPlaylist(playlistId: String, url: String, forceRefresh: Boolean = false): List<Category> =
         withContext(Dispatchers.IO) {
             val channels = mutableListOf<Channel>()
             val cacheFile = getCacheFile(playlistId)
+            val effectiveUrl = resolvePlaylistUrl(url)
 
             try {
-                if (forceRefresh || !cacheFile.exists() || cacheFile.length() == 0L) {
-                    downloadAndCache(url, cacheFile)
+                if (isLocalSource(effectiveUrl)) {
+                    loadFromLocal(effectiveUrl, cacheFile)
+                } else {
+                    if (forceRefresh || !cacheFile.exists() || cacheFile.length() == 0L) {
+                        downloadAndCache(effectiveUrl, cacheFile)
+                    }
                 }
 
                 if (cacheFile.exists() && cacheFile.length() > 0L) {
                     val stream = FileInputStream(cacheFile)
-                    channels.addAll(M3UParser.parse(stream))
+                    channels.addAll(M3UParser.parse(stream, baseUrl = effectiveUrl))
                 }
             } catch (e: Exception) {
                 // Nếu tải lỗi mà có cache cũ, đọc từ cache
                 if (cacheFile.exists() && cacheFile.length() > 0L && channels.isEmpty()) {
                     val stream = FileInputStream(cacheFile)
-                    channels.addAll(M3UParser.parse(stream))
+                    channels.addAll(M3UParser.parse(stream, baseUrl = effectiveUrl))
                 } else {
                     throw e
                 }
+            }
+
+            if (channels.isEmpty()) {
+                throw Exception("Không tìm thấy kênh nào trong danh sách. Vui lòng kiểm tra lại link M3U.")
             }
 
             val favoriteUrls = prefs.getFavoriteUrls()
@@ -72,17 +100,52 @@ class PlaylistManager(private val context: Context) {
     private fun downloadAndCache(url: String, targetFile: File) {
         val request = Request.Builder()
             .url(url)
-            .header("User-Agent", "Mozilla/5.0 (SmartTV; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) ExoPlayer")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+            .header("Accept", "*/*")
             .build()
 
         val response = httpClient.newCall(request).execute()
         if (!response.isSuccessful) {
-            throw Exception("HTTP Error: ${response.code}")
+            throw Exception("HTTP ${response.code}: Không thể tải danh sách kênh")
         }
 
-        val body = response.body ?: throw Exception("Empty response body")
+        val body = response.body ?: throw Exception("Nội dung tải về rỗng")
         FileOutputStream(targetFile).use { output ->
             body.byteStream().copyTo(output)
+        }
+    }
+
+    fun isLocalSource(url: String): Boolean {
+        val trimmed = url.trim()
+        return trimmed.startsWith("file://", ignoreCase = true) ||
+                trimmed.startsWith("content://", ignoreCase = true) ||
+                trimmed.startsWith("/")
+    }
+
+    private fun loadFromLocal(url: String, targetFile: File) {
+        val trimmed = url.trim()
+        val inputStream = when {
+            trimmed.startsWith("content://", ignoreCase = true) -> {
+                context.contentResolver.openInputStream(android.net.Uri.parse(trimmed))
+                    ?: throw Exception("Không thể mở đường dẫn: $trimmed")
+            }
+            trimmed.startsWith("file://", ignoreCase = true) -> {
+                val filePath = android.net.Uri.parse(trimmed).path ?: trimmed.substring(7)
+                val file = File(filePath)
+                if (!file.exists()) throw Exception("File không tồn tại: $filePath")
+                FileInputStream(file)
+            }
+            else -> {
+                val file = File(trimmed)
+                if (!file.exists()) throw Exception("File không tồn tại: $trimmed")
+                FileInputStream(file)
+            }
+        }
+
+        inputStream.use { input ->
+            FileOutputStream(targetFile).use { output ->
+                input.copyTo(output)
+            }
         }
     }
 

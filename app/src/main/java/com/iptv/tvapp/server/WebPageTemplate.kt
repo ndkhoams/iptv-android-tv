@@ -143,6 +143,20 @@ object WebPageTemplate {
             <button class="submit-btn" onclick="addNewPlaylist()">+ Thêm &amp; Lưu Vào TV</button>
         </div>
 
+        <div class="form-card">
+            <h3>📂 Tải File M3U Từ Điện Thoại Lên TV</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Truyền file M3U/M3U8 từ bộ nhớ điện thoại hoặc máy tính sang TV qua Wi-Fi.</p>
+            <div class="form-group">
+                <label>Tên danh sách (tùy chọn)</label>
+                <input type="text" id="uploadPlName" class="form-input" placeholder="Để trống sẽ lấy theo tên file">
+            </div>
+            <div class="form-group">
+                <label>Chọn file (.m3u, .m3u8, .txt)</label>
+                <input type="file" id="fileLocalM3u" accept=".m3u,.m3u8,.txt" class="form-input" style="padding:6px;">
+            </div>
+            <button class="submit-btn" style="background:#10b981;" onclick="uploadLocalPlaylist()">⬆ Tải File Lên TV</button>
+        </div>
+
         <h3 style="font-size:15px; margin-bottom:10px; color:var(--text-main);">Danh Sách Playlist Đã Có:</h3>
         <div id="playlistsContainer">Đang tải...</div>
     </div>
@@ -169,6 +183,16 @@ object WebPageTemplate {
                     Kênh cố định: <span id="lblFixedName" style="color:var(--accent); font-weight:bold;">Chưa chọn</span>
                 </label>
             </div>
+        </div>
+
+        <div class="form-card">
+            <h3>🌐 Cấu Hình Máy Chủ udpxy</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tự động chuyển đổi luồng multicast (UDP/RTP) sang HTTP proxy mà không cần sửa link.</p>
+            <div class="form-group">
+                <label>Máy chủ udpxy (IP:Port):</label>
+                <input type="text" id="txtUdpxyServer" class="form-input" placeholder="Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022">
+            </div>
+            <button class="submit-btn" onclick="updateUdpxySettings()">Lưu Cấu Hình udpxy</button>
         </div>
     </div>
 
@@ -365,6 +389,42 @@ object WebPageTemplate {
             });
         }
 
+        function uploadLocalPlaylist() {
+            var fileInput = document.getElementById('fileLocalM3u');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast('Vui lòng chọn file M3U!');
+                return;
+            }
+            var file = fileInput.files[0];
+            var customName = document.getElementById('uploadPlName').value.trim();
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var content = e.target.result;
+                fetch('/api/playlist/upload', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: customName,
+                        filename: file.name,
+                        content: content
+                    })
+                }).then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        showToast('Đã tải lên TV thành công: ' + (data.name || file.name));
+                        fileInput.value = '';
+                        document.getElementById('uploadPlName').value = '';
+                        loadPlaylists();
+                    } else {
+                        showToast('Lỗi tải file lên TV!');
+                    }
+                }).catch(function() {
+                    showToast('Lỗi đường truyền khi tải file!');
+                });
+            };
+            reader.readAsText(file);
+        }
+
         function selectPlaylist(id) {
             fetch('/api/playlist/select', {
                 method: 'POST',
@@ -399,6 +459,7 @@ object WebPageTemplate {
                     document.getElementById('optLastWatched').checked = true;
                 }
                 document.getElementById('lblFixedName').innerText = data.defaultStartupChannelName || 'Chưa chọn';
+                document.getElementById('txtUdpxyServer').value = data.udpxyServer || '';
             }).catch(function() {});
         }
 
@@ -412,6 +473,19 @@ object WebPageTemplate {
             }).then(function() {
                 showToast('Đã lưu cài đặt khởi động!');
             }).catch(function() {});
+        }
+
+        function updateUdpxySettings() {
+            var val = document.getElementById('txtUdpxyServer').value.trim();
+            fetch('/api/settings/udpxy', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ udpxyServer: val })
+            }).then(function() {
+                showToast('Đã lưu và cập nhật server udpxy!');
+            }).catch(function() {
+                showToast('Lỗi lưu server udpxy!');
+            });
         }
 
         fetchStatus();

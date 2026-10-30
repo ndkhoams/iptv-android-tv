@@ -40,6 +40,26 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
         private val binding: ItemEpgTimelineBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        init {
+            binding.root.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    view.animate().scaleX(1.03f).scaleY(1.03f).setDuration(120).start()
+                    view.setBackgroundResource(R.drawable.selector_epg_item)
+                } else {
+                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+                    val pos = adapterPosition
+                    if (pos != RecyclerView.NO_POSITION && pos < programs.size) {
+                        val prog = programs[pos]
+                        if (prog.isCurrent(System.currentTimeMillis())) {
+                            view.setBackgroundResource(R.drawable.bg_epg_current_item)
+                        } else {
+                            view.setBackgroundResource(R.drawable.selector_epg_item)
+                        }
+                    }
+                }
+            }
+        }
+
         fun bind(program: EpgProgram) {
             val now = System.currentTimeMillis()
             val isCurrent = program.isCurrent(now)
@@ -57,8 +77,9 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
                 binding.tvProgramTitle.setTextColor(Color.parseColor("#FFFFFF"))
                 binding.tvProgramTitle.textSize = 12.5f
                 binding.tvLiveBadge.visibility = View.VISIBLE
-                binding.root.setBackgroundResource(R.drawable.bg_epg_current_item)
-                binding.root.setPadding(14, 8, 14, 8)
+                if (!binding.root.hasFocus()) {
+                    binding.root.setBackgroundResource(R.drawable.bg_epg_current_item)
+                }
             } else if (isUpcoming) {
                 binding.tvTimelineDot.text = "○"
                 binding.tvTimelineDot.setTextColor(Color.parseColor("#64748B"))
@@ -66,8 +87,9 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
                 binding.tvProgramTitle.setTextColor(Color.parseColor("#CBD5E1"))
                 binding.tvProgramTitle.textSize = 11.5f
                 binding.tvLiveBadge.visibility = View.GONE
-                binding.root.background = null
-                binding.root.setPadding(6, 6, 6, 6)
+                if (!binding.root.hasFocus()) {
+                    binding.root.setBackgroundResource(R.drawable.selector_epg_item)
+                }
             } else {
                 binding.tvTimelineDot.text = "·"
                 binding.tvTimelineDot.setTextColor(Color.parseColor("#475569"))
@@ -75,8 +97,9 @@ class EpgTimelineAdapter : RecyclerView.Adapter<EpgTimelineAdapter.EpgViewHolder
                 binding.tvProgramTitle.setTextColor(Color.parseColor("#64748B"))
                 binding.tvProgramTitle.textSize = 11.5f
                 binding.tvLiveBadge.visibility = View.GONE
-                binding.root.background = null
-                binding.root.setPadding(6, 6, 6, 6)
+                if (!binding.root.hasFocus()) {
+                    binding.root.setBackgroundResource(R.drawable.selector_epg_item)
+                }
             }
         }
     }
