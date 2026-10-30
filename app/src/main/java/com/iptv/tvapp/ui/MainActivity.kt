@@ -228,8 +228,7 @@ class MainActivity : AppCompatActivity() {
         val extractorsFactory = DefaultExtractorsFactory().apply {
             setTsExtractorFlags(
                 DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
-                DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
-                DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO
+                DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
             )
         }
 
