@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permissions required for IPTV streaming -->
+    <!-- Permissions required for IPTV streaming and Boot auto-start -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.QUICKBOOT_POWERON" />
+    <uses-permission android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
 
     <!-- Android TV compatibility declarations -->
-    <!-- Setting required="false" ensures the app can install on any Android TV 5.0+ and Box -->
     <uses-feature
         android:name="android.software.leanback"
         android:required="false" />
@@ -36,13 +38,23 @@
             android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
-                <!-- Android TV Leanback Launcher -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                <!-- Standard Launcher for TV boxes that use standard launcher -->
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Receiver tự động mở app khi Android TV khởi động -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

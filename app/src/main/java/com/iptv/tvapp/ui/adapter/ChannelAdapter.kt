@@ -11,7 +11,8 @@ import com.iptv.tvapp.databinding.ItemChannelBinding
 import com.iptv.tvapp.model.Channel
 
 class ChannelAdapter(
-    private val onChannelClick: (Channel) -> Unit
+    private val onChannelClick: (Channel) -> Unit,
+    private val onChannelLongClick: ((Channel) -> Unit)? = null
 ) : RecyclerView.Adapter<ChannelAdapter.ChannelViewHolder>() {
 
     private val channels = mutableListOf<Channel>()
@@ -30,6 +31,14 @@ class ChannelAdapter(
 
         if (oldPos != -1) notifyItemChanged(oldPos)
         if (newPos != -1) notifyItemChanged(newPos)
+    }
+
+    fun updateChannelItem(channel: Channel) {
+        val index = channels.indexOfFirst { it.streamUrl == channel.streamUrl }
+        if (index != -1) {
+            channels[index] = channel
+            notifyItemChanged(index)
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelViewHolder {
@@ -57,6 +66,16 @@ class ChannelAdapter(
                 }
             }
 
+            binding.root.setOnLongClickListener {
+                val pos = adapterPosition
+                if (pos != RecyclerView.NO_POSITION && onChannelLongClick != null) {
+                    onChannelLongClick.invoke(channels[pos])
+                    true
+                } else {
+                    false
+                }
+            }
+
             // Hiệu ứng phóng to nhẹ khi Remote focus vào item trên Android TV
             binding.root.setOnFocusChangeListener { view, hasFocus ->
                 if (hasFocus) {
@@ -73,6 +92,8 @@ class ChannelAdapter(
 
             val isPlaying = channel.streamUrl == playingChannel?.streamUrl
             binding.tvNowPlaying.visibility = if (isPlaying) View.VISIBLE else View.GONE
+            binding.tvDefaultBadge.visibility = if (channel.isDefaultStartup) View.VISIBLE else View.GONE
+            binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE
             binding.root.isSelected = isPlaying
 
             // Load logo kênh bằng Glide

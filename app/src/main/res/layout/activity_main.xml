@@ -103,7 +103,7 @@
         android:padding="24dp"
         android:visibility="visible">
 
-        <!-- Top Bar: Tiêu đề + Các nút thao tác -->
+        <!-- Top Bar: Tiêu đề + Nguồn Playlist + Nút thao tác -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -120,13 +120,25 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvActivePlaylistBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:background="#1E293B"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:text="Danh sách: Mặc định" />
+
+            <TextView
                 android:id="@+id/tvCurrentPlayingTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="24dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="16sp"
+                android:layout_marginStart="16dp"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:text="" />
@@ -245,7 +257,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:text="@string/tv_guide_hint"
+            android:text="Nhấn OK: Xem kênh • Giữ OK: Yêu Thích ★ / Đặt Mặc Định • Menu: Cài Đặt"
             android:textColor="@color/text_muted"
             android:textSize="13sp" />
     </LinearLayout>

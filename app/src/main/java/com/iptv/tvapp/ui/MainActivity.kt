@@ -24,7 +24,8 @@ import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
-import com.iptv.tvapp.ui.dialog.PlaylistDialog
+import com.iptv.tvapp.ui.dialog.ChannelActionDialog
+import com.iptv.tvapp.ui.dialog.SettingsDialog
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private var allChannels = mutableListOf<Channel>()
     private var currentCategoryChannels = mutableListOf<Channel>()
     private var currentPlayingChannel: Channel? = null
+    private var currentSelectedCategory: Category? = null
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideOverlayRunnable = Runnable { hideOverlay() }
@@ -62,9 +64,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        // Cấu hình danh sách Danh mục (Category)
         categoryAdapter = CategoryAdapter { category ->
             resetOverlayTimer()
+            currentSelectedCategory = category
             displayCategoryChannels(category)
         }
         binding.rvCategories.apply {
@@ -72,28 +74,28 @@ class MainActivity : AppCompatActivity() {
             adapter = categoryAdapter
         }
 
-        // Cấu hình danh sách Kênh (Channel)
-        channelAdapter = ChannelAdapter { channel ->
-            playChannel(channel)
-            // Ẩn menu sau khi chọn kênh để xem toàn màn hình
-            hideHandler.postDelayed({ hideOverlay() }, 800)
-        }
+        channelAdapter = ChannelAdapter(
+            onChannelClick = { channel ->
+                playChannel(channel)
+                hideHandler.postDelayed({ hideOverlay() }, 800)
+            },
+            onChannelLongClick = { channel ->
+                showChannelActionDialog(channel)
+            }
+        )
         binding.rvChannels.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = channelAdapter
         }
 
-        // Nút Cài đặt Playlist
         binding.btnSettings.setOnClickListener {
-            showPlaylistDialog()
+            showSettingsDialog()
         }
 
-        // Nút Tải lại Playlist
         binding.btnReload.setOnClickListener {
             loadPlaylist(forceRefresh = true)
         }
 
-        // Lắng nghe tương tác để reset bộ đếm ẩn menu tự động
         binding.rootView.setOnClickListener {
             toggleOverlay()
         }
@@ -145,13 +147,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadPlaylist(forceRefresh: Boolean) {
+        val activeSource = prefs.getActivePlaylist()
+        binding.tvActivePlaylistBadge.text = "Danh sách: ${activeSource.name}"
+
         binding.layoutBuffering.visibility = View.VISIBLE
         binding.tvBufferingText.text = getString(R.string.loading_playlist)
         binding.tvErrorMessage.visibility = View.GONE
 
         lifecycleScope.launch {
             try {
-                val categories = playlistManager.loadPlaylist(prefs.playlistUrl, forceRefresh)
+                val categories = playlistManager.loadPlaylist(activeSource.id, activeSource.url, forceRefresh)
                 allCategories.clear()
                 allCategories.addAll(categories)
 
@@ -166,21 +171,27 @@ class MainActivity : AppCompatActivity() {
                 categoryAdapter.submitList(allCategories)
 
                 if (allCategories.isNotEmpty()) {
+                    currentSelectedCategory = allCategories[0]
                     displayCategoryChannels(allCategories[0])
                 }
 
                 binding.layoutBuffering.visibility = View.GONE
 
-                // Tự động phát kênh đã xem gần nhất hoặc kênh đầu tiên
-                val lastUrl = prefs.lastChannelUrl
-                val channelToPlay = allChannels.firstOrNull { it.streamUrl == lastUrl }
-                    ?: allChannels.firstOrNull()
-
-                if (channelToPlay != null) {
-                    playChannel(channelToPlay)
+                // Xác định kênh phát khi khởi động:
+                // Nếu chọn chế độ Kênh Cố Định -> tìm đúng kênh đó; nếu không có -> kênh vừa xem -> kênh đầu tiên
+                val targetChannel = if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL && !prefs.defaultStartupChannelUrl.isNullOrBlank()) {
+                    allChannels.firstOrNull { it.streamUrl == prefs.defaultStartupChannelUrl }
+                        ?: allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
+                        ?: allChannels.firstOrNull()
+                } else {
+                    allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
+                        ?: allChannels.firstOrNull()
                 }
 
-                // Cho focus vào danh mục đầu tiên
+                if (targetChannel != null) {
+                    playChannel(targetChannel)
+                }
+
                 binding.rvCategories.requestFocus()
                 resetOverlayTimer()
 
@@ -208,7 +219,6 @@ class MainActivity : AppCompatActivity() {
         channelAdapter.setPlayingChannel(channel)
         binding.tvCurrentPlayingTitle.text = "Đang phát: [${String.format("%02d", channel.number)}] ${channel.name}"
 
-        // Hiển thị banner nhanh thông tin kênh góc dưới
         showQuickChannelInfo(channel)
 
         binding.tvErrorMessage.visibility = View.GONE
@@ -236,7 +246,37 @@ class MainActivity : AppCompatActivity() {
         hideHandler.postDelayed(hideQuickBannerRunnable, 3500)
     }
 
-    // Chuyển kênh kế tiếp hoặc trước đó (như TV truyền thống)
+    private fun showChannelActionDialog(channel: Channel) {
+        resetOverlayTimer()
+        val dialog = ChannelActionDialog(this, channel) {
+            refreshChannelsState()
+        }
+        dialog.show()
+    }
+
+    private fun refreshChannelsState() {
+        val favUrls = prefs.getFavoriteUrls()
+        val defaultUrl = prefs.defaultStartupChannelUrl
+
+        allChannels.forEach { ch ->
+            ch.isFavorite = favUrls.contains(ch.streamUrl)
+            ch.isDefaultStartup = (ch.streamUrl == defaultUrl)
+        }
+
+        allCategories.clear()
+        allCategories.addAll(playlistManager.groupChannels(allChannels))
+        categoryAdapter.submitList(allCategories)
+
+        val activeCat = currentSelectedCategory?.let { sel ->
+            allCategories.firstOrNull { it.name == sel.name }
+        } ?: allCategories.firstOrNull()
+
+        if (activeCat != null) {
+            currentSelectedCategory = activeCat
+            displayCategoryChannels(activeCat)
+        }
+    }
+
     private fun switchChannel(next: Boolean) {
         if (allChannels.isEmpty()) return
 
@@ -251,7 +291,6 @@ class MainActivity : AppCompatActivity() {
         playChannel(targetChannel)
     }
 
-    // Điều khiển remote Android TV
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         resetOverlayTimer()
 
@@ -263,21 +302,19 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             KeyEvent.KEYCODE_DPAD_UP -> {
-                // Nếu đang xem toàn màn hình (menu đang ẩn), bấm Lên để chuyển kênh trước
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     switchChannel(next = false)
                     return true
                 }
             }
             KeyEvent.KEYCODE_DPAD_DOWN -> {
-                // Nếu đang xem toàn màn hình, bấm Xuống để chuyển kênh tiếp theo
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     switchChannel(next = true)
                     return true
                 }
             }
             KeyEvent.KEYCODE_MENU -> {
-                showPlaylistDialog()
+                showSettingsDialog()
                 return true
             }
             KeyEvent.KEYCODE_BACK -> {
@@ -285,7 +322,6 @@ class MainActivity : AppCompatActivity() {
                     hideOverlay()
                     return true
                 } else {
-                    // Nhấn BACK 2 lần để thoát
                     if (System.currentTimeMillis() - backPressedTime < 2000) {
                         finish()
                     } else {
@@ -322,15 +358,14 @@ class MainActivity : AppCompatActivity() {
     private fun resetOverlayTimer() {
         hideHandler.removeCallbacks(hideOverlayRunnable)
         if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-            // Tự động ẩn danh sách sau 7 giây không thao tác
             hideHandler.postDelayed(hideOverlayRunnable, 7000)
         }
     }
 
-    private fun showPlaylistDialog() {
-        val dialog = PlaylistDialog(this, prefs.playlistUrl) { newUrl ->
-            prefs.playlistUrl = newUrl
-            loadPlaylist(forceRefresh = true)
+    private fun showSettingsDialog() {
+        resetOverlayTimer()
+        val dialog = SettingsDialog(this) {
+            loadPlaylist(forceRefresh = false)
         }
         dialog.show()
     }

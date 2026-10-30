@@ -8,5 +8,7 @@ data class Channel(
     val logoUrl: String? = null,
     val streamUrl: String,
     val groupTitle: String = "Mặc định",
-    var number: Int = 0
+    var number: Int = 0,
+    var isFavorite: Boolean = false,
+    var isDefaultStartup: Boolean = false
 ) : Serializable
