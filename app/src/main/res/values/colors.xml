@@ -37,6 +37,8 @@
     <color name="accent_focused">#FF8533</color>
     <color name="tv_bg_dark">#0E0C1B</color>
     <color name="tv_overlay_bg">#E60E0C1B</color>
+    <color name="tv_panel_bg">#D9161526</color>
     <color name="item_bg_normal">#161526</color>
     <color name="item_bg_focused">#F1F3F5</color>
+    <color name="item_bg_selected">#2A2744</color>
 </resources>
