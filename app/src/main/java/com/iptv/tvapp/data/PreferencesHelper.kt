@@ -21,7 +21,7 @@ class PreferencesHelper(context: Context) {
             // Danh sách mặc định ban đầu
             val defaultSource = PlaylistSource(
                 id = UUID.randomUUID().toString(),
-                name = "Kênh Mẫu Việt Nam (IPTV-org)",
+                name = "FPT IPTV (udpxy)",
                 url = DEFAULT_URL,
                 isSelected = true
             )
@@ -45,6 +45,22 @@ class PreferencesHelper(context: Context) {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+
+        // Tự động nâng cấp danh sách mặc định cũ sang link FPT udpxy
+        var updatedDefault = false
+        for (i in 0 until list.size) {
+            val item = list[i]
+            if (item.url.contains("iptv-org/iptv/master/streams/vn.m3u")) {
+                list[i] = item.copy(
+                    name = "FPT IPTV (udpxy)",
+                    url = DEFAULT_URL
+                )
+                updatedDefault = true
+            }
+        }
+        if (updatedDefault) {
+            savePlaylists(list)
         }
 
         // Đảm bảo luôn có ít nhất 1 danh sách được chọn
@@ -137,6 +153,6 @@ class PreferencesHelper(context: Context) {
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 
-        const val DEFAULT_URL = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u"
+        const val DEFAULT_URL = "https://121124.xyz/tv/fpt?udpxy=10.0.0.222:4022"
     }
 }

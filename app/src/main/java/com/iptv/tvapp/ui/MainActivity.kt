@@ -29,11 +29,13 @@ import com.iptv.tvapp.R
 import com.iptv.tvapp.data.PlaylistManager
 import com.iptv.tvapp.data.PreferencesHelper
 import com.iptv.tvapp.databinding.ActivityMainBinding
+import com.iptv.tvapp.epg.EpgManager
 import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.server.TvWebServer
 import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
+import com.iptv.tvapp.ui.adapter.EpgTimelineAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.util.FptLogoHelper
@@ -48,6 +50,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var prefs: PreferencesHelper
     private lateinit var playlistManager: PlaylistManager
+    private lateinit var epgManager: EpgManager
 
     private var player: ExoPlayer? = null
     private var webServer: TvWebServer? = null
@@ -55,6 +58,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var channelAdapter: ChannelAdapter
+    private lateinit var epgTimelineAdapter: EpgTimelineAdapter
 
     private val allCategories = mutableListOf<Category>()
     private var allChannels = mutableListOf<Channel>()
@@ -85,6 +89,7 @@ class MainActivity : AppCompatActivity() {
 
         prefs = PreferencesHelper(this)
         playlistManager = PlaylistManager(this)
+        epgManager = EpgManager(this)
 
         acquireMulticastLock()
         initViews()
@@ -92,6 +97,14 @@ class MainActivity : AppCompatActivity() {
         initWebServer()
         startClock()
         loadPlaylist(forceRefresh = false)
+        loadEpgData()
+    }
+
+    private fun loadEpgData() {
+        lifecycleScope.launch {
+            epgManager.loadEpg()
+            currentFocusedChannel?.let { updateSpotlight(it) }
+        }
     }
 
     private fun startClock() {
@@ -140,6 +153,13 @@ class MainActivity : AppCompatActivity() {
         binding.rvChannels.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = channelAdapter
+        }
+
+        // Khởi tạo Timeline EPG dạng list
+        epgTimelineAdapter = EpgTimelineAdapter()
+        binding.rvSpotlightEpg.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = epgTimelineAdapter
         }
 
         // Spotlight Action Buttons
@@ -220,6 +240,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnReload.setOnClickListener {
             loadPlaylist(forceRefresh = true)
+            loadEpgData()
         }
 
         binding.rootView.setOnClickListener {
@@ -477,6 +498,7 @@ class MainActivity : AppCompatActivity() {
 
         // Giao thức
         val protocol = when {
+            channel.streamUrl.contains("udpxy=", ignoreCase = true) -> "HTTP Proxy (udpxy FPT)"
             channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast (FPT IPTV khử 1080i)"
             channel.streamUrl.startsWith("rtp", ignoreCase = true) -> "RTP Multicast (FPT IPTV khử 1080i)"
             channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS Streaming / CDN"
@@ -484,9 +506,17 @@ class MainActivity : AppCompatActivity() {
         }
         binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol"
 
-        // Lịch phát sóng
-        binding.tvSpotlightEpgNow.text = "● Đang phát: ${channel.name} Trực tiếp"
-        binding.tvSpotlightEpgNext.text = "○ Kế tiếp: Bản tin thời sự & Phim truyện đặc sắc"
+        // Lịch phát sóng EPG dạng list time-line từ epg.io.vn
+        val timeline = epgManager.getTimelineForChannel(channel.id, channel.name)
+        if (timeline.isNotEmpty()) {
+            binding.rvSpotlightEpg.visibility = View.VISIBLE
+            binding.tvEpgEmpty.visibility = View.GONE
+            epgTimelineAdapter.submitList(timeline)
+        } else {
+            binding.rvSpotlightEpg.visibility = View.GONE
+            binding.tvEpgEmpty.visibility = View.VISIBLE
+            binding.tvEpgEmpty.text = if (epgManager.isLoaded) "Chưa có lịch phát sóng" else "Đang tải lịch phát sóng..."
+        }
 
         // Nút trạng thái
         binding.btnSpotlightFav.text = if (channel.isFavorite) "★ BỎ THÍCH" else "☆ YÊU THÍCH"
@@ -507,7 +537,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
         try {
-            // Chuẩn hóa đường dẫn stream: Hỗ trợ link UDP / RTP multicast từ FPT (@225.x.x.x)
+            // Chuẩn hóa đường dẫn stream: Hỗ trợ link UDP / RTP multicast từ FPT (@225.x.x.x) và udpxy
             var streamUriString = channel.streamUrl.trim()
             if (streamUriString.startsWith("udp://@", ignoreCase = true)) {
                 streamUriString = "udp://" + streamUriString.substring(7)
@@ -532,6 +562,19 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickNumber.text = String.format("%02d", channel.number)
         binding.tvQuickName.text = channel.name
 
+        // Lấy tên chương trình EPG đang phát thời gian thực (hiển thị xong rồi tự tắt đi)
+        val currentProg = epgManager.getCurrentProgram(channel.id, channel.name)
+        if (currentProg != null) {
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val startStr = timeFormat.format(Date(currentProg.startTime))
+            val endStr = timeFormat.format(Date(currentProg.endTime))
+            binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title} ($startStr - $endStr)"
+            binding.tvQuickProgramTitle.visibility = View.VISIBLE
+        } else {
+            binding.tvQuickProgramTitle.text = "● Đang phát: Chương trình trực tiếp"
+            binding.tvQuickProgramTitle.visibility = View.VISIBLE
+        }
+
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
         if (resolvedLogo.isNotBlank()) {
             Glide.with(this)
@@ -547,7 +590,7 @@ class MainActivity : AppCompatActivity() {
         binding.quickChannelInfo.visibility = View.VISIBLE
 
         hideHandler.removeCallbacks(hideQuickBannerRunnable)
-        hideHandler.postDelayed(hideQuickBannerRunnable, 3500)
+        hideHandler.postDelayed(hideQuickBannerRunnable, 4000)
     }
 
     private fun showChannelActionDialog(channel: Channel) {
@@ -670,6 +713,7 @@ class MainActivity : AppCompatActivity() {
         resetOverlayTimer()
         val dialog = SettingsDialog(this) {
             loadPlaylist(forceRefresh = false)
+            loadEpgData()
         }
         dialog.show()
     }

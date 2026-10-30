@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="62dp"
-    android:layout_marginTop="3dp"
-    android:layout_marginBottom="3dp"
-    android:layout_marginStart="6dp"
-    android:layout_marginEnd="6dp"
+    android:layout_height="52dp"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="4dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:paddingStart="12dp"
-    android:paddingEnd="16dp"
+    android:paddingStart="8dp"
+    android:paddingEnd="10dp"
     android:focusable="true"
     android:focusableInTouchMode="true"
     android:background="@drawable/selector_channel_item">
 
-    <!-- Số thứ tự kênh (Chuẩn FPT G2: Cam khi focus/selected, xám bạc khi bình thường) -->
+    <!-- Số thứ tự kênh -->
     <TextView
         android:id="@+id/tvChannelNumber"
-        android:layout_width="40dp"
+        android:layout_width="28dp"
         android:layout_height="wrap_content"
         android:textColor="@color/selector_fpt_channel_num"
         android:duplicateParentState="true"
-        android:textSize="17sp"
+        android:textSize="14sp"
         android:textStyle="bold"
         android:gravity="center"
         android:text="01" />
@@ -29,37 +29,42 @@
     <!-- Logo kênh CDN FPT Play / M3U -->
     <ImageView
         android:id="@+id/ivChannelLogo"
-        android:layout_width="48dp"
-        android:layout_height="36dp"
-        android:layout_marginStart="8dp"
+        android:layout_width="38dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="6dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_tv_placeholder" />
 
-    <!-- Tên kênh (Chuẩn FPT G2: Đen #111827 khi focus trên nền trắng, Trắng sáng khi bình thường) -->
+    <!-- Tên kênh: Dành tối đa không gian để không bị cắt trên độ phân giải 1280x720 -->
     <TextView
         android:id="@+id/tvChannelName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:layout_marginStart="14dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="4dp"
         android:textColor="@color/selector_fpt_channel_text"
         android:duplicateParentState="true"
-        android:textSize="16sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:singleLine="true"
         android:ellipsize="end"
-        android:text="VTV1 HD" />
+        android:text="VTV1 (HD 8Mbps)" />
 
     <!-- Huy hiệu Độ phân giải FHD / 4K -->
     <TextView
         android:id="@+id/tvResolutionBadge"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="6dp"
+        android:layout_marginEnd="4dp"
         android:background="@drawable/bg_fpt_badge"
         android:textColor="#38BDF8"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
         android:text="FHD"
         android:visibility="gone" />
 
@@ -68,11 +73,15 @@
         android:id="@+id/tvDefaultBadge"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="6dp"
+        android:layout_marginEnd="4dp"
         android:background="@drawable/bg_fpt_badge"
         android:textColor="#34D399"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
         android:text="MẶC ĐỊNH"
         android:visibility="gone" />
 
@@ -81,20 +90,24 @@
         android:id="@+id/tvNowPlaying"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="6dp"
+        android:layout_marginEnd="4dp"
         android:background="@drawable/bg_fpt_badge_live"
         android:textColor="#FFFFFF"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
         android:text="ĐANG PHÁT"
         android:visibility="gone" />
 
     <!-- Ngôi sao yêu thích ★ -->
     <ImageView
         android:id="@+id/ivFavorite"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:layout_marginStart="4dp"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="2dp"
         android:src="@drawable/ic_star_filled"
         android:visibility="gone" />
 

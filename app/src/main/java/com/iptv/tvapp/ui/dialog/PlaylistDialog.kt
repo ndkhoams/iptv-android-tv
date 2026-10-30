@@ -17,7 +17,7 @@ class PlaylistDialog(
     private lateinit var binding: DialogPlaylistBinding
 
     companion object {
-        const val SAMPLE_VN_URL = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u"
+        const val SAMPLE_VN_URL = "https://121124.xyz/tv/fpt?udpxy=10.0.0.222:4022"
         const val SAMPLE_NEWS_URL = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/news.m3u"
     }
 
