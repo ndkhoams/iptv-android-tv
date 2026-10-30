@@ -87,7 +87,7 @@ object WebPageTemplate {
 <body>
 
     <header>
-        <h1>📱 FPT PLAY IPTV REMOTE</h1>
+        <h1>📱 TV PLAY REMOTE</h1>
         <span id="tvIpBadge" style="font-size:12px; color:var(--text-sub);">Đang kết nối TV...</span>
     </header>
 

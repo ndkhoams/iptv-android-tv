@@ -779,7 +779,7 @@ class MainActivity : AppCompatActivity() {
             upperName.contains("HD") || upperName.contains("720") -> "HD 720p"
             else -> "FHD 1080"
         }
-        binding.tvQuickResolution.text = "$defaultRes • FPT Play Live"
+        binding.tvQuickResolution.text = "$defaultRes • TV Play Live"
 
         binding.quickChannelInfo.visibility = View.VISIBLE
 

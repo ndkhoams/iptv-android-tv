@@ -20,7 +20,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="fpt"
+            android:text="TV"
             android:textColor="@color/fpt_orange"
             android:textSize="22sp"
             android:textStyle="bold" />
@@ -28,7 +28,8 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="play"
+            android:layout_marginStart="3dp"
+            android:text="Play"
             android:textColor="#FFFFFF"
             android:textSize="22sp"
             android:textStyle="bold" />

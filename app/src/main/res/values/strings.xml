@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FPT Play IPTV</string>
+    <string name="app_name">TV Play</string>
     <string name="all_channels">Tất cả kênh</string>
     <string name="channels_count">%d kênh</string>
     <string name="loading_playlist">Đang tải danh sách kênh…</string>

@@ -155,7 +155,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="1dp"
-                android:text="FHD 1080i • FPT Play Live"
+                android:text="FHD 1080 • TV Play Live"
                 android:textColor="@color/text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
@@ -182,7 +182,7 @@
             android:gravity="center_vertical"
             android:layout_marginBottom="8dp">
 
-            <!-- FPT Play Brand Title -->
+            <!-- TV Play Brand Title -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -192,7 +192,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="fpt"
+                    android:text="TV"
                     android:textColor="@color/fpt_orange"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -200,7 +200,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="play"
+                    android:layout_marginStart="2dp"
+                    android:text="Play"
                     android:textColor="#FFFFFF"
                     android:textSize="20sp"
                     android:textStyle="bold" />
@@ -214,7 +215,7 @@
                     android:paddingEnd="5dp"
                     android:paddingTop="2dp"
                     android:paddingBottom="2dp"
-                    android:text="IPTV G2"
+                    android:text="IPTV"
                     android:textColor="@color/fpt_orange"
                     android:textSize="9sp"
                     android:textStyle="bold" />
