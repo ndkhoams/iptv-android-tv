@@ -241,8 +241,7 @@ class MainActivity : AppCompatActivity() {
             .setAllowCrossProtocolRedirects(true)
 
         val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
-        val mediaSourceFactory = DefaultMediaSourceFactory(this, extractorsFactory)
-            .setDataSourceFactory(defaultDataSourceFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
 
         player = ExoPlayer.Builder(this)
             .setRenderersFactory(renderersFactory)

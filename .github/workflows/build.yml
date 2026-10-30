@@ -29,19 +29,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Debug APK
-      id: build_apk
-      continue-on-error: true
-      run: |
-        ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log
-
-    - name: Report Build Error to Step Summary
-      if: steps.build_apk.outcome != 'success'
-      run: |
-        echo "## ❌ Build Debug APK Thất Bại" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        grep -i -E "error:|exception:|failed|e: " -C 2 build.log | tail -n 50 >> $GITHUB_STEP_SUMMARY || tail -n 50 build.log >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        exit 1
+      run: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
