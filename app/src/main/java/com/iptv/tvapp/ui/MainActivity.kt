@@ -243,7 +243,8 @@ class MainActivity : AppCompatActivity() {
         val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
         val mediaSourceFactory = DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
 
-        player = ExoPlayer.Builder(this, renderersFactory)
+        player = ExoPlayer.Builder(this)
+            .setRenderersFactory(renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
             .setLoadControl(loadControl)
             .build()
