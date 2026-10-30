@@ -99,6 +99,9 @@ class MainActivity : AppCompatActivity() {
     private var lastRxBytes: Long = 0L
     private var lastRxTime: Long = 0L
     private var currentMeasuredBitrateMbps: Float = 0f
+    private var currentVideoWidth: Int = 0
+    private var currentVideoHeight: Int = 0
+    private var currentVideoFps: Int = 0
     private val telemetryHandler = Handler(Looper.getMainLooper())
     private val telemetryRunnable = object : Runnable {
         override fun run() {
@@ -448,6 +451,7 @@ class MainActivity : AppCompatActivity() {
                             }
                             VlcMediaPlayer.Event.Playing,
                             VlcMediaPlayer.Event.Vout,
+                            VlcMediaPlayer.Event.ESAdded,
                             VlcMediaPlayer.Event.ESSelected -> {
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
@@ -744,6 +748,9 @@ class MainActivity : AppCompatActivity() {
         prefs.lastChannelUrl = channel.streamUrl
 
         currentMeasuredBitrateMbps = 0f
+        currentVideoWidth = 0
+        currentVideoHeight = 0
+        currentVideoFps = 0
         lastRxBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid())
         lastRxTime = System.currentTimeMillis()
         startTelemetryUpdates()
@@ -925,9 +932,9 @@ class MainActivity : AppCompatActivity() {
     private fun updateDynamicTelemetry() {
         val currentCh = currentPlayingChannel ?: return
 
-        var width = 0
-        var height = 0
-        var fps = 0
+        var width = currentVideoWidth
+        var height = currentVideoHeight
+        var fps = currentVideoFps
         var bitrateBps = 0
         var vCodec = ""
         var aCodec = ""
@@ -937,8 +944,8 @@ class MainActivity : AppCompatActivity() {
         try {
             if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
                 vlcPlayer?.currentVideoTrack?.let { vt ->
-                    width = vt.width
-                    height = vt.height
+                    if (vt.width > 0) width = vt.width
+                    if (vt.height > 0) height = vt.height
                     if (vt.frameRateDen > 0 && vt.frameRateNum > 0) {
                         fps = Math.round(vt.frameRateNum.toFloat() / vt.frameRateDen.toFloat())
                     }
@@ -955,6 +962,22 @@ class MainActivity : AppCompatActivity() {
                     val curAudioId = vlcPlayer?.audioTrack ?: -1
                     for (i in 0 until trackCount) {
                         val track = media.getTrack(i)
+                        if (track is IMedia.VideoTrack) {
+                            if (width <= 0 && track.width > 0) width = track.width
+                            if (height <= 0 && track.height > 0) height = track.height
+                            if (fps <= 0 && track.frameRateDen > 0 && track.frameRateNum > 0) {
+                                fps = Math.round(track.frameRateNum.toFloat() / track.frameRateDen.toFloat())
+                            }
+                            if (bitrateBps <= 0 && track.bitrate > 0) bitrateBps = track.bitrate
+                            if (vCodec.isEmpty()) {
+                                vCodec = when (track.codec?.lowercase()) {
+                                    "h264", "avc1" -> "H.264"
+                                    "hevc", "h265" -> "H.265"
+                                    "mpgv", "mp2v" -> "MPEG-2"
+                                    else -> track.codec?.uppercase() ?: "H.264"
+                                }
+                            }
+                        }
                         if (track is IMedia.AudioTrack) {
                             if (curAudioId == -1 || track.id == curAudioId || aChannels.isEmpty()) {
                                 aChannels = when (track.channels) {
@@ -981,8 +1004,8 @@ class MainActivity : AppCompatActivity() {
             } else {
                 // ExoPlayer
                 player?.videoFormat?.let { vf ->
-                    width = vf.width
-                    height = vf.height
+                    if (vf.width > 0) width = vf.width
+                    if (vf.height > 0) height = vf.height
                     if (vf.frameRate > 0) {
                         fps = Math.round(vf.frameRate)
                     }
@@ -992,6 +1015,10 @@ class MainActivity : AppCompatActivity() {
                         vf.sampleMimeType?.contains("avc", ignoreCase = true) == true -> "H.264"
                         else -> "H.264"
                     }
+                }
+                player?.videoSize?.let { vs ->
+                    if (vs.width > 0 && width <= 0) width = vs.width
+                    if (vs.height > 0 && height <= 0) height = vs.height
                 }
                 player?.audioFormat?.let { af ->
                     aChannels = when (af.channelCount) {
@@ -1015,6 +1042,12 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
+        if (width > 0 && height > 0) {
+            currentVideoWidth = width
+            currentVideoHeight = height
+            if (fps > 0) currentVideoFps = fps
+        }
+
         // Định dạng Bitrate thực tế đo đạc
         val bitrateStr = if (currentMeasuredBitrateMbps > 0.1f) {
             String.format(Locale.US, "%.1f Mbps", currentMeasuredBitrateMbps)
@@ -1030,7 +1063,7 @@ class MainActivity : AppCompatActivity() {
                     height >= 900 || width >= 1400 -> "6.5 Mbps"
                     height >= 700 || width >= 1200 -> "3.5 Mbps"
                     height > 0 -> "1.8 Mbps"
-                    else -> "5.0 Mbps"
+                    else -> "--- Mbps"
                 }
             }
         }
@@ -1041,7 +1074,7 @@ class MainActivity : AppCompatActivity() {
             height >= 900 || width >= 1400 -> "FHD 1080"
             height >= 700 || width >= 1200 -> "HD 720p"
             height > 0 -> "SD ${height}p"
-            else -> "FHD 1080"
+            else -> "Đang nhận diện"
         }
 
         // Chi tiết Audio: Codec Kênh âm thanh (Tần số lấy mẫu)
@@ -1059,13 +1092,17 @@ class MainActivity : AppCompatActivity() {
         val resDim = if (width > 0 && height > 0) {
             "${width}x${height}$fpsStr"
         } else {
-            "1920x1080 @ 50fps"
+            "Đang nhận diện video..."
         }
 
         // Bố cục Dòng 3 thẻ OSD góc dưới (Màu xanh Cyan):
         // Kích thước độ phân giải @ Tần số quét • Bitrate • Thông tin Audio chi tiết
         // Ví dụ: 1920x1080 @ 50fps • 8.0 Mbps • AAC Stereo 2.0 (48kHz)
-        val quickOsdLine3 = "$resDim • $bitrateStr • $audioDetails"
+        val quickOsdLine3 = if (width > 0 && height > 0) {
+            "$resDim • $bitrateStr • $audioDetails"
+        } else {
+            "Đang nhận diện video... • $bitrateStr • $audioDetails"
+        }
         binding.tvQuickResolution.text = quickOsdLine3
         binding.tvQuickAudioBitrate.text = "Âm thanh: $audioDetails"
 
@@ -1129,12 +1166,11 @@ class MainActivity : AppCompatActivity() {
             binding.ivQuickLogo.setImageResource(R.drawable.ic_tv_placeholder)
         }
 
-        val upperName = channel.name.uppercase()
-        val initialResDim = when {
-            upperName.contains("4K") -> "3840x2160 @ 50fps"
-            upperName.contains("720") -> "1280x720 @ 50fps"
-            upperName.contains("SD") -> "720x576 @ 50fps"
-            else -> "1920x1080 @ 50fps"
+        val initialResDim = if (currentVideoWidth > 0 && currentVideoHeight > 0) {
+            val fpsStr = if (currentVideoFps > 0) " @ ${currentVideoFps}fps" else " @ 50fps"
+            "${currentVideoWidth}x${currentVideoHeight}$fpsStr"
+        } else {
+            "Đang nhận diện video..."
         }
         val initialBitrate = if (currentMeasuredBitrateMbps > 0.1f) {
             String.format(Locale.US, "%.1f Mbps", currentMeasuredBitrateMbps)
@@ -1143,12 +1179,7 @@ class MainActivity : AppCompatActivity() {
             if (match != null) {
                 "${match.groupValues[1]} Mbps"
             } else {
-                when {
-                    upperName.contains("4K") -> "15.0 Mbps"
-                    upperName.contains("720") -> "3.5 Mbps"
-                    upperName.contains("SD") -> "1.8 Mbps"
-                    else -> "6.5 Mbps"
-                }
+                "--- Mbps"
             }
         }
         // Dòng 3 (Màu xanh Cyan): Kích thước độ phân giải @ FPS • Bitrate • Thông tin Audio chi tiết
