@@ -32,8 +32,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Debug APK
-      run: |
-        ./gradlew compileDebugKotlin 2>&1 | tee compile.log
+      run: ./gradlew assembleDebug --no-daemon
 
     - name: Push Full Compile Log if Failed
       if: failure()
@@ -41,13 +40,11 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git checkout -B build-error-log
-        cat compile.log > error_report.txt
+        find . -name "*.log" -o -name "hs_err*" -o -name "*.txt" | head -n 30 > error_report.txt
+        ./gradlew assembleDebug -Pkotlin.daemon.jvm.options="-XX:+PrintCommandLineFlags" 2>&1 | grep -C 3 "e: " >> error_report.txt || true
         git add error_report.txt
-        git commit -m "Cat compile log directly"
+        git commit -m "Capture compiler error report"
         git push origin build-error-log --force
-
-    - name: Finish Assemble
-      run: ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
