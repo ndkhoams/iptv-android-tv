@@ -9,7 +9,7 @@
         </shape>
     </item>
     <!-- Vạch đứng Cam FPT #FF6500 dày 7dp ở mép phải -->
-    <item android:gravity="end">
+    <item android:gravity="right">
         <shape android:shape="rectangle">
             <size android:width="7dp" />
             <solid android:color="#FF6500" />

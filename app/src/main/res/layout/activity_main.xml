@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/rootView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -26,8 +25,10 @@
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/bg_fpt_glass_panel"
-        android:paddingHorizontal="32dp"
-        android:paddingVertical="24dp"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
         android:visibility="gone">
 
         <ProgressBar
@@ -56,8 +57,10 @@
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/bg_fpt_glass_panel"
-        android:paddingHorizontal="36dp"
-        android:paddingVertical="20dp"
+        android:paddingStart="36dp"
+        android:paddingEnd="36dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp"
         android:visibility="gone">
 
         <TextView
@@ -90,8 +93,10 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="@drawable/bg_fpt_quick_banner"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="12dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
         android:visibility="gone">
 
         <TextView
@@ -184,8 +189,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:background="@drawable/bg_fpt_badge"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="2dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
                     android:text="IPTV G2"
                     android:textColor="@color/fpt_orange"
                     android:textSize="10sp"
@@ -199,8 +206,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:background="@drawable/bg_fpt_badge"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:text="Danh sách: Mặc định" />
@@ -212,8 +221,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:background="@drawable/bg_fpt_badge"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
                 android:textColor="#34D399"
                 android:textSize="12sp"
                 android:textStyle="bold"
@@ -242,7 +253,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:layout_marginEnd="10dp"
-                android:paddingHorizontal="14dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
                 android:text="@string/reload"
                 android:textColor="@color/text_primary"
                 android:textSize="12sp"
@@ -255,7 +267,8 @@
                 android:id="@+id/btnSettings"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:paddingHorizontal="14dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
                 android:text="@string/settings"
                 android:textColor="@color/text_primary"
                 android:textSize="12sp"
@@ -278,7 +291,8 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:paddingVertical="12dp">
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
 
                 <!-- 1. Live TV Tất cả -->
                 <ImageButton
@@ -374,8 +388,10 @@
                     android:textColor="@color/fpt_orange"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp" />
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvCategories"
@@ -403,8 +419,10 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp">
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
 
                     <TextView
                         android:id="@+id/tvCategoryHeader"
@@ -550,7 +568,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="● Đang phát: Bản tin thời sự truyền hình trực tiếp"
+                        android:text="● Đang phát: Chương trình truyền hình trực tiếp"
                         android:textColor="@color/text_primary"
                         android:textSize="12sp"
                         android:maxLines="2"
