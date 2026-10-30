@@ -29,16 +29,14 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace --info --no-daemon
+      run: ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee build_log.txt
 
-    - name: Upload Build Reports if Failed
-      if: failure()
+    - name: Upload Build Log
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-error-reports
-        path: |
-          app/build/reports/
-          **/hs_err_pid*
+        name: gradle-build-log
+        path: build_log.txt
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
