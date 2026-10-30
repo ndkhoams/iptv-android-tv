@@ -54,14 +54,15 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
-        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.1' }}
-        name: v1.9.1 - Tối ưu toàn màn hình EPG & Bỏ các nút thừa điều hướng
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.9.2' }}
+        name: v1.9.2 - Tương thích nguồn Playlist Di động & Bóc tách M3U
         body: |
-          ### Bản cập nhật v1.9.1 cho TV Play Android TV:
-          - **Tối ưu hiển thị EPG toàn diện:** Loại bỏ 3 nút thừa bên dưới lịch phát sóng (Phát kênh, Yêu thích, Mặc định), giải phóng 100% không gian chiều cao để hiển thị thêm nhiều chương trình trong ngày.
-          - **Điều hướng Remote mượt mà:** Khắc phục triệt để lỗi bị mắc kẹt khi cuộn lịch phát sóng; cuộn lên / xuống thoải mái từ đầu đến cuối ngày không bị cản trở.
-          - **Tích hợp thao tác trực tiếp trên EPG:** Bấm OK vào bất kỳ chương trình nào trong danh sách EPG để phát ngay kênh đó; nhấn giữ OK để mở Menu tác vụ (Yêu thích, Đặt kênh mặc định khởi động, v.v.).
-          - **Bao gồm các cải tiến v1.9.0:** Logo TV viền cam mới, Banner Android TV Leanback thẻ dài, sửa tương phản danh sách phát nhanh, chuẩn FHD 1080 và thẻ thông tin kênh 10s khi Back.
+          ### Bản cập nhật v1.9.2 cho TV Play Android TV:
+          - **Tương thích nguồn Playlist Di động:** Chuyển đổi User-Agent mặc định sang Mobile Android Chrome & iOS Safari kèm bộ Header di động đầy đủ (sec-ch-ua-mobile, Accept stream), giúp tải mượt mà các link M3U được bảo vệ hoặc chỉ trả dữ liệu cho trình duyệt điện thoại (như Cloudflare Pages `thtt.pages.dev/ttt.m3u`).
+          - **Cơ chế xoay vòng User-Agent tự động:** Tự động thử qua nhiều danh tính (Mobile Chrome, Safari, VLC, TiviMate, Desktop) nếu server chặn hoặc trả về trang web mẫu.
+          - **Tự động bóc tách link M3U nhúng trong HTML:** Nhận diện và tự động chuyển hướng theo các thẻ meta refresh, thẻ `<a href="...m3u">` hoặc mã M3U nhúng trong trang web.
+          - **Bộ nhớ Cookie tự động (CookieJar):** Duy trì cookie phiên qua các lần redirect để vượt qua trang xác thực.
+          - **Bao gồm các cải tiến trước:** Giao diện EPG toàn màn hình mượt mà, bấm OK trên EPG để phát, logo TV viền cam, thẻ dài Android TV, chuẩn FHD 1080 và thẻ OSD 10s khi Back.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

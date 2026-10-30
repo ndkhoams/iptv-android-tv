@@ -6,23 +6,57 @@ import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.parser.M3UParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
 class PlaylistManager(private val context: Context) {
 
     private val prefs = PreferencesHelper(context)
 
+    private val cookieStore = ConcurrentHashMap<String, MutableList<Cookie>>()
+
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(25, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
+        .cookieJar(object : CookieJar {
+            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+                val list = cookieStore.getOrPut(url.host) { CopyOnWriteArrayList() }
+                list.addAll(cookies)
+            }
+
+            override fun loadForRequest(url: HttpUrl): List<Cookie> {
+                return cookieStore[url.host] ?: emptyList()
+            }
+        })
         .build()
+
+    companion object {
+        // Danh sách các User-Agent mô phỏng điện thoại và trình phát phổ biến
+        val USER_AGENTS = listOf(
+            // 1. Mobile Android Chrome (Trình duyệt điện thoại Android chính thống)
+            "Mozilla/5.0 (Linux; Android 14; Mobile; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+            // 2. Mobile iOS Safari (Trình duyệt điện thoại iPhone)
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
+            // 3. VLC Media Player (Đầu phát đa phương tiện IPTV chuẩn)
+            "VLC/3.0.18 LibVLC/3.0.18",
+            // 4. TiviMate IPTV Player (Ứng dụng IPTV Android TV phổ biến)
+            "TiviMate/4.7.0 (Android TV)",
+            // 5. Desktop Chrome (Dự phòng cho các link yêu cầu desktop)
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        )
+    }
 
     private fun getCacheFile(playlistId: String): File {
         return File(context.cacheDir, "playlist_${playlistId.replace("-", "_")}.m3u")
@@ -98,20 +132,121 @@ class PlaylistManager(private val context: Context) {
         }
 
     private fun downloadAndCache(url: String, targetFile: File) {
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-            .header("Accept", "*/*")
-            .build()
+        var lastException: Exception? = null
+        var downloadedBytes: ByteArray? = null
 
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw Exception("HTTP ${response.code}: Không thể tải danh sách kênh")
+        for (ua in USER_AGENTS) {
+            try {
+                val requestBuilder = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", ua)
+                    .header("Accept", "text/plain, audio/x-mpegurl, application/x-mpegurl, text/html, */*")
+                    .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
+
+                if (ua.contains("Mobile") || ua.contains("Android")) {
+                    requestBuilder.header("sec-ch-ua-mobile", "?1")
+                    requestBuilder.header("sec-ch-ua-platform", "\"Android\"")
+                    requestBuilder.header("Sec-Fetch-Mode", "navigate")
+                    requestBuilder.header("Sec-Fetch-Dest", "document")
+                }
+
+                val response = httpClient.newCall(requestBuilder.build()).execute()
+                if (response.isSuccessful) {
+                    val bodyBytes = response.body?.bytes()
+                    if (bodyBytes != null && bodyBytes.isNotEmpty()) {
+                        // Kiểm tra xem dữ liệu có phải là HTML hay không
+                        val preview = String(bodyBytes.take(512).toByteArray(), Charsets.UTF_8).trim().lowercase()
+                        val isHtml = preview.startsWith("<!doctype html") || preview.startsWith("<html")
+
+                        if (!isHtml) {
+                            // Dữ liệu M3U hoặc text danh sách hợp lệ!
+                            downloadedBytes = bodyBytes
+                            break
+                        } else {
+                            // Nội dung trả về là HTML -> Thử tìm kiếm link .m3u / .m3u8 bên trong HTML
+                            val fullHtml = String(bodyBytes, Charsets.UTF_8)
+                            val extractedM3uUrl = findM3uLinkInHtml(fullHtml, url)
+                            if (extractedM3uUrl != null && extractedM3uUrl != url) {
+                                try {
+                                    val redirectReq = Request.Builder()
+                                        .url(extractedM3uUrl)
+                                        .header("User-Agent", ua)
+                                        .build()
+                                    val redResp = httpClient.newCall(redirectReq).execute()
+                                    if (redResp.isSuccessful) {
+                                        val redBytes = redResp.body?.bytes()
+                                        if (redBytes != null && redBytes.isNotEmpty()) {
+                                            downloadedBytes = redBytes
+                                            break
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    // Bỏ qua lỗi để thử UA tiếp theo
+                                }
+                            }
+
+                            // Thử kiểm tra xem trong HTML có nội dung #EXTM3U/EXTINF dạng pre/code hay không
+                            val extractedContent = extractM3uContentFromHtml(fullHtml)
+                            if (extractedContent != null) {
+                                downloadedBytes = extractedContent.toByteArray(Charsets.UTF_8)
+                                break
+                            }
+
+                            lastException = Exception("Nguồn online trả về trang HTML thay vì danh sách M3U. Bạn có thể tải file về điện thoại và truyền lên TV qua Web Remote.")
+                        }
+                    }
+                } else {
+                    lastException = Exception("HTTP ${response.code}: Không thể tải danh sách kênh")
+                }
+            } catch (e: Exception) {
+                lastException = e
+            }
         }
 
-        val body = response.body ?: throw Exception("Nội dung tải về rỗng")
-        FileOutputStream(targetFile).use { output ->
-            body.byteStream().copyTo(output)
+        if (downloadedBytes != null && downloadedBytes.isNotEmpty()) {
+            FileOutputStream(targetFile).use { output ->
+                output.write(downloadedBytes)
+            }
+        } else {
+            throw lastException ?: Exception("Không thể tải danh sách kênh từ URL này.")
+        }
+    }
+
+    private fun findM3uLinkInHtml(html: String, baseUrl: String): String? {
+        // 1. Thẻ meta refresh chuyển tiếp
+        val metaRegex = Regex("(?i)<meta\\s+http-equiv=[\"']refresh[\"']\\s+content=[\"']\\d+;\\s*url=([^\"']+)[\"']")
+        metaRegex.find(html)?.groupValues?.get(1)?.let { return resolveRelativeUrl(baseUrl, it.trim()) }
+
+        // 2. Thẻ href hoặc src trỏ tới .m3u hoặc .m3u8
+        val linkRegex = Regex("(?i)(?:href|src)=[\"']([^\"'\\s>]+\\.(?:m3u8?|txt)(?:\\?[^\"'\\s>]*)?)[\"']")
+        linkRegex.find(html)?.groupValues?.get(1)?.let { return resolveRelativeUrl(baseUrl, it.trim()) }
+
+        // 3. Link tuyệt đối chứa .m3u trong toàn văn bản
+        val urlRegex = Regex("(?i)https?://[^\"'\\s<>]+\\.(?:m3u8?|txt)(?:\\?[^\"'\\s<>]*)?")
+        urlRegex.find(html)?.value?.let { return it.trim() }
+
+        return null
+    }
+
+    private fun extractM3uContentFromHtml(html: String): String? {
+        val lower = html.lowercase()
+        val startIndex = lower.indexOf("#extm3u").takeIf { it != -1 } ?: lower.indexOf("#extinf")
+        if (startIndex != -1) {
+            val content = html.substring(startIndex)
+            val clean = content.replace(Regex("(?i)</(?:pre|code|body|html)>.*"), "").trim()
+            if (clean.lines().count { it.startsWith("#EXTINF", ignoreCase = true) } > 0) {
+                return clean
+            }
+        }
+        return null
+    }
+
+    private fun resolveRelativeUrl(baseUrl: String, targetUrl: String): String {
+        return try {
+            if (targetUrl.contains("://")) targetUrl
+            else URI(baseUrl).resolve(targetUrl).toString()
+        } catch (e: Exception) {
+            targetUrl
         }
     }
 
