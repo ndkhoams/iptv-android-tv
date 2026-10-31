@@ -26,6 +26,8 @@ object M3UParser {
         var currentName = ""
         var currentLogo: String? = null
         var currentGroup = "Tất cả"
+        var currentReferer: String? = null
+        var currentUserAgent: String? = null
         var channelIndex = 1
         var isFirstLine = true
         var isHtmlContent = false
@@ -73,6 +75,15 @@ object M3UParser {
                 if (groupVal.isNotBlank()) {
                     currentGroup = groupVal
                 }
+            } else if (trimmedLine.startsWith("#EXTVLCOPT:", ignoreCase = true)) {
+                // Hỗ trợ directive VLC / PotPlayer (http-referrer, http-user-agent)
+                val opt = trimmedLine.substringAfter(':').trim()
+                val lowerOpt = opt.lowercase()
+                if (lowerOpt.startsWith("http-referrer=")) {
+                    currentReferer = opt.substringAfter('=').trim()
+                } else if (lowerOpt.startsWith("http-user-agent=")) {
+                    currentUserAgent = opt.substringAfter('=').trim()
+                }
             } else if (trimmedLine.isNotBlank() && !trimmedLine.startsWith("#")) {
                 // Dòng này chứa link stream (http / https / rtsp / udp / rtp / ...)
                 var streamUrl = trimmedLine
@@ -115,6 +126,19 @@ object M3UParser {
                 }
 
                 if (streamUrl.isNotBlank()) {
+                    if (!streamUrl.contains("|")) {
+                        val headersList = mutableListOf<String>()
+                        if (!currentReferer.isNullOrBlank()) {
+                            headersList.add("Referer=$currentReferer")
+                        }
+                        if (!currentUserAgent.isNullOrBlank()) {
+                            headersList.add("User-Agent=$currentUserAgent")
+                        }
+                        if (headersList.isNotEmpty()) {
+                            streamUrl = "$streamUrl|${headersList.joinToString("&")}"
+                        }
+                    }
+
                     channels.add(
                         Channel(
                             id = currentId.ifBlank { "ch_$channelIndex" },
@@ -132,6 +156,8 @@ object M3UParser {
                     currentName = ""
                     currentLogo = null
                     currentGroup = "Khác"
+                    currentReferer = null
+                    currentUserAgent = null
                 }
             }
 

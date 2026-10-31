@@ -653,19 +653,22 @@ class SportsLiveManager(private val context: Context) {
             }
 
             val serverName = keyData.optString("server_name", "origin")
-            var serverDomain = keyData.optString("server_domain", "https://streamfree.top")
-            if (!serverDomain.startsWith("http")) {
-                serverDomain = "https://streamfree.top"
+            val actualQuality = when {
+                tokensJson.has(quality) -> quality
+                tokensJson.has("1080p") -> "1080p"
+                tokensJson.has("720p") -> "720p"
+                tokensJson.has("540p") -> "540p"
+                tokensJson.has("2160p") -> "2160p"
+                else -> quality
             }
-
-            val variant = "$streamKey$quality"
+            val variant = "$encodedKey$actualQuality"
             val (domain, path) = when {
                 serverName == "externalcdn" -> Pair("https://streamfree.top", "/live-externalcdn/$variant/index.m3u8")
-                serverName != "origin" -> Pair(serverDomain, "/live-cdn/$variant/index.m3u8")
-                else -> Pair(serverDomain, "/live/$variant/index.m3u8")
+                else -> Pair("https://strmfree.st", "/live-cdn/$variant/index.m3u8")
             }
 
-            val tokenObj = tokensJson.optJSONObject(quality)
+            val tokenObj = tokensJson.optJSONObject(actualQuality)
+                ?: tokensJson.optJSONObject("1080p")
                 ?: tokensJson.optJSONObject("720p")
                 ?: tokensJson.optJSONObject("540p")
                 ?: tokensJson.optJSONObject("2160p")
@@ -679,7 +682,8 @@ class SportsLiveManager(private val context: Context) {
                 "$domain$path"
             }
 
-            return "$m3u8Url|Referer=$STREAMFREE_REFERER&User-Agent=$CHROME_UA"
+            val streamReferer = if (serverName == "externalcdn") STREAMFREE_HOME else "https://strmfree.st/"
+            return "$m3u8Url|Referer=$streamReferer&User-Agent=$CHROME_UA"
         } catch (e: Exception) {
             e.printStackTrace()
         }

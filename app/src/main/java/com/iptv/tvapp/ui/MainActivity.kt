@@ -815,7 +815,7 @@ class MainActivity : AppCompatActivity() {
         // Giao thức
         val udpxy = prefs.udpxyServer.trim()
         val protocol = when {
-            channel.streamUrl.contains("/truc-tiep/") -> "Web Live Stream (HLS)"
+            channel.streamUrl.contains("/truc-tiep/") || channel.streamUrl.startsWith("streamfree://") -> "Web Live Stream (HLS)"
             channel.streamUrl.contains("/udp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("udp", ignoreCase = true)) -> "udpxy ($udpxy)"
             channel.streamUrl.contains("/rtp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("rtp", ignoreCase = true)) -> "udpxy ($udpxy)"
             channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast"
@@ -879,8 +879,8 @@ class MainActivity : AppCompatActivity() {
 
         val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
 
-        // Nếu là trận đấu bóng đá trực tiếp từ web (Xôi Lạc, Cà Khịa, Chuối Chiên), giải mã link m3u8 động
-        if (channel.streamUrl.contains("/truc-tiep/")) {
+        // Nếu là trận đấu thể thao trực tiếp từ web (Xôi Lạc, Cà Khịa, StreamFree), giải mã link m3u8 động
+        if (channel.streamUrl.contains("/truc-tiep/") || channel.streamUrl.startsWith("streamfree://")) {
             binding.tvQuickBufferingText.text = "Đang kết nối luồng trực tiếp..."
             binding.layoutQuickBuffering.visibility = View.VISIBLE
             lifecycleScope.launch(Dispatchers.Main) {
@@ -1734,6 +1734,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun isSportsLiveMatch(channel: Channel): Boolean {
         return channel.streamUrl.contains("/truc-tiep/") ||
+                channel.streamUrl.startsWith("streamfree://") ||
+                channel.id.startsWith("streamfree_") ||
                 channel.id.startsWith("chuoichien_") ||
                 channel.id.startsWith("gavang_") ||
                 channel.id.startsWith("xoilac_") ||
@@ -1742,8 +1744,13 @@ class MainActivity : AppCompatActivity() {
                 channel.groupTitle.contains("Gà Vàng") ||
                 channel.groupTitle.contains("Xôi Lạc") ||
                 channel.groupTitle.contains("Cà Khịa") ||
+                channel.groupTitle.contains("StreamFree") ||
                 channel.groupTitle.contains("TRỰC TIẾP") ||
-                channel.name.startsWith("⚽")
+                channel.name.startsWith("⚽") ||
+                channel.name.startsWith("🏎️") ||
+                channel.name.startsWith("🎾") ||
+                channel.name.startsWith("🏀") ||
+                channel.name.startsWith("🏆")
     }
 
     private fun buildSportsTimeline(channel: Channel): List<EpgProgram> {
