@@ -90,6 +90,18 @@ class ChannelAdapter(
         }
 
         fun bind(channel: Channel) {
+            if (channel.id == "action_refresh_sports" || channel.streamUrl == "action://refresh_sports") {
+                binding.tvChannelNumber.text = "🔄"
+                binding.ivChannelLogo.setImageResource(R.drawable.ic_tv_placeholder)
+                binding.tvChannelName.text = channel.name
+                binding.tvResolutionBadge.visibility = View.GONE
+                binding.tvNowPlaying.visibility = View.GONE
+                binding.tvDefaultBadge.visibility = View.GONE
+                binding.ivFavorite.visibility = View.GONE
+                binding.root.isSelected = false
+                return
+            }
+
             binding.tvChannelNumber.text = String.format("%02d", channel.number)
             binding.tvChannelName.text = channel.name
 

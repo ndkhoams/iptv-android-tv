@@ -39,10 +39,12 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.iptv.tvapp.R
 import com.iptv.tvapp.data.PlaylistManager
 import com.iptv.tvapp.data.PreferencesHelper
+import com.iptv.tvapp.data.SportsLiveManager
 import com.iptv.tvapp.databinding.ActivityMainBinding
 import com.iptv.tvapp.epg.EpgManager
 import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
+import com.iptv.tvapp.model.EpgProgram
 import com.iptv.tvapp.server.TvWebServer
 import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
@@ -53,6 +55,8 @@ import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.videolan.libvlc.LibVLC
@@ -60,6 +64,7 @@ import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer as VlcMediaPlayer
 import org.videolan.libvlc.interfaces.IMedia
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -161,6 +166,7 @@ class MainActivity : AppCompatActivity() {
         startClock()
         loadPlaylist(forceRefresh = false)
         loadEpgData()
+        startPeriodicSportsRefresh()
     }
 
     private fun loadEpgData() {
@@ -226,11 +232,17 @@ class MainActivity : AppCompatActivity() {
 
         channelAdapter = ChannelAdapter(
             onChannelClick = { channel ->
-                playChannel(channel)
-                hideHandler.postDelayed({ hideOverlay() }, 800)
+                if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
+                    refreshSportsMatchesManually()
+                } else {
+                    playChannel(channel)
+                    hideHandler.postDelayed({ hideOverlay() }, 800)
+                }
             },
             onChannelLongClick = { channel ->
-                showChannelActionDialog(channel)
+                if (channel.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !channel.streamUrl.startsWith("action://")) {
+                    showChannelActionDialog(channel)
+                }
             },
             onChannelFocused = { channel ->
                 updateSpotlight(channel, immediate = false)
@@ -656,26 +668,27 @@ class MainActivity : AppCompatActivity() {
 
                 binding.layoutBuffering.visibility = View.GONE
 
+                val playableChannels = allChannels.filter { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !it.streamUrl.startsWith("action://") }
                 val targetChannel = if (isInitialAppStart) {
                     isInitialAppStart = false
-                    allChannels.firstOrNull()
+                    playableChannels.firstOrNull()
                 } else when (prefs.startupMode) {
                     PreferencesHelper.MODE_FIRST_CHANNEL -> {
-                        allChannels.firstOrNull()
+                        playableChannels.firstOrNull()
                     }
                     PreferencesHelper.MODE_FIXED_CHANNEL -> {
                         if (!prefs.defaultStartupChannelUrl.isNullOrBlank()) {
-                            allChannels.firstOrNull { it.streamUrl == prefs.defaultStartupChannelUrl }
-                                ?: allChannels.firstOrNull()
+                            playableChannels.firstOrNull { it.streamUrl == prefs.defaultStartupChannelUrl }
+                                ?: playableChannels.firstOrNull()
                         } else {
-                            allChannels.firstOrNull()
+                            playableChannels.firstOrNull()
                         }
                     }
                     PreferencesHelper.MODE_LAST_WATCHED -> {
-                        allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
-                            ?: allChannels.firstOrNull()
+                        playableChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
+                            ?: playableChannels.firstOrNull()
                     }
-                    else -> allChannels.firstOrNull()
+                    else -> playableChannels.firstOrNull()
                 }
 
                 if (targetChannel != null) {
@@ -733,6 +746,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSpotlight(channel: Channel, immediate: Boolean = true) {
+        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
+            currentFocusedChannel = channel
+            binding.tvSpotlightName.text = "CẬP NHẬT TRẬN ĐẤU THỂ THAO"
+            binding.tvSpotlightResolution.text = "HÔM NAY"
+            binding.tvSpotlightCategory.text = "Trực Tiếp Bóng Đá"
+            binding.tvSpotlightStatus.visibility = View.GONE
+            spotlightHandler.removeCallbacks(spotlightRunnable)
+            performHeavySpotlightUpdate(channel)
+            return
+        }
+
         currentFocusedChannel = channel
         binding.tvSpotlightName.text = channel.name
 
@@ -764,6 +788,15 @@ class MainActivity : AppCompatActivity() {
     private fun performHeavySpotlightUpdate(channel: Channel) {
         if (isFinishing || isDestroyed) return
 
+        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
+            binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
+            binding.tvSpotlightStreamInfo.text = "Tác vụ: Cập nhật dữ liệu trận đấu mới nhất hôm nay"
+            binding.rvSpotlightEpg.visibility = View.GONE
+            binding.tvEpgEmpty.visibility = View.VISIBLE
+            binding.tvEpgEmpty.text = "Nhấn OK trên điều khiển để tải lại trận đấu"
+            return
+        }
+
         // Logo chính hãng FPT CDN hoặc M3U (Khống chế kích thước và RGB_565 tiết kiệm RAM)
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
         if (resolvedLogo.isNotBlank()) {
@@ -782,6 +815,7 @@ class MainActivity : AppCompatActivity() {
         // Giao thức
         val udpxy = prefs.udpxyServer.trim()
         val protocol = when {
+            channel.streamUrl.contains("/truc-tiep/") -> "Web Live Stream (HLS)"
             channel.streamUrl.contains("/udp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("udp", ignoreCase = true)) -> "udpxy ($udpxy)"
             channel.streamUrl.contains("/rtp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("rtp", ignoreCase = true)) -> "udpxy ($udpxy)"
             channel.streamUrl.startsWith("udp", ignoreCase = true) -> "UDP Multicast"
@@ -792,8 +826,13 @@ class MainActivity : AppCompatActivity() {
         val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) "ExoPlayer" else "LibVLC (MediaCodec)"
         binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol • $engineName"
 
-        // Lịch phát sóng EPG dạng list time-line từ lichphatsong.io.vn (Có thể cuộn xem cả ngày)
-        val timeline = epgManager.getTimelineForChannel(channel.id, channel.name)
+        // Lịch phát sóng EPG: Nếu là trận bóng đá trực tiếp, hiển thị lịch thi đấu chuyên biệt
+        val timeline = if (isSportsLiveMatch(channel)) {
+            buildSportsTimeline(channel)
+        } else {
+            epgManager.getTimelineForChannel(channel.id, channel.name)
+        }
+
         if (timeline.isNotEmpty()) {
             binding.rvSpotlightEpg.visibility = View.VISIBLE
             binding.tvEpgEmpty.visibility = View.GONE
@@ -813,6 +852,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playChannel(channel: Channel) {
+        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
+            refreshSportsMatchesManually()
+            return
+        }
+
         currentPlayingChannel = channel
         prefs.lastChannelUrl = channel.streamUrl
 
@@ -1305,7 +1349,13 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickName.text = channel.name
 
         // Lấy tên chương trình EPG đang phát thời gian thực (hiển thị xong rồi tự tắt đi)
-        val currentProg = epgManager.getCurrentProgram(channel.id, channel.name)
+        val currentProg = if (isSportsLiveMatch(channel)) {
+            val sportsTimeline = buildSportsTimeline(channel)
+            val now = System.currentTimeMillis()
+            sportsTimeline.firstOrNull { it.isCurrent(now) } ?: sportsTimeline.getOrNull(1)
+        } else {
+            epgManager.getCurrentProgram(channel.id, channel.name)
+        }
         if (currentProg != null) {
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             val startStr = timeFormat.format(Date(currentProg.startTime))
@@ -1680,6 +1730,153 @@ class MainActivity : AppCompatActivity() {
             }
         }
         player?.pause()
+    }
+
+    private fun isSportsLiveMatch(channel: Channel): Boolean {
+        return channel.streamUrl.contains("/truc-tiep/") ||
+                channel.id.startsWith("chuoichien_") ||
+                channel.id.startsWith("gavang_") ||
+                channel.id.startsWith("xoilac_") ||
+                channel.id.startsWith("cakhia_") ||
+                channel.groupTitle.contains("Chuối Chiên") ||
+                channel.groupTitle.contains("Gà Vàng") ||
+                channel.groupTitle.contains("Xôi Lạc") ||
+                channel.groupTitle.contains("Cà Khịa") ||
+                channel.groupTitle.contains("TRỰC TIẾP") ||
+                channel.name.startsWith("⚽")
+    }
+
+    private fun buildSportsTimeline(channel: Channel): List<EpgProgram> {
+        val name = channel.name
+        val timeMatch = Regex("\\[(\\d{1,2}:\\d{2})\\]").find(name)
+        val matchTimeStr = timeMatch?.groupValues?.get(1)
+
+        val cal = Calendar.getInstance()
+        var matchStartTime: Long = cal.timeInMillis
+
+        if (!matchTimeStr.isNullOrBlank()) {
+            try {
+                val parts = matchTimeStr.split(":")
+                cal.set(Calendar.HOUR_OF_DAY, parts[0].toInt())
+                cal.set(Calendar.MINUTE, parts[1].toInt())
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                matchStartTime = cal.timeInMillis
+            } catch (e: Exception) {}
+        }
+
+        val matchDurationMs = 105 * 60 * 1000L
+        val matchEndTime = matchStartTime + matchDurationMs
+
+        var cleanTitle = name.replace("⚽", "").trim()
+        cleanTitle = cleanTitle.replace(Regex("\\[[^\\]]+\\]"), "").trim()
+        var blvInfo = ""
+        val blvMatch = Regex("\\((BLV[^\\)]+)\\)").find(cleanTitle)
+        if (blvMatch != null) {
+            blvInfo = blvMatch.groupValues[1]
+            cleanTitle = cleanTitle.replace(blvMatch.value, "").trim()
+        }
+        val sourceInfo = if (cleanTitle.contains("-")) {
+            val src = cleanTitle.substringAfterLast("-").trim()
+            cleanTitle = cleanTitle.substringBeforeLast("-").trim()
+            src
+        } else channel.groupTitle
+
+        val list = mutableListOf<EpgProgram>()
+
+        list.add(
+            EpgProgram(
+                channelId = channel.id,
+                startTime = matchStartTime - 30 * 60 * 1000L,
+                endTime = matchStartTime,
+                title = "Trước trận đấu: Nhận định & Đội hình",
+                desc = "Phân tích chiến thuật trước giờ bóng lăn: $cleanTitle"
+            )
+        )
+
+        val liveDesc = if (blvInfo.isNotBlank()) "Bình luận: $blvInfo • Tiếp sóng: $sourceInfo" else "Tiếp sóng: $sourceInfo (Trực tiếp HD/FHD)"
+        list.add(
+            EpgProgram(
+                channelId = channel.id,
+                startTime = matchStartTime,
+                endTime = matchEndTime,
+                title = "⚽ TRỰC TIẾP: $cleanTitle",
+                desc = liveDesc
+            )
+        )
+
+        list.add(
+            EpgProgram(
+                channelId = channel.id,
+                startTime = matchEndTime,
+                endTime = matchEndTime + 30 * 60 * 1000L,
+                title = "Sau trận đấu: Phỏng vấn & Điểm nhấn",
+                desc = "Tổng kết diễn biến và kết quả trận đấu: $cleanTitle"
+            )
+        )
+
+        return list
+    }
+
+    private fun refreshSportsMatchesManually() {
+        Toast.makeText(this, "🔄 Đang làm mới danh sách trận đấu thể thao...", Toast.LENGTH_SHORT).show()
+        binding.tvQuickBufferingText.text = "Đang quét trận đấu..."
+        binding.layoutQuickBuffering.visibility = View.VISIBLE
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            val sportsCategories = withContext(Dispatchers.IO) {
+                playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
+            }
+            binding.layoutQuickBuffering.visibility = View.GONE
+            if (sportsCategories.isNotEmpty()) {
+                applyUpdatedSportsCategories(sportsCategories)
+                val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
+                Toast.makeText(this@MainActivity, "✅ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@MainActivity, "Không tìm thấy thêm trận đấu mới nào.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun startPeriodicSportsRefresh() {
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(15 * 60 * 1000L) // Chu kỳ quét tự động 15 phút 1 lần
+                try {
+                    val sportsCategories = withContext(Dispatchers.IO) {
+                        playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
+                    }
+                    if (sportsCategories.isNotEmpty()) {
+                        applyUpdatedSportsCategories(sportsCategories)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    private fun applyUpdatedSportsCategories(sportsCategories: List<Category>) {
+        val sportsNames = setOf(
+            "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
+            "🍌 Chuối Chiên TV",
+            "🐔 Gà Vàng / Tiếu Lâm",
+            "🍚 Xôi Lạc TV",
+            "🌶️ Cà Khịa TV"
+        )
+        val nonSports = allCategories.filter { it.name !in sportsNames }
+        allCategories.clear()
+        val favCat = nonSports.firstOrNull { it.name == "★ KÊNH YÊU THÍCH" }
+        if (favCat != null) allCategories.add(favCat)
+        allCategories.addAll(sportsCategories)
+        nonSports.filter { it.name != "★ KÊNH YÊU THÍCH" }.forEach { allCategories.add(it) }
+
+        categoryAdapter.submitList(allCategories)
+
+        val currentCatName = currentSelectedCategory?.name ?: ""
+        val updatedCat = allCategories.firstOrNull { it.name == currentCatName } ?: sportsCategories.first()
+        currentSelectedCategory = updatedCat
+        displayCategoryChannels(updatedCat)
     }
 
     override fun onDestroy() {

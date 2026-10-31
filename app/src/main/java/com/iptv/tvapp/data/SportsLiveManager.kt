@@ -23,7 +23,8 @@ class SportsLiveManager(private val context: Context) {
         .build()
 
     companion object {
-        private const val CACHE_TTL_MS = 3 * 60 * 1000L // Cache 3 phút
+        const val ACTION_REFRESH_SPORTS = "action_refresh_sports"
+        private const val CACHE_TTL_MS = 15 * 60 * 1000L // Tự động cập nhật 15 phút 1 lần
 
         // Chuối Chiên TV
         private const val CHUOICHIEN_API =
@@ -89,8 +90,23 @@ class SportsLiveManager(private val context: Context) {
                     val categories = mutableListOf<Category>()
 
                     if (allMatches.isNotEmpty()) {
-                        // Nhóm tổng hợp: Toàn bộ trận đấu trực tiếp hôm nay
-                        categories.add(Category("⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)", allMatches.toMutableList()))
+                        val matchesWithRefresh = mutableListOf<Channel>()
+                        val refreshItem = Channel(
+                            id = ACTION_REFRESH_SPORTS,
+                            name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
+                            logoUrl = null,
+                            streamUrl = "action://refresh_sports",
+                            groupTitle = "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
+                            number = 0
+                        )
+                        matchesWithRefresh.add(refreshItem)
+                        allMatches.forEachIndexed { idx, ch ->
+                            ch.number = idx + 1
+                        }
+                        matchesWithRefresh.addAll(allMatches)
+
+                        // Nhóm tổng hợp: Toàn bộ trận đấu trực tiếp hôm nay (dòng đầu tiên là nút Cập nhật)
+                        categories.add(Category("⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)", matchesWithRefresh))
                     }
 
                     if (chuoichienList.isNotEmpty()) {

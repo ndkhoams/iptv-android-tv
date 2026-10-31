@@ -251,6 +251,12 @@ class EpgManager(private val context: Context) {
     }
 
     private fun findRawTimeline(channelId: String?, channelName: String?): List<EpgProgram> {
+        val cName = channelName ?: ""
+        // Các trận đấu thể thao trực tiếp không sử dụng EPG truyền hình
+        if (cName.contains("⚽") || cName.contains(" vs ", ignoreCase = true) || cName.contains("[LIVE]", ignoreCase = true)) {
+            return emptyList()
+        }
+
         val id = channelId?.lowercase(Locale.ROOT)?.trim()
         if (!id.isNullOrBlank()) {
             epgMap[id]?.let { return it }
@@ -262,12 +268,12 @@ class EpgManager(private val context: Context) {
             }
         }
 
-        // Nếu không khớp theo tvg-id, tìm khớp theo tên kênh chuẩn hóa
-        val norm = normalizeName(channelName ?: "")
+        // Nếu không khớp theo tvg-id, tìm khớp theo tên kênh chuẩn hóa (chỉ khớp chính xác hoặc cùng tiền tố từ 4 ký tự)
+        val norm = normalizeName(cName)
         if (norm.isNotBlank()) {
             for ((key, list) in epgMap) {
                 val normKey = normalizeName(key)
-                if (normKey == norm || normKey.contains(norm) || norm.contains(normKey)) {
+                if (normKey == norm || (normKey.length >= 4 && (norm == normKey || norm.startsWith("$normKey ") || norm.endsWith(" $normKey")))) {
                     return list
                 }
             }

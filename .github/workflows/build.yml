@@ -55,19 +55,16 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Tối Ưu Tải Luồng & Kênh Đầu Tiên KTV.m3u Mặc Định"
+        name: "${{ github.ref_name }} - Nút Cập Nhật Thể Thao & Sửa Lỗi EPG Trực Tiếp"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Tối ưu trải nghiệm tải luồng (Buffering UI):**
-            - Triệt tiêu hoàn toàn thông báo xoay vòng "Đang tải luồng..." ở giữa màn hình khi đang phát video.
-            - Chuyển vòng xoay tải luồng tinh tế sang cuối bên phải thẻ tên kênh ở góc trái màn hình khi chuyển/mở kênh mới.
-            - Tối ưu bộ nhớ đệm VLC lên 1.5s, loại bỏ hiện tượng giật lag và chống tải luồng vi mô liên tục.
-          - **Mặc định kênh khởi động:**
-            - Luôn tự động mở kênh đầu tiên của danh sách `KTV.m3u` mỗi khi ứng dụng khởi động.
-            - Đồng bộ thiết lập chế độ kênh khởi động giữa TV và giao diện quản lý Web.
-          - **Kho Thể Thao & KTV Playlist:**
-            - TV Play Pro chuyên biệt trực tiếp thể thao (Chuối Chiên, Gà Vàng, Tiếu Lâm, Xôi Lạc, Cà Khịa, Sự kiện TV360, VTVPrime, Sky Sports...).
-            - Duy nhất playlist online mặc định KTV.m3u.
+          - **Tối ưu cơ chế cập nhật thể thao & Bổ sung nút làm mới:**
+            - Bổ sung nút bấm `"🔄 Cập nhật trận đấu (Bấm OK để tải lại)"` ở dòng đầu tiên của danh mục `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)`.
+            - Giảm tần suất tự động quét trận đấu từ 3 phút xuống **15 phút một lần**, triệt tiêu request dồn dập khi chuyển đổi danh mục trong menu.
+            - Tự động chạy tác vụ ngầm làm mới trận đấu và tỉ số định kỳ mỗi 15 phút.
+          - **Sửa triệt để lỗi hiển thị EPG cho các trận đấu trực tiếp:**
+            - Thay thế hoàn toàn EPG truyền hình sai lệch (trước đây hiện nhầm chương trình thời sự/phim truyện) bằng **Lịch thi đấu chuyên biệt cho từng trận**.
+            - Hiển thị chính xác thời gian thi đấu thực tế, giờ bóng lăn, tên 2 đội, bình luận viên (BLV) và kênh tiếp sóng cả ở Spotlight bên phải và banner dưới góc trái.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
