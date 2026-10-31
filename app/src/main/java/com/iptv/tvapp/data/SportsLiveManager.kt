@@ -82,21 +82,18 @@ class SportsLiveManager(private val context: Context) {
                     val gavangDeferred = async { fetchGaVangMatches() }
                     val xoilacDeferred = async { fetchXoiLacMatches() }
                     val cakhiaDeferred = async { fetchCaKhiaMatches() }
-                    val streamFreeDeferred = async { fetchStreamFreeMatches() }
 
                     val chuoichienList = try { chuoichienDeferred.await() } catch (e: Exception) { emptyList() }
                     val gavangList = try { gavangDeferred.await() } catch (e: Exception) { emptyList() }
                     val xoilacList = try { xoilacDeferred.await() } catch (e: Exception) { emptyList() }
                     val cakhiaList = try { cakhiaDeferred.await() } catch (e: Exception) { emptyList() }
-                    val streamFreeList = try { streamFreeDeferred.await() } catch (e: Exception) { emptyList() }
+                    val intlList = getInternationalChannels()
 
                     val allMatches = mutableListOf<Channel>()
                     allMatches.addAll(chuoichienList)
                     allMatches.addAll(gavangList)
                     allMatches.addAll(xoilacList)
                     allMatches.addAll(cakhiaList)
-                    // Thêm các trận bóng đá quốc tế từ StreamFree vào danh sách tổng hợp
-                    allMatches.addAll(streamFreeList.filter { it.streamUrl.contains("streamfree://soccer/") })
 
                     val categories = mutableListOf<Category>()
 
@@ -120,6 +117,10 @@ class SportsLiveManager(private val context: Context) {
                         categories.add(Category("⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)", matchesWithRefresh))
                     }
 
+                    if (intlList.isNotEmpty()) {
+                        categories.add(Category("🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)", intlList.toMutableList()))
+                    }
+
                     if (chuoichienList.isNotEmpty()) {
                         categories.add(Category("🍌 Chuối Chiên TV", chuoichienList.toMutableList()))
                     }
@@ -134,14 +135,6 @@ class SportsLiveManager(private val context: Context) {
 
                     if (cakhiaList.isNotEmpty()) {
                         categories.add(Category("🌶️ Cà Khịa TV", cakhiaList.toMutableList()))
-                    }
-
-                    if (streamFreeList.isNotEmpty()) {
-                        val sortedStreamFree = streamFreeList.sortedWith(
-                            compareByDescending<Channel> { it.name.contains("[LIVE]") }
-                                .thenBy { it.name }
-                        )
-                        categories.add(Category("🌐 StreamFree (Quốc Tế)", sortedStreamFree.toMutableList()))
                     }
 
                     if (categories.isNotEmpty()) {
@@ -443,94 +436,32 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
-     * StreamFree Scraper: Lấy toàn bộ các giải đấu quốc tế (Bóng đá, F1, Quần vợt, Quyền Anh/UFC, Bóng rổ...)
+     * Kênh thể thao quốc tế 24/7 (Sky Sports F1, Sky Sports Tennis, TNT Sports 1-4, Eurosport 1-2, Canal+)
      */
-    private fun fetchStreamFreeMatches(): List<Channel> {
+    private fun getInternationalChannels(): List<Channel> {
         val list = mutableListOf<Channel>()
-        try {
-            val request = Request.Builder()
-                .url(STREAMFREE_API)
-                .header("User-Agent", CHROME_UA)
-                .header("Referer", STREAMFREE_HOME)
-                .header("Accept", "application/json, text/plain, */*")
-                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: return emptyList()
-                val json = JSONObject(bodyStr)
-                val streams = json.optJSONArray("streams") ?: return emptyList()
-                val allowedCategories = setOf("soccer", "basketball", "tennis", "racing")
-
-                var idx = 1
-                for (i in 0 until streams.length()) {
-                    val item = streams.optJSONObject(i) ?: continue
-                    val streamKey = item.optString("stream_key").trim()
-                    val name = item.optString("name").trim()
-                    val category = item.optString("category").trim().lowercase()
-                    val league = item.optString("league").trim()
-                    if (streamKey.isBlank() || name.isBlank()) continue
-                    if (category !in allowedCategories) continue
-
-                    val liveSources = item.optJSONArray("live_sources")
-                    val sources = item.optJSONArray("sources")
-                    val isLiveNow = liveSources != null && liveSources.length() > 0
-
-                    val chosenSources = if (isLiveNow) liveSources!! else sources
-                    var quality = "1080p"
-                    if (chosenSources != null && chosenSources.length() > 0) {
-                        val firstSrc = chosenSources.optJSONObject(0)
-                        val srcUrl = firstSrc?.optString("url") ?: ""
-                        val qLabel = firstSrc?.optString("quality") ?: ""
-                        quality = if (srcUrl.contains("540p") || qLabel.equals("SD", ignoreCase = true)) "540p"
-                        else if (srcUrl.contains("720p") || qLabel.equals("HD", ignoreCase = true)) "720p"
-                        else "1080p"
-                    }
-
-                    val matchTs = item.optLong("match_timestamp", 0L)
-                    val timeStr = if (matchTs > 0) {
-                        try {
-                            val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                            sdf.timeZone = java.util.TimeZone.getTimeZone("GMT+7")
-                            sdf.format(java.util.Date(matchTs * 1000L))
-                        } catch (e: Exception) { "LIVE" }
-                    } else "LIVE"
-
-                    val sportIcon = when (category) {
-                        "soccer" -> "⚽"
-                        "racing" -> "🏎️"
-                        "tennis" -> "🎾"
-                        "basketball" -> "🏀"
-                        else -> "🏆"
-                    }
-
-                    val statusTag = if (isLiveNow) "LIVE" else timeStr
-                    val leagueSuffix = if (league.isNotBlank()) " ($league)" else ""
-                    val channelName = "$sportIcon [$statusTag] $name$leagueSuffix - StreamFree"
-
-                    val logoUrl = item.optString("thumbnail_url").takeIf { it.isNotBlank() }
-                        ?: item.optJSONObject("team1")?.optString("logo")?.takeIf { it.isNotBlank() }
-                        ?: "https://streamfree.top/favicon.ico"
-
-                    // Gắn URL dạng streamfree:// để resolveLiveStreamUrl tự động giải mã luồng m3u8 động khi click
-                    val streamUrl = "streamfree://$category/$streamKey?quality=$quality"
-
-                    list.add(
-                        Channel(
-                            id = "streamfree_${idx}_$category",
-                            name = channelName,
-                            logoUrl = logoUrl,
-                            streamUrl = streamUrl,
-                            groupTitle = "🌐 StreamFree (Quốc Tế)",
-                            number = idx
-                        )
-                    )
-                    idx++
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val intl = listOf(
+            Triple("🏎️ [24/7] Sky Sport F1 HD - Đua xe Công thức 1", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1149423&extension=ts&play_token=1jkVQWGCqc", "https://r2.thesportsdb.com/images/media/channel/logo/p5csyn1620551587.png"),
+            Triple("🎾 [24/7] Sky Sport Tennis HD - Quần vợt ATP / WTA", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1149433&extension=ts&play_token=Y1kv3yxPS8", "https://e0.365dm.com/24/01/2048x1152/skysports-sky-sports-tennis_6437040.jpg"),
+            Triple("🏆 [24/7] TNT Sports 1 HD - Cúp C1 / Ngoại Hạng Anh", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894977&extension=ts&play_token=W2HvDO5iES", "https://media.info/l/o/1/1539.1690027797.png"),
+            Triple("🏆 [24/7] TNT Sports 2 HD - Đua xe MotoGP / UFC", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1091517&extension=ts&play_token=zKzxFKTNmb", "https://media.info/l/o/1/1540.1690027877.png"),
+            Triple("🏆 [24/7] TNT Sports 3 HD - Thể thao trực tiếp", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894979&extension=ts&play_token=RLLwKaJKqY", "https://media.info/l/o/5/5712.1690027954.png"),
+            Triple("🏆 [24/7] TNT Sports 4 HD - Thể thao trực tiếp", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894980&extension=ts&play_token=4ofwEIdTU4", "https://media.info/l/o/1/1491.1690027975.png"),
+            Triple("🚴 [24/7] Eurosport 1 HD - Thể thao & Tennis Grand Slam", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=933004&extension=ts&play_token=jtuDUMdLno", "https://upload.wikimedia.org/wikipedia/commons/3/37/Eurosport1hd.png"),
+            Triple("🚴 [24/7] Eurosport 2 HD - Thể thao & Đua xe", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=933003&extension=ts&play_token=OIqiUqIbWW", "https://upload.wikimedia.org/wikipedia/commons/d/d5/Eurosport2hd.png"),
+            Triple("⚽ [24/7] Canal+ Sport HD - Thể thao Châu Âu", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=958758&extension=ts&play_token=MskDtCSrpn", "https://upload.wikimedia.org/wikipedia/commons/1/1a/Canal%2B_Sport_2015.png")
+        )
+        intl.forEachIndexed { index, (name, url, logo) ->
+            list.add(
+                Channel(
+                    id = "intl_sports_$index",
+                    name = name,
+                    logoUrl = logo,
+                    streamUrl = url,
+                    groupTitle = "🌐 KÊNH THỂ THAO QUỐC TẾ (F1 / TENNIS)",
+                    number = index + 1
+                )
+            )
         }
         return list
     }

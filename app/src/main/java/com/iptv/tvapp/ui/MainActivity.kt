@@ -1736,6 +1736,7 @@ class MainActivity : AppCompatActivity() {
         return channel.streamUrl.contains("/truc-tiep/") ||
                 channel.streamUrl.startsWith("streamfree://") ||
                 channel.id.startsWith("streamfree_") ||
+                channel.id.startsWith("intl_sports_") ||
                 channel.id.startsWith("chuoichien_") ||
                 channel.id.startsWith("gavang_") ||
                 channel.id.startsWith("xoilac_") ||
@@ -1745,12 +1746,14 @@ class MainActivity : AppCompatActivity() {
                 channel.groupTitle.contains("Xôi Lạc") ||
                 channel.groupTitle.contains("Cà Khịa") ||
                 channel.groupTitle.contains("StreamFree") ||
+                channel.groupTitle.contains("THỂ THAO QUỐC TẾ") ||
                 channel.groupTitle.contains("TRỰC TIẾP") ||
                 channel.name.startsWith("⚽") ||
                 channel.name.startsWith("🏎️") ||
                 channel.name.startsWith("🎾") ||
                 channel.name.startsWith("🏀") ||
-                channel.name.startsWith("🏆")
+                channel.name.startsWith("🏆") ||
+                channel.name.startsWith("🚴")
     }
 
     private fun buildSportsTimeline(channel: Channel): List<EpgProgram> {
