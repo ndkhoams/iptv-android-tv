@@ -139,6 +139,34 @@
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:text="VTV1 (HD 8Mbps)" />
+
+            <!-- Vòng xoay tải luồng ở cuối bên phải thẻ tên kênh khi mới mở kênh -->
+            <LinearLayout
+                android:id="@+id/layoutQuickBuffering"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:id="@+id/pbQuickBuffering"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:indeterminate="true"
+                    android:indeterminateTint="@color/fpt_orange" />
+
+                <TextView
+                    android:id="@+id/tvQuickBufferingText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Đang tải luồng..."
+                    android:textColor="@color/fpt_orange"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Dòng 2 (Màu cam): Lịch phát sóng EPG thời gian thực (● Đang phát: Bản tin Thời sự (20:00 - 21:00)) -->

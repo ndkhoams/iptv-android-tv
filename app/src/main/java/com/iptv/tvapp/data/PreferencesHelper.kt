@@ -193,10 +193,19 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getBoolean(KEY_AUTO_START_BOOT, false)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_START_BOOT, value).apply()
 
-    // Chế độ khởi động: "LAST_WATCHED" hoặc "FIXED_CHANNEL"
+    // Chế độ khởi động: "FIRST_CHANNEL" (mặc định), "LAST_WATCHED" hoặc "FIXED_CHANNEL"
     var startupMode: String
-        get() = prefs.getString(KEY_STARTUP_MODE, MODE_LAST_WATCHED) ?: MODE_LAST_WATCHED
+        get() = prefs.getString(KEY_STARTUP_MODE, MODE_FIRST_CHANNEL) ?: MODE_FIRST_CHANNEL
         set(value) = prefs.edit().putString(KEY_STARTUP_MODE, value).apply()
+
+    fun ensureKtvActiveOnStartup() {
+        val list = getPlaylists()
+        val ktv = list.firstOrNull { it.url == DEFAULT_URL }
+        if (ktv != null) {
+            list.forEach { it.isSelected = (it.id == ktv.id) }
+            savePlaylists(list)
+        }
+    }
 
     var defaultStartupChannelUrl: String?
         get() = prefs.getString(KEY_DEFAULT_STARTUP_URL, null)
@@ -499,6 +508,7 @@ class PreferencesHelper(context: Context) {
         const val DEINTERLACE_BLEND = "blend"
         const val DEINTERLACE_OFF = "off"
 
+        const val MODE_FIRST_CHANNEL = "FIRST_CHANNEL"
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 

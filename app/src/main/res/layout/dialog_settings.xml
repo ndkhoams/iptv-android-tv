@@ -471,13 +471,27 @@
                     android:layout_height="wrap_content">
 
                     <RadioButton
-                        android:id="@+id/rbLastWatched"
+                        android:id="@+id/rbFirstChannel"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Vào lại kênh vừa xem gần nhất"
+                        android:text="Mở kênh đầu tiên của danh sách (Mặc định)"
                         android:textColor="@color/text_primary"
                         android:textSize="12sp"
                         android:nextFocusUp="@+id/btnResetUserAgent"
+                        android:nextFocusDown="@+id/rbLastWatched"
+                        android:nextFocusLeft="@+id/btnAddPlaylist"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
+
+                    <RadioButton
+                        android:id="@+id/rbLastWatched"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Vào lại kênh vừa xem gần nhất"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:nextFocusUp="@+id/rbFirstChannel"
                         android:nextFocusDown="@+id/rbFixedChannel"
                         android:nextFocusLeft="@+id/btnAddPlaylist"
                         android:focusable="true"

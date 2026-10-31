@@ -357,10 +357,10 @@ class SettingsDialog(
     }
 
     private fun initBootSettings() {
-        if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL) {
-            binding.rbFixedChannel.isChecked = true
-        } else {
-            binding.rbLastWatched.isChecked = true
+        when (prefs.startupMode) {
+            PreferencesHelper.MODE_FIXED_CHANNEL -> binding.rbFixedChannel.isChecked = true
+            PreferencesHelper.MODE_LAST_WATCHED -> binding.rbLastWatched.isChecked = true
+            else -> binding.rbFirstChannel.isChecked = true
         }
 
         val fixedName = prefs.defaultStartupChannelName
@@ -402,10 +402,10 @@ class SettingsDialog(
             hasChangedPlaylist = true
         }
 
-        prefs.startupMode = if (binding.rbFixedChannel.isChecked) {
-            PreferencesHelper.MODE_FIXED_CHANNEL
-        } else {
-            PreferencesHelper.MODE_LAST_WATCHED
+        prefs.startupMode = when {
+            binding.rbFixedChannel.isChecked -> PreferencesHelper.MODE_FIXED_CHANNEL
+            binding.rbLastWatched.isChecked -> PreferencesHelper.MODE_LAST_WATCHED
+            else -> PreferencesHelper.MODE_FIRST_CHANNEL
         }
 
         val newUdpxy = binding.etUdpxyServer.text.toString().trim()

@@ -55,19 +55,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Chuyên Biệt Trực Tiếp Thể Thao & Duy Nhất KTV Playlist"
+        name: "${{ github.ref_name }} - Tối Ưu Tải Luồng & Kênh Đầu Tiên KTV.m3u Mặc Định"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Chuyên biệt hoá TV Play Pro thành kho Trực Tiếp Thể Thao:**
-            - Loại bỏ toàn bộ các kênh truyền hình TV thường khỏi list TV Play Pro để tránh trùng lặp.
-            - Chỉ giữ lại các mục trực tiếp thể thao đỉnh cao: FIFA World Cup 2026, Thể Thao Quốc Tế (Sky Sports, Canal+ Live 1-12, TNT Sports 1-4, Eurosport, MUTV), Sự Kiện TV360, Sự Kiện VTVPrime.
-            - Tích hợp tự động 5 nguồn thể thao trực tiếp theo thời gian thực: 🍌 Chuối Chiên TV (kèm BLV & FHD/HD), 🐔 Gà Vàng & Tiếu Lâm, 🍚 Xôi Lạc TV, 🌶️ Cà Khịa TV.
-          - **Duy nhất Playlist M3U mặc định KTV Playlist:**
-            - Chỉ giữ lại duy nhất đường link playlist trực tuyến: `https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u`.
-            - Tự động làm sạch các nguồn M3U cũ (FPT, VMT).
-            - Mặc định để trống máy chủ UDPXY.
-          - **Player Engine hoàn thiện:**
-            - Hỗ trợ đầy đủ Referer và User-Agent cho cả LibVLC và ExoPlayer, phát mượt mọi luồng trực tiếp không bị chặn 403.
+          - **Tối ưu trải nghiệm tải luồng (Buffering UI):**
+            - Triệt tiêu hoàn toàn thông báo xoay vòng "Đang tải luồng..." ở giữa màn hình khi đang phát video.
+            - Chuyển vòng xoay tải luồng tinh tế sang cuối bên phải thẻ tên kênh ở góc trái màn hình khi chuyển/mở kênh mới.
+            - Tối ưu bộ nhớ đệm VLC lên 1.5s, loại bỏ hiện tượng giật lag và chống tải luồng vi mô liên tục.
+          - **Mặc định kênh khởi động:**
+            - Luôn tự động mở kênh đầu tiên của danh sách `KTV.m3u` mỗi khi ứng dụng khởi động.
+            - Đồng bộ thiết lập chế độ kênh khởi động giữa TV và giao diện quản lý Web.
+          - **Kho Thể Thao & KTV Playlist:**
+            - TV Play Pro chuyên biệt trực tiếp thể thao (Chuối Chiên, Gà Vàng, Tiếu Lâm, Xôi Lạc, Cà Khịa, Sự kiện TV360, VTVPrime, Sky Sports...).
+            - Duy nhất playlist online mặc định KTV.m3u.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

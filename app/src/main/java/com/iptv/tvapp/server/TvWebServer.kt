@@ -296,7 +296,7 @@ class TvWebServer(
                 if (json.has("autoStartOnBoot")) {
                     prefs.autoStartOnBoot = json.getBoolean("autoStartOnBoot")
                 }
-                prefs.startupMode = json.optString("startupMode", PreferencesHelper.MODE_LAST_WATCHED)
+                prefs.startupMode = json.optString("startupMode", PreferencesHelper.MODE_FIRST_CHANNEL)
                 val resp = JSONObject().apply { put("success", true) }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }

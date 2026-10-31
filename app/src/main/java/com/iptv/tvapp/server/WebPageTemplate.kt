@@ -246,6 +246,10 @@ object WebPageTemplate {
             <div>
                 <label style="display:block; font-size:13px; color:var(--text-sub); margin-bottom:8px;">Chế độ mở kênh khi khởi động ứng dụng:</label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+                    <input type="radio" name="startupMode" value="FIRST_CHANNEL" id="optFirstChannel" onchange="updateBootSettings()">
+                    Mở kênh đầu tiên của danh sách (Mặc định)
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
                     <input type="radio" name="startupMode" value="LAST_WATCHED" id="optLastWatched" onchange="updateBootSettings()">
                     Vào lại kênh vừa xem gần nhất
                 </label>
@@ -616,8 +620,10 @@ object WebPageTemplate {
                 document.getElementById('chkAutoStartBoot').checked = !!data.autoStartOnBoot;
                 if (data.startupMode === 'FIXED_CHANNEL') {
                     document.getElementById('optFixedChannel').checked = true;
-                } else {
+                } else if (data.startupMode === 'LAST_WATCHED') {
                     document.getElementById('optLastWatched').checked = true;
+                } else {
+                    document.getElementById('optFirstChannel').checked = true;
                 }
                 document.getElementById('lblFixedName').innerText = data.defaultStartupChannelName || 'Chưa chọn';
 

@@ -93,11 +93,13 @@ class MainActivity : AppCompatActivity() {
     private var currentPlayingChannel: Channel? = null
     private var currentFocusedChannel: Channel? = null
     private var currentSelectedCategory: Category? = null
+    private var isInitialAppStart = true
 
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideOverlayRunnable = Runnable { hideOverlay() }
     private val hideQuickBannerRunnable = Runnable {
         binding.quickChannelInfo.visibility = View.GONE
+        binding.layoutQuickBuffering.visibility = View.GONE
         if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
             stopTelemetryUpdates()
         }
@@ -147,6 +149,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = PreferencesHelper(this)
+        prefs.ensureKtvActiveOnStartup()
         playlistManager = PlaylistManager(this)
         epgManager = EpgManager(this)
 
@@ -462,10 +465,10 @@ class MainActivity : AppCompatActivity() {
                 // 2. Chống xé hình/răng cưa phần cứng với thuật toán chọn lọc (Mặc định Yadif sắc nét như PC)
                 "--deinterlace=$deinterlaceVal",
                 "--deinterlace-mode=${prefs.deinterlaceMode}",
-                // 3. Tối ưu bộ nhớ đệm (Chuyển kênh siêu tốc 0.3s cho luồng LAN / udpxy)
-                "--network-caching=300",
-                "--live-caching=300",
-                "--file-caching=300",
+                // 3. Tối ưu bộ nhớ đệm (1.5s cân bằng giữa khởi động nhanh và chống tràn đệm/khựng hình)
+                "--network-caching=1500",
+                "--live-caching=1500",
+                "--file-caching=1500",
                 // 4. Giữ toàn vẹn khung hình và đồng bộ chuẩn A/V Master Clock (loại bỏ desync và noise)
                 "--no-audio-time-stretch",
                 // 5. Bật thống kê lưu lượng để đo chính xác bitrate thời gian thực
@@ -482,8 +485,9 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         when (event.type) {
                             VlcMediaPlayer.Event.Buffering -> {
-                                if (event.buffering < 100f) {
-                                    binding.layoutBuffering.visibility = View.VISIBLE
+                                // Tuyệt đối không hiện vòng xoay giữa màn hình khi đang phát luồng
+                                if (vlcPlayer?.isPlaying != true) {
+                                    binding.layoutQuickBuffering.visibility = View.VISIBLE
                                 }
                             }
                             VlcMediaPlayer.Event.Vout -> {
@@ -491,23 +495,28 @@ class MainActivity : AppCompatActivity() {
                                     // Khi video của kênh mới đã thực sự giải mã và xuất hình lên Surface
                                     binding.vlcVideoLayout.visibility = View.VISIBLE
                                     binding.layoutBuffering.visibility = View.GONE
+                                    binding.layoutQuickBuffering.visibility = View.GONE
                                     binding.tvErrorMessage.visibility = View.GONE
                                     updateDynamicTelemetry()
                                 }
                             }
                             VlcMediaPlayer.Event.Playing -> {
                                 binding.tvErrorMessage.visibility = View.GONE
+                                binding.layoutBuffering.visibility = View.GONE
+                                binding.layoutQuickBuffering.visibility = View.GONE
                                 updateDynamicTelemetry()
                                 // Dự phòng cho kênh chỉ có tiếng (Radio / Audio-only) không có track video
                                 binding.rootView.postDelayed({
-                                    if (vlcPlayer?.isPlaying == true && binding.layoutBuffering.visibility == View.VISIBLE) {
+                                    if (vlcPlayer?.isPlaying == true) {
                                         binding.vlcVideoLayout.visibility = View.VISIBLE
                                         binding.layoutBuffering.visibility = View.GONE
+                                        binding.layoutQuickBuffering.visibility = View.GONE
                                     }
                                 }, 1200L)
                             }
                             VlcMediaPlayer.Event.EncounteredError -> {
                                 binding.layoutBuffering.visibility = View.GONE
+                                binding.layoutQuickBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.VISIBLE
                                 binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
                             }
@@ -573,18 +582,23 @@ class MainActivity : AppCompatActivity() {
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         when (playbackState) {
                             Player.STATE_BUFFERING -> {
-                                binding.layoutBuffering.visibility = View.VISIBLE
+                                if (player?.isPlaying != true) {
+                                    binding.layoutQuickBuffering.visibility = View.VISIBLE
+                                }
                                 binding.tvErrorMessage.visibility = View.GONE
                             }
                             Player.STATE_READY -> {
                                 binding.layoutBuffering.visibility = View.GONE
+                                binding.layoutQuickBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
                             }
                             Player.STATE_ENDED -> {
                                 binding.layoutBuffering.visibility = View.GONE
+                                binding.layoutQuickBuffering.visibility = View.GONE
                             }
                             Player.STATE_IDLE -> {
                                 binding.layoutBuffering.visibility = View.GONE
+                                binding.layoutQuickBuffering.visibility = View.GONE
                             }
                         }
                     }
@@ -603,6 +617,7 @@ class MainActivity : AppCompatActivity() {
 
                     override fun onPlayerError(error: PlaybackException) {
                         binding.layoutBuffering.visibility = View.GONE
+                        binding.layoutQuickBuffering.visibility = View.GONE
                         binding.tvErrorMessage.visibility = View.VISIBLE
                         binding.tvErrorDetail.text = "Lỗi phát kênh: ${error.errorCodeName}\nBấm ▲ ▼ để đổi kênh khác"
                     }
@@ -641,13 +656,26 @@ class MainActivity : AppCompatActivity() {
 
                 binding.layoutBuffering.visibility = View.GONE
 
-                val targetChannel = if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL && !prefs.defaultStartupChannelUrl.isNullOrBlank()) {
-                    allChannels.firstOrNull { it.streamUrl == prefs.defaultStartupChannelUrl }
-                        ?: allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
-                        ?: allChannels.firstOrNull()
-                } else {
-                    allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
-                        ?: allChannels.firstOrNull()
+                val targetChannel = if (isInitialAppStart) {
+                    isInitialAppStart = false
+                    allChannels.firstOrNull()
+                } else when (prefs.startupMode) {
+                    PreferencesHelper.MODE_FIRST_CHANNEL -> {
+                        allChannels.firstOrNull()
+                    }
+                    PreferencesHelper.MODE_FIXED_CHANNEL -> {
+                        if (!prefs.defaultStartupChannelUrl.isNullOrBlank()) {
+                            allChannels.firstOrNull { it.streamUrl == prefs.defaultStartupChannelUrl }
+                                ?: allChannels.firstOrNull()
+                        } else {
+                            allChannels.firstOrNull()
+                        }
+                    }
+                    PreferencesHelper.MODE_LAST_WATCHED -> {
+                        allChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
+                            ?: allChannels.firstOrNull()
+                    }
+                    else -> allChannels.firstOrNull()
                 }
 
                 if (targetChannel != null) {
@@ -802,15 +830,15 @@ class MainActivity : AppCompatActivity() {
         showQuickChannelInfo(channel)
 
         binding.tvErrorMessage.visibility = View.GONE
-        binding.layoutBuffering.visibility = View.VISIBLE
-        binding.tvBufferingText.text = getString(R.string.stream_buffering)
+        binding.tvQuickBufferingText.text = "Đang tải luồng..."
+        binding.layoutQuickBuffering.visibility = View.VISIBLE
 
         val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
 
         // Nếu là trận đấu bóng đá trực tiếp từ web (Xôi Lạc, Cà Khịa, Chuối Chiên), giải mã link m3u8 động
         if (channel.streamUrl.contains("/truc-tiep/")) {
-            binding.layoutBuffering.visibility = View.VISIBLE
-            binding.tvBufferingText.text = "Đang kết nối luồng trực tiếp..."
+            binding.tvQuickBufferingText.text = "Đang kết nối luồng trực tiếp..."
+            binding.layoutQuickBuffering.visibility = View.VISIBLE
             lifecycleScope.launch(Dispatchers.Main) {
                 val resolved = withContext(Dispatchers.IO) {
                     playlistManager.sportsLiveManager.resolveLiveStreamUrl(channel.streamUrl)
@@ -908,8 +936,7 @@ class MainActivity : AppCompatActivity() {
 
             // Che ngay lập tức khung hình tĩnh của kênh cũ để triệt tiêu hiện tượng đơ hình kênh cũ
             binding.vlcVideoLayout.visibility = View.INVISIBLE
-            binding.layoutBuffering.visibility = View.VISIBLE
-            binding.tvBufferingText.text = getString(R.string.stream_buffering)
+            binding.layoutQuickBuffering.visibility = View.VISIBLE
 
             val vlc = libVLC ?: return
             val vp = vlcPlayer ?: return
@@ -944,9 +971,9 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     addOption(":deinterlace=0")
                 }
-                addOption(":network-caching=300")
-                addOption(":live-caching=300")
-                addOption(":file-caching=300")
+                addOption(":network-caching=1500")
+                addOption(":live-caching=1500")
+                addOption(":file-caching=1500")
                 addOption(":no-audio-time-stretch")
                 // BẮT BUỘC LUÔN PHÁT ĐỘ PHÂN GIẢI 1080/CAO NHẤT DÙ MÀN HÌNH MÁY LÀ 720P
                 addOption(":adaptive-logic=highest")
@@ -958,6 +985,7 @@ class MainActivity : AppCompatActivity() {
             vp.play()
         } catch (e: Exception) {
             binding.layoutBuffering.visibility = View.GONE
+            binding.layoutQuickBuffering.visibility = View.GONE
             binding.tvErrorMessage.visibility = View.VISIBLE
             binding.tvErrorDetail.text = "Không thể phát qua VLC: ${e.localizedMessage}"
         }
@@ -1266,6 +1294,7 @@ class MainActivity : AppCompatActivity() {
             player?.play()
         } catch (e: Exception) {
             binding.layoutBuffering.visibility = View.GONE
+            binding.layoutQuickBuffering.visibility = View.GONE
             binding.tvErrorMessage.visibility = View.VISIBLE
             binding.tvErrorDetail.text = "Không thể phát qua ExoPlayer: ${e.localizedMessage}"
         }
