@@ -86,13 +86,20 @@ class SettingsDialog(
             Toast.makeText(context, "Đã thêm danh sách thành công!", Toast.LENGTH_SHORT).show()
         }
 
+        val existingBackup = prefs.getAvailableBackupFile()
+        if (existingBackup != null) {
+            binding.tvBackupStatus.text = "Bản sao lưu hiện có: ${existingBackup.name} (${existingBackup.parent})"
+        }
+
         binding.btnBackupConfig.setOnClickListener {
             val file = prefs.saveAutoBackup()
             if (file != null) {
-                binding.tvBackupStatus.text = "✓ Đã sao lưu thành công: ${file.name}"
+                binding.tvBackupStatus.text = "✓ Đã sao lưu thành công: ${file.name}\n${file.absolutePath}"
                 binding.tvBackupStatus.setTextColor(Color.parseColor("#34D399"))
-                Toast.makeText(context, "Đã sao lưu cấu hình: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Đã sao lưu cấu hình: ${file.name}", Toast.LENGTH_LONG).show()
             } else {
+                binding.tvBackupStatus.text = "✗ Lỗi khi sao lưu dữ liệu!"
+                binding.tvBackupStatus.setTextColor(Color.parseColor("#EF4444"))
                 Toast.makeText(context, "Lỗi khi sao lưu dữ liệu!", Toast.LENGTH_SHORT).show()
             }
         }
@@ -115,9 +122,13 @@ class SettingsDialog(
                             binding.tvBackupStatus.setTextColor(Color.parseColor("#34D399"))
                             Toast.makeText(context, "Đã khôi phục thành công từ: ${file.name}", Toast.LENGTH_LONG).show()
                         } else {
+                            binding.tvBackupStatus.text = "✗ File sao lưu không đúng định dạng!"
+                            binding.tvBackupStatus.setTextColor(Color.parseColor("#EF4444"))
                             Toast.makeText(context, "File sao lưu không đúng định dạng!", Toast.LENGTH_SHORT).show()
                         }
                     } catch (e: Exception) {
+                        binding.tvBackupStatus.text = "✗ Lỗi đọc file: ${e.message}"
+                        binding.tvBackupStatus.setTextColor(Color.parseColor("#EF4444"))
                         Toast.makeText(context, "Lỗi đọc file: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }

@@ -38,7 +38,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:text="• CHỌN FILE PLAYLIST TỪ BỘ NHỚ HOẶC USB"
+            android:text="• CHỌN FILE PLAYLIST / SAO LƯU TỪ BỘ NHỚ HOẶC USB"
             android:textColor="@color/text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -154,7 +154,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="Không tìm thấy file playlist (.m3u, .m3u8, .txt) nào trong thư mục này."
+        android:text="Không tìm thấy file playlist (.m3u, .m3u8, .txt) hoặc sao lưu (.json) nào trong thư mục này."
         android:textColor="@color/text_muted"
         android:textSize="13sp"
         android:visibility="gone" />

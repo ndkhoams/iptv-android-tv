@@ -1,8 +1,13 @@
 package com.iptv.tvapp.data
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import com.iptv.tvapp.model.PlaylistSource
 import org.json.JSONArray
 import org.json.JSONObject
@@ -271,46 +276,154 @@ class PreferencesHelper(context: Context) {
     }
 
     fun saveAutoBackup(): File? {
-        return try {
-            val backupJson = createBackupJson()
-            // 1. Lưu bản sao nội bộ trong app
-            val internalFile = File(appContext.filesDir, "tvplay_backup_auto.json")
-            internalFile.writeText(backupJson, Charsets.UTF_8)
+        val backupJson = try {
+            createBackupJson()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
 
-            // 2. Lưu bản sao vào thư mục Download công cộng nếu có quyền
+        // 1. Luôn lưu bản sao nội bộ an toàn (100% thành công, không cần quyền)
+        val internalFile = File(appContext.filesDir, "tvplay_backup_auto.json")
+        try {
+            internalFile.writeText(backupJson, Charsets.UTF_8)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 2. Lưu bản sao vào thư mục ngoài của ứng dụng (External Files Dir - không cần quyền trên mọi Android)
+        var appExtFile: File? = null
+        try {
+            val appExtDir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                ?: appContext.getExternalFilesDir(null)
+            if (appExtDir != null && (appExtDir.exists() || appExtDir.mkdirs())) {
+                val f = File(appExtDir, "tvplay_backup.json")
+                f.writeText(backupJson, Charsets.UTF_8)
+                if (f.exists() && f.length() > 0) {
+                    appExtFile = f
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 3. Thử lưu vào thư mục Download công cộng (/sdcard/Download/tvplay_backup.json)
+        val publicFile = writeToPublicDownload(backupJson)
+
+        // Trả về file có mức truy cập thuận tiện nhất cho người dùng
+        return publicFile?.takeIf { it.exists() && it.length() > 0 }
+            ?: appExtFile?.takeIf { it.exists() && it.length() > 0 }
+            ?: internalFile.takeIf { it.exists() && it.length() > 0 }
+    }
+
+    private fun writeToPublicDownload(backupJson: String): File? {
+        // A. Thử ghi trực tiếp bằng File API trước (nhanh và tương thích rộng rãi trên Android TV / ROM tuỳ biến)
+        try {
             val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             if (downloadDir != null && (downloadDir.exists() || downloadDir.mkdirs())) {
                 val extFile = File(downloadDir, "tvplay_backup.json")
                 extFile.writeText(backupJson, Charsets.UTF_8)
-                extFile
-            } else {
-                internalFile
+                if (extFile.exists() && extFile.length() > 0) {
+                    return extFile
+                }
             }
         } catch (e: Exception) {
-            null
+            // EACCES trên Android 10+ với Scoped Storage - chuyển sang MediaStore bên dưới
         }
+
+        // B. Nếu Android >= 29 (Android 10+), thử ghi qua MediaStore Downloads (hoạt động không cần quyền đặc biệt)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val resolver = appContext.contentResolver
+                val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+
+                // Tìm file cũ nếu có để ghi đè
+                val projection = arrayOf(MediaStore.MediaColumns._ID)
+                val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+                val selectionArgs = arrayOf("tvplay_backup.json")
+
+                var existingUri: Uri? = null
+                try {
+                    resolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
+                            existingUri = ContentUris.withAppendedId(collection, id)
+                        }
+                    }
+                } catch (ignored: Exception) {}
+
+                var written = false
+                if (existingUri != null) {
+                    try {
+                        resolver.openOutputStream(existingUri!!, "rwt")?.use { os ->
+                            os.write(backupJson.toByteArray(Charsets.UTF_8))
+                            os.flush()
+                            written = true
+                        }
+                    } catch (e: Exception) {
+                        try {
+                            resolver.delete(existingUri!!, null, null)
+                        } catch (ignored: Exception) {}
+                    }
+                }
+
+                if (!written) {
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, "tvplay_backup.json")
+                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    }
+                    val newUri = resolver.insert(collection, contentValues)
+                    if (newUri != null) {
+                        resolver.openOutputStream(newUri)?.use { os ->
+                            os.write(backupJson.toByteArray(Charsets.UTF_8))
+                            os.flush()
+                        }
+                    }
+                }
+
+                val publicFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "tvplay_backup.json")
+                if (publicFile.exists() && publicFile.length() > 0) {
+                    return publicFile
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        return null
+    }
+
+    fun getAvailableBackupFile(): File? {
+        val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val extFile = if (downloadDir != null) File(downloadDir, "tvplay_backup.json") else null
+        val appExtFile = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.let { File(it, "tvplay_backup.json") }
+        val internalFile = File(appContext.filesDir, "tvplay_backup_auto.json")
+
+        val candidates = listOfNotNull(extFile, appExtFile, internalFile)
+        return candidates.firstOrNull { it.exists() && it.canRead() && it.length() > 0 }
     }
 
     fun restoreAutoBackupIfAvailable(): Boolean {
         val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val extFile = File(downloadDir, "tvplay_backup.json")
+        val extFile = if (downloadDir != null) File(downloadDir, "tvplay_backup.json") else null
+        val appExtFile = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.let { File(it, "tvplay_backup.json") }
         val internalFile = File(appContext.filesDir, "tvplay_backup_auto.json")
 
-        val targetFile = when {
-            extFile.exists() && extFile.length() > 0 -> extFile
-            internalFile.exists() && internalFile.length() > 0 -> internalFile
-            else -> null
-        }
-
-        return if (targetFile != null) {
+        val candidates = listOfNotNull(extFile, appExtFile, internalFile)
+        for (file in candidates) {
             try {
-                restoreFromBackupJson(targetFile.readText(Charsets.UTF_8))
+                if (file.exists() && file.canRead() && file.length() > 0) {
+                    val content = file.readText(Charsets.UTF_8)
+                    if (restoreFromBackupJson(content)) {
+                        return true
+                    }
+                }
             } catch (e: Exception) {
-                false
+                e.printStackTrace()
             }
-        } else {
-            false
         }
+        return false
     }
 
     companion object {

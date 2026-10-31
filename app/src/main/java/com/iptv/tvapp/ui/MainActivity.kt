@@ -185,8 +185,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+            val perms = mutableListOf<String>()
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1001)
+                perms.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }
+            if (perms.isNotEmpty()) {
+                ActivityCompat.requestPermissions(this, perms.toTypedArray(), 1001)
             }
         }
     }

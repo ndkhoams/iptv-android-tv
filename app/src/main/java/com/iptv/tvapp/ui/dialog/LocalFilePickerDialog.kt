@@ -64,7 +64,17 @@ class LocalFilePickerDialog(
 
         binding.btnQuickDownload.setOnClickListener {
             val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (downloadDir.exists()) navigateTo(downloadDir)
+            val appExtDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            val publicFiles = try { downloadDir?.listFiles() } catch (e: Exception) { null }
+            if (downloadDir != null && downloadDir.exists() && !publicFiles.isNullOrEmpty()) {
+                navigateTo(downloadDir)
+            } else if (appExtDir != null && appExtDir.exists() && appExtDir.listFiles()?.isNotEmpty() == true) {
+                navigateTo(appExtDir)
+            } else if (downloadDir != null && downloadDir.exists()) {
+                navigateTo(downloadDir)
+            } else if (appExtDir != null && appExtDir.exists()) {
+                navigateTo(appExtDir)
+            }
         }
 
         binding.btnQuickInternal.setOnClickListener {
@@ -145,15 +155,16 @@ class LocalFilePickerDialog(
                     )
                 } else {
                     val ext = f.extension.lowercase()
-                    if (ext == "m3u" || ext == "m3u8" || ext == "txt") {
+                    if (ext == "m3u" || ext == "m3u8" || ext == "txt" || ext == "json") {
                         val sizeStr = formatFileSize(f.length())
                         val timeStr = dateFormat.format(Date(f.lastModified()))
+                        val iconPrefix = if (ext == "json") "⚙ [Sao lưu] " else "📺 "
                         fileList.add(
                             FileItem(
                                 file = f,
                                 isDirectory = false,
                                 displayName = f.name,
-                                detail = "$sizeStr • $timeStr"
+                                detail = "$iconPrefix$sizeStr • $timeStr"
                             )
                         )
                     }
@@ -178,10 +189,20 @@ class LocalFilePickerDialog(
 
     private fun getInitialDirectory(): File {
         val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        if (downloadDir.exists() && downloadDir.canRead()) return downloadDir
+        val publicFiles = try { downloadDir?.listFiles() } catch (e: Exception) { null }
+        if (downloadDir != null && downloadDir.exists() && !publicFiles.isNullOrEmpty()) {
+            return downloadDir
+        }
+
+        val appExtDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        if (appExtDir != null && appExtDir.exists() && appExtDir.listFiles()?.isNotEmpty() == true) {
+            return appExtDir
+        }
+
+        if (downloadDir != null && downloadDir.exists() && downloadDir.canRead()) return downloadDir
 
         val extDir = Environment.getExternalStorageDirectory()
-        if (extDir.exists() && extDir.canRead()) return extDir
+        if (extDir != null && extDir.exists() && extDir.canRead()) return extDir
 
         return context.filesDir
     }
