@@ -44,8 +44,9 @@ class SportsLiveManager(private val context: Context) {
         private const val CAKHIA_HOME = "https://cakhiazbb.tv/"
         private const val CAKHIA_REFERER = "https://ck.domainkqt.cc/"
 
-        private const val IPHONE_UA =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+        // User-Agent Chrome Desktop chuẩn để vượt qua Cloudflare WAF của Chuối Chiên, Cà Khịa, Xôi Lạc, Gà Vàng
+        private const val CHROME_UA =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
         private val REGEX_LIST_STREAM = Pattern.compile("var\\s+list_stream\\s*=\\s*(\\[.*?\\]);")
         private val REGEX_URL_STREAM = Pattern.compile("var\\s+urlStream\\s*=\\s*\"([^\"]+)\"")
@@ -146,9 +147,11 @@ class SportsLiveManager(private val context: Context) {
         try {
             val request = Request.Builder()
                 .url(CHUOICHIEN_API)
-                .header("User-Agent", PreferencesHelper.DEFAULT_USER_AGENT)
+                .header("User-Agent", CHROME_UA)
                 .header("Referer", CHUOICHIEN_HOME)
-                .header("Accept", "application/json")
+                .header("Origin", "https://chuoichientv.com")
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
                 .build()
 
             val response = httpClient.newCall(request).execute()
@@ -201,7 +204,7 @@ class SportsLiveManager(private val context: Context) {
                             if (bestStreamUrl.isNotBlank()) {
                                 val blvSuffix = if (blvName.isNotBlank()) " (BLV $blvName)" else ""
                                 val channelName = "⚽ [${if (timeStr.isNotBlank()) timeStr else "LIVE"}] $home vs $away$blvSuffix - Chuối Chiên"
-                                val fullUrl = "$bestStreamUrl|Referer=$CHUOICHIEN_REFERER"
+                                val fullUrl = "$bestStreamUrl|Referer=$CHUOICHIEN_REFERER&User-Agent=$CHROME_UA"
 
                                 list.add(
                                     Channel(
@@ -234,9 +237,10 @@ class SportsLiveManager(private val context: Context) {
         try {
             val request = Request.Builder()
                 .url(GAVANG_API)
-                .header("User-Agent", PreferencesHelper.DEFAULT_USER_AGENT)
+                .header("User-Agent", CHROME_UA)
                 .header("Referer", GAVANG_REFERER)
-                .header("Accept", "application/json")
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
                 .build()
 
             val response = httpClient.newCall(request).execute()
@@ -279,7 +283,7 @@ class SportsLiveManager(private val context: Context) {
                     val channelName = "⚽ [${if (timeStr.isNotBlank()) timeStr else "LIVE"}] $teams$blvSuffix - Gà Vàng"
 
                     // Gắn header Referer chuẩn để ExoPlayer / VLC truyền thẳng khi phát
-                    val fullStreamUrl = "$streamUrl|Referer=$GAVANG_REFERER"
+                    val fullStreamUrl = "$streamUrl|Referer=$GAVANG_REFERER&User-Agent=$CHROME_UA"
 
                     list.add(
                         Channel(
@@ -308,9 +312,10 @@ class SportsLiveManager(private val context: Context) {
         try {
             val request = Request.Builder()
                 .url(XOILAC_HOME)
-                .header("User-Agent", IPHONE_UA)
+                .header("User-Agent", CHROME_UA)
                 .header("Referer", XOILAC_HOME)
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
                 .build()
 
             val response = httpClient.newCall(request).execute()
@@ -367,9 +372,10 @@ class SportsLiveManager(private val context: Context) {
         try {
             val request = Request.Builder()
                 .url(CAKHIA_HOME)
-                .header("User-Agent", IPHONE_UA)
+                .header("User-Agent", CHROME_UA)
                 .header("Referer", CAKHIA_HOME)
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
                 .build()
 
             val response = httpClient.newCall(request).execute()
@@ -432,8 +438,10 @@ class SportsLiveManager(private val context: Context) {
         try {
             val req1 = Request.Builder()
                 .url(rawUrl)
-                .header("User-Agent", IPHONE_UA)
+                .header("User-Agent", CHROME_UA)
                 .header("Referer", if (isCakhia) CAKHIA_HOME else XOILAC_HOME)
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
                 .build()
 
             val resp1 = httpClient.newCall(req1).execute()
@@ -450,8 +458,10 @@ class SportsLiveManager(private val context: Context) {
 
                             val req2 = Request.Builder()
                                 .url(playerAjaxUrl)
-                                .header("User-Agent", IPHONE_UA)
+                                .header("User-Agent", CHROME_UA)
                                 .header("Referer", if (isCakhia) CAKHIA_HOME else XOILAC_HOME)
+                                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
                                 .build()
 
                             val resp2 = httpClient.newCall(req2).execute()
@@ -461,7 +471,7 @@ class SportsLiveManager(private val context: Context) {
                                 if (m2.find()) {
                                     val streamUrl = m2.group(1)?.trim().orEmpty()
                                     if (streamUrl.isNotBlank()) {
-                                        return@withContext "$streamUrl|Referer=$baseReferer"
+                                        return@withContext "$streamUrl|Referer=$baseReferer&User-Agent=$CHROME_UA"
                                     }
                                 }
                             }
