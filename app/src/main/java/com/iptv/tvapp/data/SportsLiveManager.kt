@@ -44,7 +44,12 @@ class SportsLiveManager(private val context: Context) {
         private const val CAKHIA_HOME = "https://cakhiazbb.tv/"
         private const val CAKHIA_REFERER = "https://ck.domainkqt.cc/"
 
-        // User-Agent Chrome Desktop chuẩn để vượt qua Cloudflare WAF của Chuối Chiên, Cà Khịa, Xôi Lạc, Gà Vàng
+        // StreamFree API
+        private const val STREAMFREE_API = "https://streamfree.top/api/v1/streams"
+        private const val STREAMFREE_HOME = "https://streamfree.top/"
+        private const val STREAMFREE_REFERER = "https://streamfree.top/"
+
+        // User-Agent Chrome Desktop chuẩn để vượt qua Cloudflare WAF của Chuối Chiên, Cà Khịa, Xôi Lạc, Gà Vàng, StreamFree
         private const val CHROME_UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
@@ -53,6 +58,7 @@ class SportsLiveManager(private val context: Context) {
         private val REGEX_MATCH_ITEM =
             Pattern.compile("<div[^>]*class=\"[^\"]*grid-matches__item[^\"]*\"[^>]*>(.*?)</div>\\s*</div>\\s*</div>", Pattern.DOTALL)
         private val REGEX_HREF = Pattern.compile("href=\"([^\"]+)\"")
+        private val REGEX_0X = Pattern.compile("const\\s+_0x\\s*=\\s*(\\{.*?\\});", Pattern.DOTALL)
 
         @Volatile
         private var cachedCategories: List<Category>? = null
@@ -76,17 +82,21 @@ class SportsLiveManager(private val context: Context) {
                     val gavangDeferred = async { fetchGaVangMatches() }
                     val xoilacDeferred = async { fetchXoiLacMatches() }
                     val cakhiaDeferred = async { fetchCaKhiaMatches() }
+                    val streamFreeDeferred = async { fetchStreamFreeMatches() }
 
                     val chuoichienList = try { chuoichienDeferred.await() } catch (e: Exception) { emptyList() }
                     val gavangList = try { gavangDeferred.await() } catch (e: Exception) { emptyList() }
                     val xoilacList = try { xoilacDeferred.await() } catch (e: Exception) { emptyList() }
                     val cakhiaList = try { cakhiaDeferred.await() } catch (e: Exception) { emptyList() }
+                    val streamFreeList = try { streamFreeDeferred.await() } catch (e: Exception) { emptyList() }
 
                     val allMatches = mutableListOf<Channel>()
                     allMatches.addAll(chuoichienList)
                     allMatches.addAll(gavangList)
                     allMatches.addAll(xoilacList)
                     allMatches.addAll(cakhiaList)
+                    // Thêm các trận bóng đá quốc tế từ StreamFree vào danh sách tổng hợp
+                    allMatches.addAll(streamFreeList.filter { it.streamUrl.contains("streamfree://soccer/") })
 
                     val categories = mutableListOf<Category>()
 
@@ -124,6 +134,14 @@ class SportsLiveManager(private val context: Context) {
 
                     if (cakhiaList.isNotEmpty()) {
                         categories.add(Category("🌶️ Cà Khịa TV", cakhiaList.toMutableList()))
+                    }
+
+                    if (streamFreeList.isNotEmpty()) {
+                        val sortedStreamFree = streamFreeList.sortedWith(
+                            compareByDescending<Channel> { it.name.contains("[LIVE]") }
+                                .thenBy { it.name }
+                        )
+                        categories.add(Category("🌐 StreamFree (Quốc Tế)", sortedStreamFree.toMutableList()))
                     }
 
                     if (categories.isNotEmpty()) {
@@ -425,9 +443,106 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
-     * Tự động giải mã link m3u8 động cho Xôi Lạc và Cà Khịa khi người dùng bấm vào xem
+     * StreamFree Scraper: Lấy toàn bộ các giải đấu quốc tế (Bóng đá, F1, Quần vợt, Quyền Anh/UFC, Bóng rổ...)
+     */
+    private fun fetchStreamFreeMatches(): List<Channel> {
+        val list = mutableListOf<Channel>()
+        try {
+            val request = Request.Builder()
+                .url(STREAMFREE_API)
+                .header("User-Agent", CHROME_UA)
+                .header("Referer", STREAMFREE_HOME)
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val bodyStr = response.body?.string() ?: return emptyList()
+                val json = JSONObject(bodyStr)
+                val streams = json.optJSONArray("streams") ?: return emptyList()
+                val allowedCategories = setOf("soccer", "basketball", "tennis", "racing")
+
+                var idx = 1
+                for (i in 0 until streams.length()) {
+                    val item = streams.optJSONObject(i) ?: continue
+                    val streamKey = item.optString("stream_key").trim()
+                    val name = item.optString("name").trim()
+                    val category = item.optString("category").trim().lowercase()
+                    val league = item.optString("league").trim()
+                    if (streamKey.isBlank() || name.isBlank()) continue
+                    if (category !in allowedCategories) continue
+
+                    val liveSources = item.optJSONArray("live_sources")
+                    val sources = item.optJSONArray("sources")
+                    val isLiveNow = liveSources != null && liveSources.length() > 0
+
+                    val chosenSources = if (isLiveNow) liveSources!! else sources
+                    var quality = "1080p"
+                    if (chosenSources != null && chosenSources.length() > 0) {
+                        val firstSrc = chosenSources.optJSONObject(0)
+                        val srcUrl = firstSrc?.optString("url") ?: ""
+                        val qLabel = firstSrc?.optString("quality") ?: ""
+                        quality = if (srcUrl.contains("540p") || qLabel.equals("SD", ignoreCase = true)) "540p"
+                        else if (srcUrl.contains("720p") || qLabel.equals("HD", ignoreCase = true)) "720p"
+                        else "1080p"
+                    }
+
+                    val matchTs = item.optLong("match_timestamp", 0L)
+                    val timeStr = if (matchTs > 0) {
+                        try {
+                            val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                            sdf.timeZone = java.util.TimeZone.getTimeZone("GMT+7")
+                            sdf.format(java.util.Date(matchTs * 1000L))
+                        } catch (e: Exception) { "LIVE" }
+                    } else "LIVE"
+
+                    val sportIcon = when (category) {
+                        "soccer" -> "⚽"
+                        "racing" -> "🏎️"
+                        "tennis" -> "🎾"
+                        "basketball" -> "🏀"
+                        else -> "🏆"
+                    }
+
+                    val statusTag = if (isLiveNow) "LIVE" else timeStr
+                    val leagueSuffix = if (league.isNotBlank()) " ($league)" else ""
+                    val channelName = "$sportIcon [$statusTag] $name$leagueSuffix - StreamFree"
+
+                    val logoUrl = item.optString("thumbnail_url").takeIf { it.isNotBlank() }
+                        ?: item.optJSONObject("team1")?.optString("logo")?.takeIf { it.isNotBlank() }
+                        ?: "https://streamfree.top/favicon.ico"
+
+                    // Gắn URL dạng streamfree:// để resolveLiveStreamUrl tự động giải mã luồng m3u8 động khi click
+                    val streamUrl = "streamfree://$category/$streamKey?quality=$quality"
+
+                    list.add(
+                        Channel(
+                            id = "streamfree_${idx}_$category",
+                            name = channelName,
+                            logoUrl = logoUrl,
+                            streamUrl = streamUrl,
+                            groupTitle = "🌐 StreamFree (Quốc Tế)",
+                            number = idx
+                        )
+                    )
+                    idx++
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
+
+    /**
+     * Tự động giải mã link m3u8 động cho StreamFree, Xôi Lạc và Cà Khịa khi người dùng bấm vào xem
      */
     suspend fun resolveLiveStreamUrl(rawUrl: String): String = withContext(Dispatchers.IO) {
+        if (rawUrl.startsWith("streamfree://")) {
+            return@withContext resolveStreamFreeUrl(rawUrl)
+        }
+
         if (!rawUrl.contains("/truc-tiep/")) {
             return@withContext rawUrl
         }
@@ -484,6 +599,91 @@ class SportsLiveManager(private val context: Context) {
         }
 
         return@withContext rawUrl
+    }
+
+    /**
+     * Giải mã luồng m3u8 StreamFree trực tiếp từ Embed player và API token
+     */
+    private fun resolveStreamFreeUrl(rawUrl: String): String {
+        try {
+            val uri = android.net.Uri.parse(rawUrl)
+            val category = uri.host ?: "soccer"
+            val streamKey = uri.path?.trim('/') ?: ""
+            val quality = uri.getQueryParameter("quality") ?: "1080p"
+            if (streamKey.isBlank()) return rawUrl
+
+            val encodedKey = try {
+                java.net.URLEncoder.encode(streamKey, "UTF-8").replace("+", "%20")
+            } catch (e: Exception) { streamKey }
+
+            val embedUrl = "https://streamfree.top/embed/$category/$encodedKey$quality"
+            val playerReferer = "https://streamfree.top/player/$category/$encodedKey"
+
+            // 1. Lấy mã nhúng HTML để trích xuất token chữ ký bảo mật _0x
+            val embedReq = Request.Builder()
+                .url(embedUrl)
+                .header("User-Agent", CHROME_UA)
+                .header("Referer", playerReferer)
+                .header("Sec-Fetch-Dest", "iframe")
+                .header("Sec-Fetch-Mode", "navigate")
+                .build()
+
+            val embedResp = httpClient.newCall(embedReq).execute()
+            if (!embedResp.isSuccessful) return rawUrl
+            val html = embedResp.body?.string().orEmpty()
+
+            val m0x = REGEX_0X.matcher(html)
+            if (!m0x.find()) return rawUrl
+            val tokensJson = JSONObject(m0x.group(1) ?: "{}")
+
+            // 2. Lấy thông tin CDN server phân phối luồng
+            val keyInfoReq = Request.Builder()
+                .url("https://streamfree.top/get-stream-key/$encodedKey")
+                .header("User-Agent", CHROME_UA)
+                .header("Referer", STREAMFREE_HOME)
+                .build()
+
+            val keyResp = httpClient.newCall(keyInfoReq).execute()
+            if (!keyResp.isSuccessful) return rawUrl
+            val keyData = JSONObject(keyResp.body?.string().orEmpty())
+
+            if (keyData.optBoolean("is_external") && keyData.optString("external_url").isNotBlank()) {
+                val extUrl = keyData.optString("external_url")
+                return "$extUrl|Referer=$STREAMFREE_REFERER&User-Agent=$CHROME_UA"
+            }
+
+            val serverName = keyData.optString("server_name", "origin")
+            var serverDomain = keyData.optString("server_domain", "https://streamfree.top")
+            if (!serverDomain.startsWith("http")) {
+                serverDomain = "https://streamfree.top"
+            }
+
+            val variant = "$streamKey$quality"
+            val (domain, path) = when {
+                serverName == "externalcdn" -> Pair("https://streamfree.top", "/live-externalcdn/$variant/index.m3u8")
+                serverName != "origin" -> Pair(serverDomain, "/live-cdn/$variant/index.m3u8")
+                else -> Pair(serverDomain, "/live/$variant/index.m3u8")
+            }
+
+            val tokenObj = tokensJson.optJSONObject(quality)
+                ?: tokensJson.optJSONObject("720p")
+                ?: tokensJson.optJSONObject("540p")
+                ?: tokensJson.optJSONObject("2160p")
+
+            val m3u8Url = if (tokenObj != null) {
+                val t = tokenObj.optString("_t")
+                val e = tokenObj.optString("_e")
+                val n = tokenObj.optString("_n")
+                "$domain$path?_t=$t&_e=$e&_n=$n"
+            } else {
+                "$domain$path"
+            }
+
+            return "$m3u8Url|Referer=$STREAMFREE_REFERER&User-Agent=$CHROME_UA"
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return rawUrl
     }
 
     private fun formatTitle(str: String): String {

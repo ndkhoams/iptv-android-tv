@@ -55,22 +55,22 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Duy Nhất KTV Playlist & Ghim Kho Thể Thao Trực Tiếp"
+        name: "${{ github.ref_name }} - Tích hợp nguồn Thể Thao Quốc Tế StreamFree (Bóng đá, F1, Quần vợt, Bóng rổ)"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Loại bỏ hoàn toàn TV Play Pro:**
-            - Xóa bỏ triệt để playlist `TV Play Pro (Thể Thao)` khỏi danh sách nguồn M3U và cấu hình lưu trữ.
-            - Triệt tiêu toàn bộ các kênh và danh mục thừa cũ (Tất cả, FIFA World Cup, Thể thao quốc tế, Sự kiện TV360, Sự kiện VTVPrime).
-          - **Duy nhất 1 Playlist mặc định KTV.m3u:**
-            - Chỉ giữ lại duy nhất 1 danh sách kênh trực tuyến là `KTV Playlist` (`https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u`).
-          - **5 chuyên mục trực tiếp thể thao ghim cố định ở đầu:**
+          - **Tích hợp nguồn thể thao quốc tế StreamFree:**
+            - Bổ sung chuyên mục `🌐 StreamFree (Quốc Tế)` với các bộ môn chọn lọc: ⚽ Bóng đá (`soccer`), 🏎️ Đua xe F1 (`racing`), 🎾 Quần vợt (`tennis`), 🏀 Bóng rổ (`basketball`).
+            - Tự động gộp các trận bóng đá quốc tế hấp dẫn vào chuyên mục `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)`.
+            - Cơ chế tự động giải mã luồng `.m3u8` trực tiếp từ ByteDance Global CDN kèm token chữ ký số động thời hạn 8 tiếng.
+          - **Tối ưu hóa kết nối & User-Agent:**
+            - Thống nhất User-Agent Chrome Desktop chuẩn tránh bị Cloudflare WAF chặn kết nối.
+          - **Kho thể thao trực tiếp đầy đủ 6 chuyên mục ghim cố định:**
             - `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)` (kèm nút 🔄 Cập nhật trận đấu)
+            - `🌐 StreamFree (Quốc Tế)`
             - `🍌 Chuối Chiên TV`
             - `🐔 Gà Vàng / Tiếu Lâm`
             - `🍚 Xôi Lạc TV`
             - `🌶️ Cà Khịa TV`
-          - **Sửa triệt để lỗi hiển thị EPG:**
-            - Lịch thi đấu chuyên biệt thời gian thực cho từng trận đấu thay thế hoàn toàn EPG kênh TV thông thường.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
