@@ -807,6 +807,27 @@ class MainActivity : AppCompatActivity() {
         binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
         val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
+
+        // Nếu là trận đấu bóng đá trực tiếp từ web (Xôi Lạc, Cà Khịa, Chuối Chiên), giải mã link m3u8 động
+        if (channel.streamUrl.contains("/truc-tiep/")) {
+            binding.layoutBuffering.visibility = View.VISIBLE
+            binding.tvBufferingText.text = "Đang kết nối luồng trực tiếp..."
+            lifecycleScope.launch(Dispatchers.Main) {
+                val resolved = withContext(Dispatchers.IO) {
+                    playlistManager.sportsLiveManager.resolveLiveStreamUrl(channel.streamUrl)
+                }
+                if (currentPlayingChannel?.id == channel.id) {
+                    val streamUriString = normalizeStreamUrl(resolved, isVlc)
+                    if (isVlc) {
+                        playWithVlc(streamUriString)
+                    } else {
+                        playWithExoPlayer(streamUriString)
+                    }
+                }
+            }
+            return
+        }
+
         val streamUriString = normalizeStreamUrl(channel.streamUrl, isVlc)
 
         if (isVlc) {
@@ -816,8 +837,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun normalizeStreamUrl(rawUrl: String, isVlc: Boolean): String {
+    private fun parseStreamUrlAndHeaders(rawUrl: String): Pair<String, Map<String, String>> {
         val trimmed = rawUrl.trim()
+        if (!trimmed.contains("|")) {
+            return Pair(trimmed, emptyMap())
+        }
+        val cleanUrl = trimmed.substringBefore('|').trim()
+        val headersStr = trimmed.substringAfter('|').trim()
+        val headersMap = mutableMapOf<String, String>()
+        headersStr.split("&").forEach { pair ->
+            val parts = pair.split("=", limit = 2)
+            if (parts.size == 2) {
+                headersMap[parts[0].trim()] = parts[1].trim()
+            }
+        }
+        return Pair(cleanUrl, headersMap)
+    }
+
+    private fun normalizeStreamUrl(rawUrl: String, isVlc: Boolean): String {
+        val (cleanUrl, headers) = parseStreamUrlAndHeaders(rawUrl)
+        val trimmed = cleanUrl.trim()
         val udpxy = prefs.udpxyServer.trim()
 
         // Nếu đã cấu hình máy chủ udpxy (server:port), tự động chuyển đổi luồng multicast sang HTTP proxy
@@ -836,7 +875,7 @@ class MainActivity : AppCompatActivity() {
             trimmed
         }
 
-        return if (isVlc) {
+        val finalClean = if (isVlc) {
             // LibVLC chuẩn Multicast: BẮT BUỘC phải có '@' trước IP Multicast (ví dụ: udp://@225.1.2.249:30120)
             when {
                 effectiveUrl.startsWith("udp://@", ignoreCase = true) -> effectiveUrl
@@ -853,6 +892,13 @@ class MainActivity : AppCompatActivity() {
                 effectiveUrl.startsWith("rtp://", ignoreCase = true) -> "udp://" + effectiveUrl.substring(6)
                 else -> effectiveUrl
             }
+        }
+
+        return if (headers.isNotEmpty()) {
+            val hStr = headers.entries.joinToString("&") { "${it.key}=${it.value}" }
+            "$finalClean|$hStr"
+        } else {
+            finalClean
         }
     }
 
@@ -877,13 +923,22 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
 
+            val (cleanUrl, headers) = parseStreamUrlAndHeaders(streamUriString)
             vp.stop()
-            val media = Media(vlc, Uri.parse(streamUriString)).apply {
+            val media = Media(vlc, Uri.parse(cleanUrl)).apply {
                 // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
                 setHWDecoderEnabled(true, false)
                 addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
                 addOption(":avcodec-hw=any")
-                addOption(":http-user-agent=${prefs.httpUserAgent}")
+
+                val userAgent = headers["User-Agent"] ?: headers["user-agent"] ?: prefs.httpUserAgent
+                addOption(":http-user-agent=$userAgent")
+
+                val referer = headers["Referer"] ?: headers["referer"]
+                if (!referer.isNullOrBlank()) {
+                    addOption(":http-referrer=$referer")
+                }
+
                 if (prefs.deinterlaceMode != PreferencesHelper.DEINTERLACE_OFF) {
                     addOption(":deinterlace=1")
                     addOption(":deinterlace-mode=${prefs.deinterlaceMode}")
@@ -1190,8 +1245,24 @@ class MainActivity : AppCompatActivity() {
             binding.vlcVideoLayout.visibility = View.GONE
             binding.playerView.visibility = View.VISIBLE
 
-            val mediaItem = MediaItem.fromUri(Uri.parse(streamUriString))
-            player?.setMediaItem(mediaItem)
+            val (cleanUrl, headers) = parseStreamUrlAndHeaders(streamUriString)
+            val mediaItem = MediaItem.fromUri(Uri.parse(cleanUrl))
+
+            if (headers.isNotEmpty()) {
+                val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                    .setUserAgent(headers["User-Agent"] ?: headers["user-agent"] ?: prefs.httpUserAgent)
+                    .setConnectTimeoutMs(15000)
+                    .setReadTimeoutMs(20000)
+                    .setAllowCrossProtocolRedirects(true)
+                    .setDefaultRequestProperties(headers)
+                val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
+                val mediaSourceFactory = DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
+                val mediaSource = mediaSourceFactory.createMediaSource(mediaItem)
+                player?.setMediaSource(mediaSource)
+            } else {
+                player?.setMediaItem(mediaItem)
+            }
+
             player?.prepare()
             player?.play()
         } catch (e: Exception) {

@@ -55,19 +55,23 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "v1.9.18 - Tích hợp 560+ Kênh TV Play Pro mặc định & Sửa lỗi Sao lưu trên Android 10+"
+        name: "${{ github.ref_name }} - Trực tiếp Thể Thao (Chuối Chiên, Gà Vàng, Xôi Lạc, Cà Khịa) & KTV Playlist"
         body: |
-          ### Bản cập nhật v1.9.18 cho TV Play Android TV:
-          - **Tích hợp kho 560+ Kênh TV Play Pro làm mặc định:**
-            - Nhúng sẵn danh sách 564 kênh chất lượng cao (`builtin_playlist.m3u`) từ kho GetOut trực tiếp vào Assets của ứng dụng. Tốc độ nạp kênh tức thì, không bị lỗi mạng làm gián đoạn.
-            - Đầy đủ các nhóm: VTV, Thể Thao Quốc Tế (Sky Sports, Canal+ Sport, TNT Sports), FIFA World Cup, VTVCab (ON Sports, ON Football, ON Cine...), SCTV (1 đến 22), HTV, Phim Truyện, Sự Kiện, Địa Phương và Radio.
-            - Hỗ trợ scheme `asset://` trong `PlaylistManager`.
-            - Cung cấp sẵn bộ 3 danh sách kênh: `TV Play Pro (560+ Kênh)`, `FPT IPTV`, `Thể Thao Quốc Tế (VMT)` dễ dàng chuyển đổi 1 click qua phím Danh Sách trên Remote hoặc qua giao diện Web.
-            - Tích hợp `GetOutManager`: Tự động bắt domain động từ GitHub và giải mã Master Key AES-256-CBC.
-          - **Sửa dứt điểm lỗi "Lỗi khi sao lưu dữ liệu!" trên Android 10+:**
-            - Cơ chế sao lưu 3 tầng an toàn: Nội bộ ứng dụng (100% không cần quyền) + Bộ nhớ ngoài chuyên biệt của app + Thư mục Download công cộng qua MediaStore API (vượt qua rào cản Scoped Storage trên Android 10, 11, 12, 13, 14).
-            - Cho phép chọn file `.json` khi Khôi phục trong `LocalFilePickerDialog` kèm icon phân biệt `⚙ [Sao lưu]`.
-            - Khai báo bổ sung quyền `MANAGE_EXTERNAL_STORAGE` và mở rộng `WRITE_EXTERNAL_STORAGE` cho Android TV.
+          ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
+          - **Tích hợp toàn diện 5 nguồn thể thao trực tiếp theo thời gian thực:**
+            - 🍌 **Chuối Chiên TV**: Kết nối trực tiếp API Chuối Chiên lấy toàn bộ các trận đấu bóng đá hôm nay, đầy đủ các BLV (Chuối Tây, Chuối Chao, Chuối Nhỏ, Chuối Già...), tự động nạp luồng FHD/HD với Referer chuẩn (`https://live.chuoichien.tv/`).
+            - 🐔 **Gà Vàng & Tiếu Lâm**: Lấy lịch thi đấu và luồng phát kèm tên BLV (Gà Siêu Son, Gà Siêu Mõm, Gà Tiếu Lâm...) qua API hệ sinh thái Gà Vàng.
+            - 🍚 **Xôi Lạc TV** & 🌶️ **Cà Khịa TV**: Cào lịch đấu thời gian thực và giải mã luồng m3u8 động siêu tốc khi bấm chọn trận.
+            - Tự động gộp thành nhóm **`⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)`** cùng các nhóm riêng từng đài đặt ngay trên đầu danh mục kênh.
+          - **Nâng cấp Player Engine (LibVLC & ExoPlayer):**
+            - Hỗ trợ định dạng link kèm header (`url|Referer=...&User-Agent=...`).
+            - Tự động truyền đúng `:http-referrer` và `:http-user-agent` cho LibVLC cũng như `DefaultHttpDataSource` cho ExoPlayer, giải quyết triệt để lỗi HTTP 403 Forbidden.
+          - **Đại tu toàn bộ kênh truyền hình nội địa & quốc tế (100% hoạt động):**
+            - VTV (VTV1-VTV10), HTV (HTV1, 2, 3, 7, 9, HTV Thể Thao), HTVC, THVL1, THVL2 và SCTV (1 đến 22).
+            - Loại bỏ nhóm `LIVE EVENTS 🔴` chứa phim lẻ gây hiểu nhầm.
+          - **Cập nhật Playlist mặc định & Cài đặt máy chủ:**
+            - Cập nhật link playlist online mặc định sang KTV: `https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u`.
+            - Mặc định để trống máy chủ UDPXY.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

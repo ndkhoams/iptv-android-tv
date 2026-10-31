@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit
 class PlaylistManager(private val context: Context) {
 
     private val prefs = PreferencesHelper(context)
+    val sportsLiveManager = SportsLiveManager(context)
 
     private val cookieStore = ConcurrentHashMap<String, MutableList<Cookie>>()
 
@@ -130,7 +131,24 @@ class PlaylistManager(private val context: Context) {
             }
 
             // Gom nhóm kênh theo Category
-            return@withContext groupChannels(channels)
+            val baseCategories = groupChannels(channels)
+
+            // Tự động tích hợp các danh mục thể thao trực tiếp hôm nay (Gà Vàng, Tiếu Lâm, Xôi Lạc, Cà Khịa, Chuối Chiên)
+            return@withContext try {
+                val sportsCategories = sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
+                if (sportsCategories.isNotEmpty()) {
+                    val merged = mutableListOf<Category>()
+                    val favCat = baseCategories.firstOrNull { it.name == "★ KÊNH YÊU THÍCH" }
+                    if (favCat != null) merged.add(favCat)
+                    merged.addAll(sportsCategories)
+                    baseCategories.filter { it.name != "★ KÊNH YÊU THÍCH" }.forEach { merged.add(it) }
+                    merged
+                } else {
+                    baseCategories
+                }
+            } catch (e: Exception) {
+                baseCategories
+            }
         }
 
     private fun downloadAndCache(url: String, targetFile: File) {

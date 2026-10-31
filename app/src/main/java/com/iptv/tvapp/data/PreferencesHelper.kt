@@ -41,9 +41,9 @@ class PreferencesHelper(context: Context) {
                 url = BUILTIN_PLAYLIST_URL,
                 isSelected = true
             )
-            val fptSource = PlaylistSource(
+            val defaultSource = PlaylistSource(
                 id = UUID.randomUUID().toString(),
-                name = "FPT IPTV",
+                name = "KTV Playlist",
                 url = DEFAULT_URL,
                 isSelected = false
             )
@@ -54,7 +54,7 @@ class PreferencesHelper(context: Context) {
                 isSelected = false
             )
             list.add(builtinSource)
-            list.add(fptSource)
+            list.add(defaultSource)
             list.add(sportsSource)
             savePlaylists(list)
             return list
@@ -77,13 +77,15 @@ class PreferencesHelper(context: Context) {
             e.printStackTrace()
         }
 
-        // Tự động nâng cấp danh sách mặc định cũ sang link FPT gốc (đã có udpxyServer cấu hình riêng)
+        // Tự động nâng cấp danh sách mặc định cũ sang link KTV mới
         var updatedDefault = false
         for (i in 0 until list.size) {
             val item = list[i]
-            if (item.url.contains("iptv-org/iptv/master/streams/vn.m3u") || item.url == "https://121124.xyz/tv/fpt?udpxy=10.0.0.222:4022") {
+            if (item.url.contains("iptv-org/iptv/master/streams/vn.m3u") ||
+                item.url.contains("121124.xyz/tv/fpt") ||
+                item.url == "https://121124.xyz/tv/fpt?udpxy=10.0.0.222:4022") {
                 list[i] = item.copy(
-                    name = "FPT IPTV",
+                    name = "KTV Playlist",
                     url = DEFAULT_URL
                 )
                 updatedDefault = true
@@ -214,7 +216,7 @@ class PreferencesHelper(context: Context) {
 
     // ===== CÀI ĐẶT MÁY CHỦ UDPXY (SERVER:PORT) =====
     var udpxyServer: String
-        get() = prefs.getString(KEY_UDPXY_SERVER, "10.0.0.222:4022") ?: "10.0.0.222:4022"
+        get() = prefs.getString(KEY_UDPXY_SERVER, "") ?: ""
         set(value) = prefs.edit().putString(KEY_UDPXY_SERVER, value.trim()).apply()
 
     // ===== SAO LƯU & KHÔI PHỤC TOÀN BỘ CẤU HÌNH (BACKUP / RESTORE) =====
@@ -490,7 +492,7 @@ class PreferencesHelper(context: Context) {
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 
-        const val DEFAULT_URL = "https://121124.xyz/tv/fpt"
+        const val DEFAULT_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
         const val BUILTIN_PLAYLIST_ID = "builtin_pro_playlist"
         const val BUILTIN_PLAYLIST_URL = "asset://builtin_playlist.m3u"
         const val SPORTS_PLAYLIST_URL = "https://raw.githubusercontent.com/vuminhthanh12/vuminhthanh12/refs/heads/main/vmttv"
