@@ -256,12 +256,17 @@ class PlaylistManager(private val context: Context) {
         val trimmed = url.trim()
         return trimmed.startsWith("file://", ignoreCase = true) ||
                 trimmed.startsWith("content://", ignoreCase = true) ||
+                trimmed.startsWith("asset://", ignoreCase = true) ||
                 trimmed.startsWith("/")
     }
 
     private fun loadFromLocal(url: String, targetFile: File) {
         val trimmed = url.trim()
         val inputStream = when {
+            trimmed.startsWith("asset://", ignoreCase = true) -> {
+                val assetPath = trimmed.substring(8).trimStart('/')
+                context.assets.open(assetPath)
+            }
             trimmed.startsWith("content://", ignoreCase = true) -> {
                 context.contentResolver.openInputStream(android.net.Uri.parse(trimmed))
                     ?: throw Exception("Không thể mở đường dẫn: $trimmed")

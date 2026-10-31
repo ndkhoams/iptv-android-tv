@@ -34,14 +34,28 @@ class PreferencesHelper(context: Context) {
                 }
             }
 
-            // Danh sách mặc định ban đầu
-            val defaultSource = PlaylistSource(
+            // Danh sách mặc định ban đầu: TV Play Pro tích hợp sẵn 560+ kênh làm mặc định
+            val builtinSource = PlaylistSource(
+                id = BUILTIN_PLAYLIST_ID,
+                name = "TV Play Pro (560+ Kênh)",
+                url = BUILTIN_PLAYLIST_URL,
+                isSelected = true
+            )
+            val fptSource = PlaylistSource(
                 id = UUID.randomUUID().toString(),
                 name = "FPT IPTV",
                 url = DEFAULT_URL,
-                isSelected = true
+                isSelected = false
             )
-            list.add(defaultSource)
+            val sportsSource = PlaylistSource(
+                id = UUID.randomUUID().toString(),
+                name = "Thể Thao Quốc Tế (VMT)",
+                url = SPORTS_PLAYLIST_URL,
+                isSelected = false
+            )
+            list.add(builtinSource)
+            list.add(fptSource)
+            list.add(sportsSource)
             savePlaylists(list)
             return list
         }
@@ -75,13 +89,35 @@ class PreferencesHelper(context: Context) {
                 updatedDefault = true
             }
         }
-        if (updatedDefault) {
-            savePlaylists(list)
+
+        // Tự động bổ sung nguồn TV Play Pro mặc định nếu chưa có trong danh sách
+        if (list.none { it.url == BUILTIN_PLAYLIST_URL || it.id == BUILTIN_PLAYLIST_ID }) {
+            list.add(0, PlaylistSource(
+                id = BUILTIN_PLAYLIST_ID,
+                name = "TV Play Pro (560+ Kênh)",
+                url = BUILTIN_PLAYLIST_URL,
+                isSelected = list.none { it.isSelected }
+            ))
+            updatedDefault = true
+        }
+        if (list.none { it.url == SPORTS_PLAYLIST_URL }) {
+            list.add(PlaylistSource(
+                id = UUID.randomUUID().toString(),
+                name = "Thể Thao Quốc Tế (VMT)",
+                url = SPORTS_PLAYLIST_URL,
+                isSelected = false
+            ))
+            updatedDefault = true
         }
 
         // Đảm bảo luôn có ít nhất 1 danh sách được chọn
         if (list.isNotEmpty() && list.none { it.isSelected }) {
             list[0].isSelected = true
+            updatedDefault = true
+        }
+
+        if (updatedDefault) {
+            savePlaylists(list)
         }
 
         return list
@@ -455,5 +491,8 @@ class PreferencesHelper(context: Context) {
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 
         const val DEFAULT_URL = "https://121124.xyz/tv/fpt"
+        const val BUILTIN_PLAYLIST_ID = "builtin_pro_playlist"
+        const val BUILTIN_PLAYLIST_URL = "asset://builtin_playlist.m3u"
+        const val SPORTS_PLAYLIST_URL = "https://raw.githubusercontent.com/vuminhthanh12/vuminhthanh12/refs/heads/main/vmttv"
     }
 }
