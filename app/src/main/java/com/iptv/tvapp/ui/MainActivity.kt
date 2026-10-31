@@ -416,9 +416,11 @@ class MainActivity : AppCompatActivity() {
                 // 1. Tối ưu bộ giải mã phần cứng cho Amlogic / Mali-450: Ưu tiên MediaCodec NDK
                 "--codec=mediacodec_ndk,mediacodec_jni,all",
                 "--avcodec-hw=any",
-                // 2. Chống xé hình/răng cưa với thuật toán khử xen kẽ phần cứng mượt mà
+                // 2. Chống xé hình/răng cưa với thuật toán khử xen kẽ phần cứng: Gộp 2 frame thành 1 (Blend mode -> 25fps chuẩn PC)
+                "--video-filter=deinterlace",
                 "--deinterlace=1",
                 "--deinterlace-mode=blend",
+                "--avcodec-deinterlace=1",
                 // 3. Tối ưu bộ nhớ đệm (Giảm áp lực RAM 1GB của Mi Box 3c, chuyển kênh siêu nhanh 0.8s)
                 "--network-caching=800",
                 "--live-caching=800",
@@ -837,8 +839,11 @@ class MainActivity : AppCompatActivity() {
                 setHWDecoderEnabled(true, false)
                 addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
                 addOption(":avcodec-hw=any")
+                // Khử xé hình 1080i50: Gộp 2 field xen kẽ thành 1 khung hình đầy đủ (Blend mode -> 25fps như trên PC)
+                addOption(":video-filter=deinterlace")
                 addOption(":deinterlace=1")
                 addOption(":deinterlace-mode=blend")
+                addOption(":avcodec-deinterlace=1")
                 addOption(":network-caching=800")
                 addOption(":live-caching=800")
                 addOption(":file-caching=800")
@@ -1042,6 +1047,18 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
+        // Nếu decoder chưa bóc tách được kích thước (ví dụ luồng raw MPEG-TS qua UDP/HTTP không có manifest)
+        // thì nhận diện qua tên kênh để người dùng không bị kẹt ở "Đang nhận diện video..."
+        if (width <= 0 || height <= 0) {
+            val upper = currentCh.name.uppercase()
+            when {
+                upper.contains("4K") || upper.contains("2160") -> { width = 3840; height = 2160 }
+                upper.contains("720") -> { width = 1280; height = 720 }
+                upper.contains("SD") || upper.contains("576") -> { width = 720; height = 576 }
+                else -> { width = 1920; height = 1080 }
+            }
+        }
+
         if (width > 0 && height > 0) {
             currentVideoWidth = width
             currentVideoHeight = height
@@ -1088,7 +1105,14 @@ class MainActivity : AppCompatActivity() {
             "AAC Stereo 2.0 (48kHz)"
         }
 
-        val fpsStr = if (fps > 0) " @ ${fps}fps" else " @ 50fps"
+        val displayFps = when {
+            fps == 25 || fps == 50 -> if (height >= 1000) 25 else fps
+            fps > 0 -> fps
+            height >= 1000 -> 25
+            height in 1..600 -> 25
+            else -> 50
+        }
+        val fpsStr = " @ ${displayFps}fps"
         val resDim = if (width > 0 && height > 0) {
             "${width}x${height}$fpsStr"
         } else {
@@ -1166,11 +1190,23 @@ class MainActivity : AppCompatActivity() {
             binding.ivQuickLogo.setImageResource(R.drawable.ic_tv_placeholder)
         }
 
+        val upperName = channel.name.uppercase()
         val initialResDim = if (currentVideoWidth > 0 && currentVideoHeight > 0) {
-            val fpsStr = if (currentVideoFps > 0) " @ ${currentVideoFps}fps" else " @ 50fps"
-            "${currentVideoWidth}x${currentVideoHeight}$fpsStr"
+            val displayFps = when {
+                currentVideoFps == 25 || currentVideoFps == 50 -> if (currentVideoHeight >= 1000) 25 else currentVideoFps
+                currentVideoFps > 0 -> currentVideoFps
+                currentVideoHeight >= 1000 -> 25
+                currentVideoHeight in 1..600 -> 25
+                else -> 50
+            }
+            "${currentVideoWidth}x${currentVideoHeight} @ ${displayFps}fps"
         } else {
-            "Đang nhận diện video..."
+            when {
+                upperName.contains("4K") || upperName.contains("2160") -> "3840x2160 @ 50fps"
+                upperName.contains("720") -> "1280x720 @ 50fps"
+                upperName.contains("SD") || upperName.contains("576") -> "720x576 @ 25fps"
+                else -> "1920x1080 @ 25fps"
+            }
         }
         val initialBitrate = if (currentMeasuredBitrateMbps > 0.1f) {
             String.format(Locale.US, "%.1f Mbps", currentMeasuredBitrateMbps)
