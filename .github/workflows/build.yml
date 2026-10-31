@@ -55,19 +55,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "v1.9.17 - Gán phím Menu Remote, Mặc định User-Agent FPT Play Box & Đồng bộ 100% Cài đặt lên Web"
+        name: "v1.9.18 - Tích hợp 560+ Kênh TV Play Pro mặc định & Sửa lỗi Sao lưu trên Android 10+"
         body: |
-          ### Bản cập nhật v1.9.17 cho TV Play Android TV:
-          - **Gán phím tắt mở Cài Đặt vào nút Menu trên remote:**
-            - Bắt phím ở tầng sự kiện cao nhất `dispatchKeyEvent`: Bấm nút Menu ☰ hoặc Settings ⚙️ trên remote là mở ngay bảng Cài đặt bất kể đang xem toàn màn hình hay đang chọn kênh.
-            - Bấm lại phím Menu lần nữa để Tự động Lưu và Đóng cài đặt nhanh chóng.
-          - **Thiết lập mặc định HTTP User-Agent FPT Play Box chuẩn IPTV:**
-            - Chuỗi định danh: `Mozilla/5.0 (Linux; Android 12; ZTE B866V2F Build/STTC.230104.002) IPTV/9.1.16`.
-            - Giúp ứng dụng nhận diện chuẩn xác như box chính hãng của đài, mở khóa toàn bộ luồng phát và vượt rào chặn kênh.
-            - Bổ sung ô tùy chỉnh User-Agent trên cả TV và Web kèm nút "Khôi phục mặc định".
-          - **Đồng bộ 100% Cài đặt lên giao diện Web Remote (`http://[IP_TV]:8080`):**
-            - Tab Cài Đặt trên Web nay có đầy đủ: Bộ giải mã (LibVLC / ExoPlayer), Khử răng cưa 1080i (Yadif, Linear, Blend, Tắt), HTTP User-Agent, UDPXY, Khởi động cùng TV.
-            - Cập nhật thời gian thực: Khi thay đổi bộ giải mã hay khử xé hình trên điện thoại/máy tính, TV lập tức áp dụng và chuyển đổi mượt mà.
+          ### Bản cập nhật v1.9.18 cho TV Play Android TV:
+          - **Tích hợp kho 560+ Kênh TV Play Pro làm mặc định:**
+            - Nhúng sẵn danh sách 564 kênh chất lượng cao (`builtin_playlist.m3u`) từ kho GetOut trực tiếp vào Assets của ứng dụng. Tốc độ nạp kênh tức thì, không bị lỗi mạng làm gián đoạn.
+            - Đầy đủ các nhóm: VTV, Thể Thao Quốc Tế (Sky Sports, Canal+ Sport, TNT Sports), FIFA World Cup, VTVCab (ON Sports, ON Football, ON Cine...), SCTV (1 đến 22), HTV, Phim Truyện, Sự Kiện, Địa Phương và Radio.
+            - Hỗ trợ scheme `asset://` trong `PlaylistManager`.
+            - Cung cấp sẵn bộ 3 danh sách kênh: `TV Play Pro (560+ Kênh)`, `FPT IPTV`, `Thể Thao Quốc Tế (VMT)` dễ dàng chuyển đổi 1 click qua phím Danh Sách trên Remote hoặc qua giao diện Web.
+            - Tích hợp `GetOutManager`: Tự động bắt domain động từ GitHub và giải mã Master Key AES-256-CBC.
+          - **Sửa dứt điểm lỗi "Lỗi khi sao lưu dữ liệu!" trên Android 10+:**
+            - Cơ chế sao lưu 3 tầng an toàn: Nội bộ ứng dụng (100% không cần quyền) + Bộ nhớ ngoài chuyên biệt của app + Thư mục Download công cộng qua MediaStore API (vượt qua rào cản Scoped Storage trên Android 10, 11, 12, 13, 14).
+            - Cho phép chọn file `.json` khi Khôi phục trong `LocalFilePickerDialog` kèm icon phân biệt `⚙ [Sao lưu]`.
+            - Khai báo bổ sung quyền `MANAGE_EXTERNAL_STORAGE` và mở rộng `WRITE_EXTERNAL_STORAGE` cho Android TV.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
