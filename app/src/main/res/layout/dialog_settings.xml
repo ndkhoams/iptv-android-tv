@@ -296,8 +296,82 @@
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:nextFocusUp="@+id/rbPlayerVlc"
-                    android:nextFocusDown="@+id/rbLastWatched"
+                    android:nextFocusDown="@+id/rbDeinterlaceYadif"
                     android:nextFocusLeft="@+id/etNewPlaylistUrl"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+            </RadioGroup>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Thuật toán khử răng cưa / xé hình 1080i (VLC):"
+                android:textColor="#38BDF8"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rgDeinterlaceMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="#1B1930"
+                android:padding="8dp">
+
+                <RadioButton
+                    android:id="@+id/rbDeinterlaceYadif"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Yadif (Khuyên dùng - Nét như PC, không mờ, không bóng ma)"
+                    android:textColor="#34D399"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:nextFocusUp="@+id/rbPlayerExo"
+                    android:nextFocusDown="@+id/rbDeinterlaceLinear"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <RadioButton
+                    android:id="@+id/rbDeinterlaceLinear"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Linear (Nội suy mượt mà, triệt tiêu xé hình, siêu nhẹ)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:nextFocusUp="@+id/rbDeinterlaceYadif"
+                    android:nextFocusDown="@+id/rbDeinterlaceBlend"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <RadioButton
+                    android:id="@+id/rbDeinterlaceBlend"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Blend (Gộp 2 trường quét - Mức độ cơ bản)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:nextFocusUp="@+id/rbDeinterlaceLinear"
+                    android:nextFocusDown="@+id/rbDeinterlaceOff"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <RadioButton
+                    android:id="@+id/rbDeinterlaceOff"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Tắt Deinterlace (Giữ nguyên luồng gốc)"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:nextFocusUp="@+id/rbDeinterlaceBlend"
+                    android:nextFocusDown="@+id/rbLastWatched"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
             </RadioGroup>
@@ -333,7 +407,7 @@
                         android:text="Vào lại kênh vừa xem gần nhất"
                         android:textColor="@color/text_primary"
                         android:textSize="12sp"
-                        android:nextFocusUp="@+id/rbPlayerExo"
+                        android:nextFocusUp="@+id/rbDeinterlaceOff"
                         android:nextFocusDown="@+id/rbFixedChannel"
                         android:nextFocusLeft="@+id/btnAddPlaylist"
                         android:focusable="true"

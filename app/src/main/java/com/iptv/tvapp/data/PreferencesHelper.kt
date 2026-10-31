@@ -161,6 +161,11 @@ class PreferencesHelper(context: Context) {
         }
         set(value) = prefs.edit().putString(KEY_PLAYER_ENGINE, value).apply()
 
+    // Thuật toán khử xé hình / deinterlace cho luồng 1080i (Mặc định: yadif - sắc nét như PC)
+    var deinterlaceMode: String
+        get() = prefs.getString(KEY_DEINTERLACE_MODE, DEINTERLACE_YADIF) ?: DEINTERLACE_YADIF
+        set(value) = prefs.edit().putString(KEY_DEINTERLACE_MODE, value).apply()
+
     // ===== CÀI ĐẶT MÁY CHỦ UDPXY (SERVER:PORT) =====
     var udpxyServer: String
         get() = prefs.getString(KEY_UDPXY_SERVER, "10.0.0.222:4022") ?: "10.0.0.222:4022"
@@ -195,6 +200,7 @@ class PreferencesHelper(context: Context) {
         // 3. Settings
         root.put("udpxyServer", udpxyServer)
         root.put("playerEngine", playerEngine)
+        root.put("deinterlaceMode", deinterlaceMode)
         root.put("autoStartOnBoot", autoStartOnBoot)
         root.put("startupMode", startupMode)
         root.put("defaultStartupChannelUrl", defaultStartupChannelUrl ?: "")
@@ -242,6 +248,7 @@ class PreferencesHelper(context: Context) {
             // 3. Settings
             if (root.has("udpxyServer")) udpxyServer = root.getString("udpxyServer")
             if (root.has("playerEngine")) playerEngine = root.getString("playerEngine")
+            if (root.has("deinterlaceMode")) deinterlaceMode = root.getString("deinterlaceMode")
             if (root.has("autoStartOnBoot")) autoStartOnBoot = root.getBoolean("autoStartOnBoot")
             if (root.has("startupMode")) startupMode = root.getString("startupMode")
             if (root.has("defaultStartupChannelUrl")) defaultStartupChannelUrl = root.getString("defaultStartupChannelUrl").takeIf { it.isNotBlank() }
@@ -309,11 +316,17 @@ class PreferencesHelper(context: Context) {
         private const val KEY_DEFAULT_STARTUP_URL = "key_default_startup_url"
         private const val KEY_DEFAULT_STARTUP_NAME = "key_default_startup_name"
         private const val KEY_PLAYER_ENGINE = "key_player_engine"
+        private const val KEY_DEINTERLACE_MODE = "key_deinterlace_mode"
         private const val KEY_UDPXY_SERVER = "key_udpxy_server"
 
         const val ENGINE_VLC = "VLC"
         const val ENGINE_VLC_SW = "VLC_SW"
         const val ENGINE_EXOPLAYER = "EXOPLAYER"
+
+        const val DEINTERLACE_YADIF = "yadif"
+        const val DEINTERLACE_LINEAR = "linear"
+        const val DEINTERLACE_BLEND = "blend"
+        const val DEINTERLACE_OFF = "off"
 
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"

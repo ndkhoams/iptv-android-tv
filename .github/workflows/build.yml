@@ -55,18 +55,23 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "v1.9.14 - Khắc phục đen màn hình, Phục hồi giải mã phần cứng MediaCodec & Giữ OSD chuẩn xác"
+        name: "v1.9.15 - Nâng cấp Deinterlace Yadif PC (Khử xé hình & nét mịn), Tùy chỉnh bộ lọc & Gỡ drop-frames"
         body: |
-          ### Bản cập nhật v1.9.14 cho TV Play Android TV:
-          - **Khắc phục triệt để lỗi đen màn hình / "Đang tải luồng...":**
-            - Gỡ bỏ hoàn toàn bộ lọc phần mềm CPU `--video-filter=deinterlace` và `--avcodec-deinterlace=1` vốn gây xung đột với bộ giải mã phần cứng MediaCodec NDK (Direct Surface).
-            - Khôi phục pipeline giải mã phần cứng nguyên bản siêu mượt, tải kênh tức thì sau 0.5s không bị treo.
-          - **Bảo toàn đầy đủ tính năng nhận diện OSD thông minh:**
-            - Nhận diện độ phân giải tức thì cho mọi luồng (UDP multicast, HTTP udpxy, HLS) mà không bao giờ bị kẹt ở "Đang nhận diện video...".
-            - Tần số quét hiển thị chuẩn xác `@ 25fps` cho các kênh truyền hình 1080i (VTV, HTV...) chuẩn như trên PC.
-            - Đo bitrate thời gian thực qua TrafficStats của Linux Kernel.
-            - Bố cục OSD góc dưới 3 dòng rõ ràng: Tên kênh/Logo, EPG đang phát (màu cam), và Thông số kỹ thuật (màu cyan).
-            - Khóa tiêu điểm D-pad không mất focus, máy chủ udpxy không bị bàn phím che khuất.
+          ### Bản cập nhật v1.9.15 cho TV Play Android TV:
+          - **Nâng cấp thuật toán Deinterlace chuẩn Yadif (Yet Another Deinterlacing Filter):**
+            - Thuật toán khử xen kẽ tiêu chuẩn vàng trên PC VLC: kết hợp nội suy không gian và thời gian theo hướng cạnh của hình ảnh.
+            - Vùng tĩnh giữ trọn $100\%$ độ sắc nét 1080p, vùng chuyển động được khử răng cưa mượt mà không còn hiện tượng bóng ma (ghosting), sọc ngang hay noise hạt như thuật toán Blend trước đây.
+          - **Loại bỏ `--skip-frames` và `--drop-late-frames`:**
+            - Đảm bảo bộ giải mã phần cứng MediaCodec giải mã nguyên vẹn $100\%$ từng trường quét (field) và khung hình, triệt tiêu hiện tượng vỡ khối nén macroblock và nhiễu viền.
+          - **Bổ sung tùy chọn Deinterlace ngay trong Menu Cài đặt (Phần 3):**
+            - Dễ dàng bấm phím Menu để chọn giữa các chế độ:
+              + **Yadif (Mặc định - Khuyên dùng):** Cực kỳ sắc nét và mịn màng như xem trên PC.
+              + **Linear:** Nội suy tuyến tính, mượt mà và nhẹ máy cho TV Box cấu hình yếu.
+              + **Blend:** Gộp 2 trường quét (chế độ cơ bản).
+              + **Tắt Deinterlace:** Giữ nguyên luồng gốc cho các kênh progressive.
+          - **Kế thừa toàn bộ tính năng vượt trội từ các bản trước:**
+            - OSD 3 dòng thông minh góc dưới màn hình: Tên kênh/Logo, Lịch phát sóng EPG (màu cam), và Thông số kỹ thuật độ phân giải @ FPS thực tế, Bitrate thực và Audio (màu cyan).
+            - Không bao giờ bị kẹt ở "Đang nhận diện video...", tải luồng siêu tốc 0.5s không bị đen màn hình.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

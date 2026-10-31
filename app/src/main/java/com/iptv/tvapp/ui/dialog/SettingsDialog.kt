@@ -41,6 +41,7 @@ class SettingsDialog(
 
         initPlaylistsList()
         initPlayerEngineSettings()
+        initDeinterlaceSettings()
         initBootSettings()
         initUdpxySettings()
         initFocusNavigation()
@@ -105,6 +106,7 @@ class SettingsDialog(
                             hasChangedPlaylist = true
                             initPlaylistsList()
                             initPlayerEngineSettings()
+                            initDeinterlaceSettings()
                             initBootSettings()
                             initUdpxySettings()
                             binding.tvBackupStatus.text = "✓ Đã khôi phục thành công từ file: ${file.name}"
@@ -314,6 +316,15 @@ class SettingsDialog(
         }
     }
 
+    private fun initDeinterlaceSettings() {
+        when (prefs.deinterlaceMode) {
+            PreferencesHelper.DEINTERLACE_LINEAR -> binding.rbDeinterlaceLinear.isChecked = true
+            PreferencesHelper.DEINTERLACE_BLEND -> binding.rbDeinterlaceBlend.isChecked = true
+            PreferencesHelper.DEINTERLACE_OFF -> binding.rbDeinterlaceOff.isChecked = true
+            else -> binding.rbDeinterlaceYadif.isChecked = true
+        }
+    }
+
     private fun initBootSettings() {
         if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL) {
             binding.rbFixedChannel.isChecked = true
@@ -338,6 +349,18 @@ class SettingsDialog(
 
         if (selectedEngine != prefs.playerEngine) {
             prefs.playerEngine = selectedEngine
+            hasChangedEngine = true
+        }
+
+        val selectedDeinterlace = when {
+            binding.rbDeinterlaceLinear.isChecked -> PreferencesHelper.DEINTERLACE_LINEAR
+            binding.rbDeinterlaceBlend.isChecked -> PreferencesHelper.DEINTERLACE_BLEND
+            binding.rbDeinterlaceOff.isChecked -> PreferencesHelper.DEINTERLACE_OFF
+            else -> PreferencesHelper.DEINTERLACE_YADIF
+        }
+
+        if (selectedDeinterlace != prefs.deinterlaceMode) {
+            prefs.deinterlaceMode = selectedDeinterlace
             hasChangedEngine = true
         }
 

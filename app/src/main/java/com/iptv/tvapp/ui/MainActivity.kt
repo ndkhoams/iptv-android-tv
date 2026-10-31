@@ -411,21 +411,35 @@ class MainActivity : AppCompatActivity() {
 
     private fun initVlcPlayer() {
         try {
+            try {
+                vlcPlayer?.apply {
+                    stop()
+                    try {
+                        if (vlcVout.areViewsAttached()) {
+                            detachViews()
+                        }
+                    } catch (e: Exception) {}
+                    release()
+                }
+                vlcPlayer = null
+                libVLC?.release()
+                libVLC = null
+            } catch (e: Exception) {}
+
+            val deinterlaceVal = if (prefs.deinterlaceMode != PreferencesHelper.DEINTERLACE_OFF) "1" else "0"
             val options = arrayListOf(
                 "-vv",
                 // 1. Tối ưu bộ giải mã phần cứng cho Amlogic / Mali-450: Ưu tiên MediaCodec NDK
                 "--codec=mediacodec_ndk,mediacodec_jni,all",
                 "--avcodec-hw=any",
-                // 2. Chống xé hình/răng cưa phần cứng
-                "--deinterlace=1",
-                "--deinterlace-mode=blend",
+                // 2. Chống xé hình/răng cưa phần cứng với thuật toán chọn lọc (Mặc định Yadif sắc nét như PC)
+                "--deinterlace=$deinterlaceVal",
+                "--deinterlace-mode=${prefs.deinterlaceMode}",
                 // 3. Tối ưu bộ nhớ đệm (Giảm áp lực RAM 1GB của Mi Box 3c, chuyển kênh siêu nhanh 0.8s)
                 "--network-caching=800",
                 "--live-caching=800",
                 "--file-caching=800",
-                // 4. Đồng bộ âm thanh & hình ảnh, tự động bỏ qua khung hình trễ
-                "--drop-late-frames",
-                "--skip-frames",
+                // 4. Đồng bộ âm thanh & hình ảnh, giữ toàn vẹn khung hình (loại bỏ skip/drop để triệt tiêu nhiễu hạt và mất nét)
                 "--clock-jitter=0",
                 "--clock-synchro=0",
                 "--no-audio-time-stretch",
@@ -837,13 +851,15 @@ class MainActivity : AppCompatActivity() {
                 setHWDecoderEnabled(true, false)
                 addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
                 addOption(":avcodec-hw=any")
-                addOption(":deinterlace=1")
-                addOption(":deinterlace-mode=blend")
+                if (prefs.deinterlaceMode != PreferencesHelper.DEINTERLACE_OFF) {
+                    addOption(":deinterlace=1")
+                    addOption(":deinterlace-mode=${prefs.deinterlaceMode}")
+                } else {
+                    addOption(":deinterlace=0")
+                }
                 addOption(":network-caching=800")
                 addOption(":live-caching=800")
                 addOption(":file-caching=800")
-                addOption(":drop-late-frames")
-                addOption(":skip-frames")
                 addOption(":clock-jitter=0")
                 addOption(":clock-synchro=0")
                 addOption(":no-audio-time-stretch")
@@ -1447,6 +1463,9 @@ class MainActivity : AppCompatActivity() {
                 loadEpgData()
             }
             if (engineChanged) {
+                if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
+                    initVlcPlayer()
+                }
                 applyPlayerVisibility()
                 currentPlayingChannel?.let { playChannel(it) }
             }
