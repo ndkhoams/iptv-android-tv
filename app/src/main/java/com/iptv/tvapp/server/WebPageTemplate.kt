@@ -169,8 +169,80 @@ object WebPageTemplate {
 
     <!-- TAB 4: SETTINGS -->
     <div id="tab-settings" class="tab-content">
+        <!-- 1. BỘ GIẢI MÃ VIDEO -->
         <div class="form-card">
-            <h3>⚙️ Cài Đặt Khởi Động TV</h3>
+            <h3>🎬 1. Bộ Giải Mã Video (Player Engine)</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lựa chọn trình phát giải mã phần cứng cho Android TV.</p>
+            <div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+                    <input type="radio" name="playerEngine" value="VLC" id="engineVlc" onchange="updateDecoderSettings()">
+                    <span><strong style="color:#10b981;">LibVLC</strong> (Phần cứng MediaCodec - Mượt mà 60fps, Không xanh màn)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                    <input type="radio" name="playerEngine" value="EXOPLAYER" id="engineExo" onchange="updateDecoderSettings()">
+                    <span><strong>ExoPlayer</strong> (Google MediaCodec - Nhẹ máy chuẩn Android TV)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 2. THUẬT TOÁN DEINTERLACE -->
+        <div class="form-card">
+            <h3>⚡ 2. Khử Xé Hình 1080i (VLC Deinterlace)</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Khử hiện tượng răng cưa ngang khi các kênh đài truyền hình phát chuẩn 1080i50.</p>
+            <div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+                    <input type="radio" name="deinterlaceMode" value="yadif" id="deintYadif" onchange="updateDeinterlaceSettings()">
+                    <span><strong style="color:#34D399;">Yadif (Khuyên dùng)</strong> - Nét như PC, không mờ, không bóng ma</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+                    <input type="radio" name="deinterlaceMode" value="linear" id="deintLinear" onchange="updateDeinterlaceSettings()">
+                    <span><strong>Linear</strong> - Nội suy mượt mà, triệt tiêu xé hình, siêu nhẹ</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+                    <input type="radio" name="deinterlaceMode" value="blend" id="deintBlend" onchange="updateDeinterlaceSettings()">
+                    <span><strong>Blend</strong> - Gộp 2 trường quét (Mức độ cơ bản)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                    <input type="radio" name="deinterlaceMode" value="off" id="deintOff" onchange="updateDeinterlaceSettings()">
+                    <span><strong>Tắt Deinterlace</strong> - Giữ nguyên luồng gốc (cho kênh 720p/1080p)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 3. HTTP USER AGENT -->
+        <div class="form-card">
+            <h3>🌐 3. HTTP User Agent Tùy Chỉnh</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Danh tính nhận diện gửi tới máy chủ phát IPTV. Mặc định dùng danh tính FPT Play Box để vượt rào chặn kênh.</p>
+            <div class="form-group">
+                <label>User Agent Chuỗi:</label>
+                <textarea id="txtHttpUserAgent" class="form-input" style="height:60px; font-size:11px; resize:none;"></textarea>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="submit-btn" style="flex:1;" onclick="updateUserAgentSettings()">Lưu User Agent</button>
+                <button class="submit-btn" style="flex:1; background:#475569;" onclick="resetDefaultUserAgent()">Khôi Phục Mặc Định</button>
+            </div>
+        </div>
+
+        <!-- 4. MÁY CHỦ UDPXY -->
+        <div class="form-card">
+            <h3>📡 4. Cấu Hình Máy Chủ udpxy</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tự động chuyển đổi luồng multicast (UDP/RTP) sang HTTP proxy mà không cần sửa link.</p>
+            <div class="form-group">
+                <label>Máy chủ udpxy (IP:Port):</label>
+                <input type="text" id="txtUdpxyServer" class="form-input" placeholder="Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022">
+            </div>
+            <button class="submit-btn" onclick="updateUdpxySettings()">Lưu Cấu Hình udpxy</button>
+        </div>
+
+        <!-- 5. CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
+        <div class="form-card">
+            <h3>🚀 5. Cài Đặt Khởi Động &amp; Mở Kênh</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                    <input type="checkbox" id="chkAutoStartBoot" onchange="updateBootSettings()">
+                    <strong>Tự động khởi động ứng dụng khi bật Android TV</strong>
+                </label>
+            </div>
             <div>
                 <label style="display:block; font-size:13px; color:var(--text-sub); margin-bottom:8px;">Chế độ mở kênh khi khởi động ứng dụng:</label>
                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
@@ -184,19 +256,10 @@ object WebPageTemplate {
             </div>
         </div>
 
+        <!-- 6. SAO LƯU & KHÔI PHỤC -->
         <div class="form-card">
-            <h3>🌐 Cấu Hình Máy Chủ udpxy</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tự động chuyển đổi luồng multicast (UDP/RTP) sang HTTP proxy mà không cần sửa link.</p>
-            <div class="form-group">
-                <label>Máy chủ udpxy (IP:Port):</label>
-                <input type="text" id="txtUdpxyServer" class="form-input" placeholder="Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022">
-            </div>
-            <button class="submit-btn" onclick="updateUdpxySettings()">Lưu Cấu Hình udpxy</button>
-        </div>
-
-        <div class="form-card">
-            <h3>💾 Sao Lưu &amp; Khôi Phục Cấu Hình</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, kênh yêu thích, udpxy và thiết lập về điện thoại/máy tính hoặc khôi phục lại.</p>
+            <h3>💾 6. Sao Lưu &amp; Khôi Phục Toàn Bộ Cấu Hình</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, bộ giải mã, khử răng cưa, User Agent, kênh yêu thích, udpxy và thiết lập về điện thoại/máy tính hoặc khôi phục lại.</p>
             <div style="display:flex; gap:10px; margin-bottom:10px;">
                 <button class="submit-btn" style="flex:1; background:#38BDF8;" onclick="downloadBackup()">📥 Tải File Sao Lưu (.json)</button>
             </div>
@@ -523,25 +586,108 @@ object WebPageTemplate {
             }).catch(function() {});
         }
 
+        var DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; ZTE B866V2F Build/STTC.230104.002) IPTV/9.1.16";
+
         function loadSettings() {
             fetch('/api/settings').then(function(res) { return res.json(); })
             .then(function(data) {
+                // 1. Player Engine
+                if (data.playerEngine === 'EXOPLAYER') {
+                    document.getElementById('engineExo').checked = true;
+                } else {
+                    document.getElementById('engineVlc').checked = true;
+                }
+
+                // 2. Deinterlace Mode
+                if (data.deinterlaceMode === 'linear') {
+                    document.getElementById('deintLinear').checked = true;
+                } else if (data.deinterlaceMode === 'blend') {
+                    document.getElementById('deintBlend').checked = true;
+                } else if (data.deinterlaceMode === 'off') {
+                    document.getElementById('deintOff').checked = true;
+                } else {
+                    document.getElementById('deintYadif').checked = true;
+                }
+
+                // 3. User Agent
+                document.getElementById('txtHttpUserAgent').value = data.httpUserAgent || DEFAULT_USER_AGENT;
+
+                // 4. Boot Settings
+                document.getElementById('chkAutoStartBoot').checked = !!data.autoStartOnBoot;
                 if (data.startupMode === 'FIXED_CHANNEL') {
                     document.getElementById('optFixedChannel').checked = true;
                 } else {
                     document.getElementById('optLastWatched').checked = true;
                 }
                 document.getElementById('lblFixedName').innerText = data.defaultStartupChannelName || 'Chưa chọn';
+
+                // 5. UDPXY Server
                 document.getElementById('txtUdpxyServer').value = data.udpxyServer || '';
             }).catch(function() {});
         }
 
+        function updateDecoderSettings() {
+            var engine = document.querySelector('input[name="playerEngine"]:checked').value;
+            fetch('/api/settings/decoder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ playerEngine: engine })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showToast('Đã đổi trình phát trên TV: ' + engine);
+                }
+            }).catch(function() {
+                showToast('Lỗi lưu bộ giải mã!');
+            });
+        }
+
+        function updateDeinterlaceSettings() {
+            var mode = document.querySelector('input[name="deinterlaceMode"]:checked').value;
+            fetch('/api/settings/deinterlace', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ deinterlaceMode: mode })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showToast('Đã đổi thuật toán Deinterlace: ' + mode.toUpperCase());
+                }
+            }).catch(function() {
+                showToast('Lỗi lưu thuật toán Deinterlace!');
+            });
+        }
+
+        function updateUserAgentSettings() {
+            var ua = document.getElementById('txtHttpUserAgent').value.trim();
+            if (!ua) ua = DEFAULT_USER_AGENT;
+            fetch('/api/settings/useragent', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ httpUserAgent: ua })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showToast('Đã lưu User Agent mới trên TV!');
+                    document.getElementById('txtHttpUserAgent').value = data.httpUserAgent;
+                }
+            }).catch(function() {
+                showToast('Lỗi lưu User Agent!');
+            });
+        }
+
+        function resetDefaultUserAgent() {
+            document.getElementById('txtHttpUserAgent').value = DEFAULT_USER_AGENT;
+            updateUserAgentSettings();
+        }
+
         function updateBootSettings() {
+            var autoBoot = document.getElementById('chkAutoStartBoot').checked;
             var mode = document.querySelector('input[name="startupMode"]:checked').value;
             fetch('/api/settings/boot', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ startupMode: mode })
+                body: JSON.stringify({ autoStartOnBoot: autoBoot, startupMode: mode })
             }).then(function() {
                 showToast('Đã lưu cài đặt khởi động!');
             }).catch(function() {});

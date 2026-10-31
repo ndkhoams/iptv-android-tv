@@ -42,6 +42,7 @@ class SettingsDialog(
         initPlaylistsList()
         initPlayerEngineSettings()
         initDeinterlaceSettings()
+        initUserAgentSettings()
         initBootSettings()
         initUdpxySettings()
         initFocusNavigation()
@@ -107,6 +108,7 @@ class SettingsDialog(
                             initPlaylistsList()
                             initPlayerEngineSettings()
                             initDeinterlaceSettings()
+                            initUserAgentSettings()
                             initBootSettings()
                             initUdpxySettings()
                             binding.tvBackupStatus.text = "✓ Đã khôi phục thành công từ file: ${file.name}"
@@ -128,6 +130,16 @@ class SettingsDialog(
             onSettingsChanged(hasChangedPlaylist, hasChangedEngine)
             dismiss()
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS || keyCode == KeyEvent.KEYCODE_HELP) {
+            saveSettings()
+            onSettingsChanged(hasChangedPlaylist, hasChangedEngine)
+            dismiss()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onStart() {
@@ -325,6 +337,14 @@ class SettingsDialog(
         }
     }
 
+    private fun initUserAgentSettings() {
+        binding.etHttpUserAgent.setText(prefs.httpUserAgent)
+        binding.btnResetUserAgent.setOnClickListener {
+            binding.etHttpUserAgent.setText(PreferencesHelper.DEFAULT_USER_AGENT)
+            Toast.makeText(context, "Đã khôi phục User-Agent FPT Play Box!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun initBootSettings() {
         if (prefs.startupMode == PreferencesHelper.MODE_FIXED_CHANNEL) {
             binding.rbFixedChannel.isChecked = true
@@ -362,6 +382,13 @@ class SettingsDialog(
         if (selectedDeinterlace != prefs.deinterlaceMode) {
             prefs.deinterlaceMode = selectedDeinterlace
             hasChangedEngine = true
+        }
+
+        val newUa = binding.etHttpUserAgent.text.toString().trim()
+        if (newUa.isNotBlank() && newUa != prefs.httpUserAgent) {
+            prefs.httpUserAgent = newUa
+            hasChangedEngine = true
+            hasChangedPlaylist = true
         }
 
         prefs.startupMode = if (binding.rbFixedChannel.isChecked) {

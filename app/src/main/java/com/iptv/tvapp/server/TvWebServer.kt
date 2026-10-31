@@ -27,7 +27,8 @@ class TvWebServer(
     private val onPlayChannel: (Channel) -> Unit,
     private val onSendKey: (String) -> Unit,
     private val onPlaylistChanged: () -> Unit,
-    private val onChannelsUpdated: () -> Unit
+    private val onChannelsUpdated: () -> Unit,
+    private val onEngineChanged: (() -> Unit)? = null
 ) {
 
     private var serverSocket: ServerSocket? = null
@@ -153,6 +154,9 @@ class TvWebServer(
             }
             method == "GET" && path == "/api/settings" -> {
                 val json = JSONObject().apply {
+                    put("playerEngine", prefs.playerEngine)
+                    put("deinterlaceMode", prefs.deinterlaceMode)
+                    put("httpUserAgent", prefs.httpUserAgent)
                     put("autoStartOnBoot", prefs.autoStartOnBoot)
                     put("startupMode", prefs.startupMode)
                     put("defaultStartupChannelName", prefs.defaultStartupChannelName ?: "")
@@ -251,6 +255,42 @@ class TvWebServer(
                 val resp = JSONObject().apply { put("success", true) }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
+            method == "POST" && path == "/api/settings/decoder" -> {
+                val json = JSONObject(body)
+                val engine = json.optString("playerEngine", PreferencesHelper.ENGINE_VLC)
+                prefs.playerEngine = engine
+                mainHandler.post { onEngineChanged?.invoke() }
+                val resp = JSONObject().apply {
+                    put("success", true)
+                    put("playerEngine", prefs.playerEngine)
+                }
+                sendResponse(output, "application/json; charset=utf-8", resp.toString())
+            }
+            method == "POST" && path == "/api/settings/deinterlace" -> {
+                val json = JSONObject(body)
+                val mode = json.optString("deinterlaceMode", PreferencesHelper.DEINTERLACE_YADIF)
+                prefs.deinterlaceMode = mode
+                mainHandler.post { onEngineChanged?.invoke() }
+                val resp = JSONObject().apply {
+                    put("success", true)
+                    put("deinterlaceMode", prefs.deinterlaceMode)
+                }
+                sendResponse(output, "application/json; charset=utf-8", resp.toString())
+            }
+            method == "POST" && path == "/api/settings/useragent" -> {
+                val json = JSONObject(body)
+                val ua = json.optString("httpUserAgent", PreferencesHelper.DEFAULT_USER_AGENT).trim()
+                prefs.httpUserAgent = ua
+                mainHandler.post {
+                    onPlaylistChanged()
+                    onEngineChanged?.invoke()
+                }
+                val resp = JSONObject().apply {
+                    put("success", true)
+                    put("httpUserAgent", prefs.httpUserAgent)
+                }
+                sendResponse(output, "application/json; charset=utf-8", resp.toString())
+            }
             method == "POST" && path == "/api/settings/boot" -> {
                 val json = JSONObject(body)
                 if (json.has("autoStartOnBoot")) {
@@ -287,6 +327,7 @@ class TvWebServer(
                     mainHandler.post {
                         onPlaylistChanged()
                         onChannelsUpdated()
+                        onEngineChanged?.invoke()
                     }
                 }
                 val resp = JSONObject().apply { put("success", success) }

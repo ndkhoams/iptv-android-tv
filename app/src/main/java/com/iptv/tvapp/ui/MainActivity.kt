@@ -132,6 +132,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var backPressedTime = 0L
+    private var activeSettingsDialog: SettingsDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -340,6 +341,15 @@ class MainActivity : AppCompatActivity() {
             },
             onChannelsUpdated = {
                 refreshChannelsState()
+            },
+            onEngineChanged = {
+                if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
+                    initVlcPlayer()
+                } else {
+                    initExoPlayer()
+                }
+                applyPlayerVisibility()
+                currentPlayingChannel?.let { playChannel(it) }
             }
         )
         webServer?.start()
@@ -432,6 +442,7 @@ class MainActivity : AppCompatActivity() {
                 // 1. Tối ưu bộ giải mã phần cứng cho Amlogic / Mali-450: Ưu tiên MediaCodec NDK
                 "--codec=mediacodec_ndk,mediacodec_jni,all",
                 "--avcodec-hw=any",
+                "--http-user-agent=${prefs.httpUserAgent}",
                 // 2. Chống xé hình/răng cưa phần cứng với thuật toán chọn lọc (Mặc định Yadif sắc nét như PC)
                 "--deinterlace=$deinterlaceVal",
                 "--deinterlace-mode=${prefs.deinterlaceMode}",
@@ -532,7 +543,7 @@ class MainActivity : AppCompatActivity() {
 
         // 5. Hỗ trợ đầy đủ HTTP / HTTPS và giao thức luồng mạng UDP multicast
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent("Mozilla/5.0 (SmartTV; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) ExoPlayer")
+            .setUserAgent(prefs.httpUserAgent)
             .setConnectTimeoutMs(15000)
             .setReadTimeoutMs(20000)
             .setAllowCrossProtocolRedirects(true)
@@ -863,6 +874,7 @@ class MainActivity : AppCompatActivity() {
                 setHWDecoderEnabled(true, false)
                 addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
                 addOption(":avcodec-hw=any")
+                addOption(":http-user-agent=${prefs.httpUserAgent}")
                 if (prefs.deinterlaceMode != PreferencesHelper.DEINTERLACE_OFF) {
                     addOption(":deinterlace=1")
                     addOption(":deinterlace-mode=${prefs.deinterlaceMode}")
@@ -1301,6 +1313,20 @@ class MainActivity : AppCompatActivity() {
         playChannel(targetChannel)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_MENU,
+                KeyEvent.KEYCODE_SETTINGS,
+                KeyEvent.KEYCODE_HELP -> {
+                    showSettingsDialog()
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         resetOverlayTimer()
 
@@ -1343,7 +1369,9 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             }
-            KeyEvent.KEYCODE_MENU -> {
+            KeyEvent.KEYCODE_MENU,
+            KeyEvent.KEYCODE_SETTINGS,
+            KeyEvent.KEYCODE_HELP -> {
                 showSettingsDialog()
                 return true
             }
@@ -1466,6 +1494,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettingsDialog() {
+        if (activeSettingsDialog?.isShowing == true) {
+            activeSettingsDialog?.dismiss()
+            return
+        }
         resetOverlayTimer()
         val dialog = SettingsDialog(this) { playlistChanged, engineChanged ->
             if (playlistChanged) {
@@ -1481,10 +1513,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
         dialog.setOnDismissListener {
+            activeSettingsDialog = null
             if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                 currentPlayingChannel?.let { showQuickChannelInfo(it) }
             }
         }
+        activeSettingsDialog = dialog
         dialog.show()
     }
 

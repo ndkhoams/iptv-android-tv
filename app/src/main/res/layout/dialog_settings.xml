@@ -370,18 +370,88 @@
                     android:textColor="@color/text_primary"
                     android:textSize="12sp"
                     android:nextFocusUp="@+id/rbDeinterlaceBlend"
-                    android:nextFocusDown="@+id/rbLastWatched"
+                    android:nextFocusDown="@+id/etHttpUserAgent"
                     android:nextFocusLeft="@+id/btnAddPlaylist"
                     android:focusable="true"
                     android:focusableInTouchMode="true" />
             </RadioGroup>
 
-            <!-- PHẦN C: CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
+            <!-- PHẦN C: HTTP USER AGENT -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="4. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
+                android:text="4. HTTP User Agent (Danh tính phát IPTV):"
+                android:textColor="@color/fpt_orange"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#1B1930"
+                android:padding="8dp"
+                android:layout_marginTop="6dp">
+
+                <EditText
+                    android:id="@+id/etHttpUserAgent"
+                    android:layout_width="match_parent"
+                    android:layout_height="38dp"
+                    android:background="#0F0E1D"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:hint="Mozilla/5.0... (IPTV User Agent)"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_muted"
+                    android:textSize="11sp"
+                    android:inputType="text"
+                    android:singleLine="true"
+                    android:nextFocusUp="@+id/rbDeinterlaceOff"
+                    android:nextFocusDown="@+id/btnResetUserAgent"
+                    android:nextFocusLeft="@+id/btnAddPlaylist"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="6dp">
+
+                    <Button
+                        android:id="@+id/btnResetUserAgent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:background="#334155"
+                        android:text="Mặc Định FPT Box"
+                        android:textColor="#38BDF8"
+                        android:textSize="11sp"
+                        android:textAllCaps="false"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:nextFocusUp="@+id/etHttpUserAgent"
+                        android:nextFocusDown="@+id/rbLastWatched"
+                        android:focusable="true" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:layout_gravity="center_vertical"
+                        android:text="FPT Play Box ZTE B866V2F (IPTV/9.1.16)"
+                        android:textColor="#94A3B8"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- PHẦN D: CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="5. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
                 android:textColor="@color/fpt_orange"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -407,7 +477,7 @@
                         android:text="Vào lại kênh vừa xem gần nhất"
                         android:textColor="@color/text_primary"
                         android:textSize="12sp"
-                        android:nextFocusUp="@+id/rbDeinterlaceOff"
+                        android:nextFocusUp="@+id/btnResetUserAgent"
                         android:nextFocusDown="@+id/rbFixedChannel"
                         android:nextFocusLeft="@+id/btnAddPlaylist"
                         android:focusable="true"
