@@ -34,20 +34,13 @@ class PreferencesHelper(context: Context) {
                 }
             }
 
-            // Danh sách mặc định ban đầu: KTV Playlist (mặc định) và TV Play Pro (Thể Thao)
-            val builtinSource = PlaylistSource(
-                id = BUILTIN_PLAYLIST_ID,
-                name = "TV Play Pro (Thể Thao)",
-                url = BUILTIN_PLAYLIST_URL,
-                isSelected = false
-            )
+            // Danh sách mặc định ban đầu: Duy nhất KTV Playlist
             val defaultSource = PlaylistSource(
                 id = UUID.randomUUID().toString(),
                 name = "KTV Playlist",
                 url = DEFAULT_URL,
                 isSelected = true
             )
-            list.add(builtinSource)
             list.add(defaultSource)
             savePlaylists(list)
             return list
@@ -70,18 +63,15 @@ class PreferencesHelper(context: Context) {
             e.printStackTrace()
         }
 
-        // Tự động làm sạch danh sách: chỉ giữ lại link KTV duy nhất và TV Play Pro Thể Thao
+        // Tự động làm sạch danh sách: Xóa bỏ hoàn toàn TV Play Pro / Builtin, chỉ giữ KTV Playlist và link do user thêm
         val cleanedList = mutableListOf<PlaylistSource>()
         var foundKtv = false
-        var foundBuiltin = false
 
         for (item in list) {
             when {
-                item.url == BUILTIN_PLAYLIST_URL || item.id == BUILTIN_PLAYLIST_ID -> {
-                    if (!foundBuiltin) {
-                        cleanedList.add(item.copy(name = "TV Play Pro (Thể Thao)"))
-                        foundBuiltin = true
-                    }
+                // Xóa bỏ hoàn toàn TV Play Pro / Builtin playlist
+                item.url == BUILTIN_PLAYLIST_URL || item.id == BUILTIN_PLAYLIST_ID || item.name.contains("TV Play Pro") -> {
+                    // Không giữ lại TV Play Pro
                 }
                 item.url == DEFAULT_URL -> {
                     if (!foundKtv) {
@@ -105,16 +95,8 @@ class PreferencesHelper(context: Context) {
             }
         }
 
-        if (!foundBuiltin) {
-            cleanedList.add(0, PlaylistSource(
-                id = BUILTIN_PLAYLIST_ID,
-                name = "TV Play Pro (Thể Thao)",
-                url = BUILTIN_PLAYLIST_URL,
-                isSelected = false
-            ))
-        }
         if (!foundKtv) {
-            cleanedList.add(PlaylistSource(
+            cleanedList.add(0, PlaylistSource(
                 id = UUID.randomUUID().toString(),
                 name = "KTV Playlist",
                 url = DEFAULT_URL,
@@ -123,7 +105,7 @@ class PreferencesHelper(context: Context) {
         }
 
         // Đảm bảo luôn có ít nhất 1 danh sách được chọn (ưu tiên KTV Playlist)
-        if (cleanedList.isNotEmpty() && cleanedList.none { it.isSelected }) {
+        if (cleanedList.none { it.isSelected }) {
             val target = cleanedList.firstOrNull { it.url == DEFAULT_URL } ?: cleanedList[0]
             target.isSelected = true
         }
@@ -151,7 +133,9 @@ class PreferencesHelper(context: Context) {
 
     fun getActivePlaylist(): PlaylistSource {
         val list = getPlaylists()
-        return list.firstOrNull { it.isSelected } ?: list.first()
+        return list.firstOrNull { it.isSelected && it.url != BUILTIN_PLAYLIST_URL && !it.name.contains("TV Play Pro") }
+            ?: list.firstOrNull { it.url == DEFAULT_URL }
+            ?: list.first()
     }
 
     fun setActivePlaylist(playlistId: String) {

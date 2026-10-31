@@ -55,16 +55,22 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Nút Cập Nhật Thể Thao & Sửa Lỗi EPG Trực Tiếp"
+        name: "${{ github.ref_name }} - Duy Nhất KTV Playlist & Ghim Kho Thể Thao Trực Tiếp"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Tối ưu cơ chế cập nhật thể thao & Bổ sung nút làm mới:**
-            - Bổ sung nút bấm `"🔄 Cập nhật trận đấu (Bấm OK để tải lại)"` ở dòng đầu tiên của danh mục `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)`.
-            - Giảm tần suất tự động quét trận đấu từ 3 phút xuống **15 phút một lần**, triệt tiêu request dồn dập khi chuyển đổi danh mục trong menu.
-            - Tự động chạy tác vụ ngầm làm mới trận đấu và tỉ số định kỳ mỗi 15 phút.
-          - **Sửa triệt để lỗi hiển thị EPG cho các trận đấu trực tiếp:**
-            - Thay thế hoàn toàn EPG truyền hình sai lệch (trước đây hiện nhầm chương trình thời sự/phim truyện) bằng **Lịch thi đấu chuyên biệt cho từng trận**.
-            - Hiển thị chính xác thời gian thi đấu thực tế, giờ bóng lăn, tên 2 đội, bình luận viên (BLV) và kênh tiếp sóng cả ở Spotlight bên phải và banner dưới góc trái.
+          - **Loại bỏ hoàn toàn TV Play Pro:**
+            - Xóa bỏ triệt để playlist `TV Play Pro (Thể Thao)` khỏi danh sách nguồn M3U và cấu hình lưu trữ.
+            - Triệt tiêu toàn bộ các kênh và danh mục thừa cũ (Tất cả, FIFA World Cup, Thể thao quốc tế, Sự kiện TV360, Sự kiện VTVPrime).
+          - **Duy nhất 1 Playlist mặc định KTV.m3u:**
+            - Chỉ giữ lại duy nhất 1 danh sách kênh trực tuyến là `KTV Playlist` (`https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u`).
+          - **5 chuyên mục trực tiếp thể thao ghim cố định ở đầu:**
+            - `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)` (kèm nút 🔄 Cập nhật trận đấu)
+            - `🍌 Chuối Chiên TV`
+            - `🐔 Gà Vàng / Tiếu Lâm`
+            - `🍚 Xôi Lạc TV`
+            - `🌶️ Cà Khịa TV`
+          - **Sửa triệt để lỗi hiển thị EPG:**
+            - Lịch thi đấu chuyên biệt thời gian thực cho từng trận đấu thay thế hoàn toàn EPG kênh TV thông thường.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
