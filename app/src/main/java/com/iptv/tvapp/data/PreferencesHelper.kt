@@ -34,28 +34,21 @@ class PreferencesHelper(context: Context) {
                 }
             }
 
-            // Danh sách mặc định ban đầu: TV Play Pro tích hợp sẵn 560+ kênh làm mặc định
+            // Danh sách mặc định ban đầu: KTV Playlist (mặc định) và TV Play Pro (Thể Thao)
             val builtinSource = PlaylistSource(
                 id = BUILTIN_PLAYLIST_ID,
-                name = "TV Play Pro (560+ Kênh)",
+                name = "TV Play Pro (Thể Thao)",
                 url = BUILTIN_PLAYLIST_URL,
-                isSelected = true
+                isSelected = false
             )
             val defaultSource = PlaylistSource(
                 id = UUID.randomUUID().toString(),
                 name = "KTV Playlist",
                 url = DEFAULT_URL,
-                isSelected = false
-            )
-            val sportsSource = PlaylistSource(
-                id = UUID.randomUUID().toString(),
-                name = "Thể Thao Quốc Tế (VMT)",
-                url = SPORTS_PLAYLIST_URL,
-                isSelected = false
+                isSelected = true
             )
             list.add(builtinSource)
             list.add(defaultSource)
-            list.add(sportsSource)
             savePlaylists(list)
             return list
         }
@@ -77,52 +70,69 @@ class PreferencesHelper(context: Context) {
             e.printStackTrace()
         }
 
-        // Tự động nâng cấp danh sách mặc định cũ sang link KTV mới
-        var updatedDefault = false
-        for (i in 0 until list.size) {
-            val item = list[i]
-            if (item.url.contains("iptv-org/iptv/master/streams/vn.m3u") ||
-                item.url.contains("121124.xyz/tv/fpt") ||
-                item.url == "https://121124.xyz/tv/fpt?udpxy=10.0.0.222:4022") {
-                list[i] = item.copy(
-                    name = "KTV Playlist",
-                    url = DEFAULT_URL
-                )
-                updatedDefault = true
+        // Tự động làm sạch danh sách: chỉ giữ lại link KTV duy nhất và TV Play Pro Thể Thao
+        val cleanedList = mutableListOf<PlaylistSource>()
+        var foundKtv = false
+        var foundBuiltin = false
+
+        for (item in list) {
+            when {
+                item.url == BUILTIN_PLAYLIST_URL || item.id == BUILTIN_PLAYLIST_ID -> {
+                    if (!foundBuiltin) {
+                        cleanedList.add(item.copy(name = "TV Play Pro (Thể Thao)"))
+                        foundBuiltin = true
+                    }
+                }
+                item.url == DEFAULT_URL -> {
+                    if (!foundKtv) {
+                        cleanedList.add(item.copy(name = "KTV Playlist"))
+                        foundKtv = true
+                    }
+                }
+                item.url.contains("121124.xyz") ||
+                item.url.contains("vmttv") ||
+                item.url.contains("iptv-org") -> {
+                    // Chuyển đổi link cũ sang KTV Playlist duy nhất
+                    if (!foundKtv) {
+                        cleanedList.add(item.copy(name = "KTV Playlist", url = DEFAULT_URL))
+                        foundKtv = true
+                    }
+                }
+                else -> {
+                    // Giữ lại các link tuỳ biến người dùng tự thêm
+                    cleanedList.add(item)
+                }
             }
         }
 
-        // Tự động bổ sung nguồn TV Play Pro mặc định nếu chưa có trong danh sách
-        if (list.none { it.url == BUILTIN_PLAYLIST_URL || it.id == BUILTIN_PLAYLIST_ID }) {
-            list.add(0, PlaylistSource(
+        if (!foundBuiltin) {
+            cleanedList.add(0, PlaylistSource(
                 id = BUILTIN_PLAYLIST_ID,
-                name = "TV Play Pro (560+ Kênh)",
+                name = "TV Play Pro (Thể Thao)",
                 url = BUILTIN_PLAYLIST_URL,
-                isSelected = list.none { it.isSelected }
-            ))
-            updatedDefault = true
-        }
-        if (list.none { it.url == SPORTS_PLAYLIST_URL }) {
-            list.add(PlaylistSource(
-                id = UUID.randomUUID().toString(),
-                name = "Thể Thao Quốc Tế (VMT)",
-                url = SPORTS_PLAYLIST_URL,
                 isSelected = false
             ))
-            updatedDefault = true
+        }
+        if (!foundKtv) {
+            cleanedList.add(PlaylistSource(
+                id = UUID.randomUUID().toString(),
+                name = "KTV Playlist",
+                url = DEFAULT_URL,
+                isSelected = true
+            ))
         }
 
-        // Đảm bảo luôn có ít nhất 1 danh sách được chọn
-        if (list.isNotEmpty() && list.none { it.isSelected }) {
-            list[0].isSelected = true
-            updatedDefault = true
+        // Đảm bảo luôn có ít nhất 1 danh sách được chọn (ưu tiên KTV Playlist)
+        if (cleanedList.isNotEmpty() && cleanedList.none { it.isSelected }) {
+            cleanedList.firstOrNull { it.url == DEFAULT_URL }?.isSelected = true
+                ?: run { cleanedList[0].isSelected = true }
         }
 
-        if (updatedDefault) {
-            savePlaylists(list)
+        if (cleanedList != list) {
+            savePlaylists(cleanedList)
         }
 
-        return list
+        return cleanedList
     }
 
     fun savePlaylists(playlists: List<PlaylistSource>) {
@@ -495,6 +505,5 @@ class PreferencesHelper(context: Context) {
         const val DEFAULT_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
         const val BUILTIN_PLAYLIST_ID = "builtin_pro_playlist"
         const val BUILTIN_PLAYLIST_URL = "asset://builtin_playlist.m3u"
-        const val SPORTS_PLAYLIST_URL = "https://raw.githubusercontent.com/vuminhthanh12/vuminhthanh12/refs/heads/main/vmttv"
     }
 }
