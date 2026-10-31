@@ -435,13 +435,11 @@ class MainActivity : AppCompatActivity() {
                 // 2. Chống xé hình/răng cưa phần cứng với thuật toán chọn lọc (Mặc định Yadif sắc nét như PC)
                 "--deinterlace=$deinterlaceVal",
                 "--deinterlace-mode=${prefs.deinterlaceMode}",
-                // 3. Tối ưu bộ nhớ đệm (Giảm áp lực RAM 1GB của Mi Box 3c, chuyển kênh siêu nhanh 0.8s)
-                "--network-caching=800",
-                "--live-caching=800",
-                "--file-caching=800",
-                // 4. Đồng bộ âm thanh & hình ảnh, giữ toàn vẹn khung hình (loại bỏ skip/drop để triệt tiêu nhiễu hạt và mất nét)
-                "--clock-jitter=0",
-                "--clock-synchro=0",
+                // 3. Tối ưu bộ nhớ đệm (Chuyển kênh siêu tốc 0.3s cho luồng LAN / udpxy)
+                "--network-caching=300",
+                "--live-caching=300",
+                "--file-caching=300",
+                // 4. Giữ toàn vẹn khung hình và đồng bộ chuẩn A/V Master Clock (loại bỏ desync và noise)
                 "--no-audio-time-stretch",
                 // 5. Bật thống kê lưu lượng để đo chính xác bitrate thời gian thực
                 "--stats",
@@ -459,17 +457,27 @@ class MainActivity : AppCompatActivity() {
                             VlcMediaPlayer.Event.Buffering -> {
                                 if (event.buffering < 100f) {
                                     binding.layoutBuffering.visibility = View.VISIBLE
-                                } else {
-                                    binding.layoutBuffering.visibility = View.GONE
                                 }
                             }
-                            VlcMediaPlayer.Event.Playing,
-                            VlcMediaPlayer.Event.Vout,
-                            VlcMediaPlayer.Event.ESAdded,
-                            VlcMediaPlayer.Event.ESSelected -> {
-                                binding.layoutBuffering.visibility = View.GONE
+                            VlcMediaPlayer.Event.Vout -> {
+                                if (event.voutCount > 0) {
+                                    // Khi video của kênh mới đã thực sự giải mã và xuất hình lên Surface
+                                    binding.vlcVideoLayout.visibility = View.VISIBLE
+                                    binding.layoutBuffering.visibility = View.GONE
+                                    binding.tvErrorMessage.visibility = View.GONE
+                                    updateDynamicTelemetry()
+                                }
+                            }
+                            VlcMediaPlayer.Event.Playing -> {
                                 binding.tvErrorMessage.visibility = View.GONE
                                 updateDynamicTelemetry()
+                                // Dự phòng cho kênh chỉ có tiếng (Radio / Audio-only) không có track video
+                                binding.rootView.postDelayed({
+                                    if (vlcPlayer?.isPlaying == true && binding.layoutBuffering.visibility == View.VISIBLE) {
+                                        binding.vlcVideoLayout.visibility = View.VISIBLE
+                                        binding.layoutBuffering.visibility = View.GONE
+                                    }
+                                }, 1200L)
                             }
                             VlcMediaPlayer.Event.EncounteredError -> {
                                 binding.layoutBuffering.visibility = View.GONE
@@ -832,7 +840,11 @@ class MainActivity : AppCompatActivity() {
         try {
             player?.pause()
             binding.playerView.visibility = View.GONE
-            binding.vlcVideoLayout.visibility = View.VISIBLE
+
+            // Che ngay lập tức khung hình tĩnh của kênh cũ để triệt tiêu hiện tượng đơ hình kênh cũ
+            binding.vlcVideoLayout.visibility = View.INVISIBLE
+            binding.layoutBuffering.visibility = View.VISIBLE
+            binding.tvBufferingText.text = getString(R.string.stream_buffering)
 
             val vlc = libVLC ?: return
             val vp = vlcPlayer ?: return
@@ -857,11 +869,9 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     addOption(":deinterlace=0")
                 }
-                addOption(":network-caching=800")
-                addOption(":live-caching=800")
-                addOption(":file-caching=800")
-                addOption(":clock-jitter=0")
-                addOption(":clock-synchro=0")
+                addOption(":network-caching=300")
+                addOption(":live-caching=300")
+                addOption(":file-caching=300")
                 addOption(":no-audio-time-stretch")
                 // BẮT BUỘC LUÔN PHÁT ĐỘ PHÂN GIẢI 1080/CAO NHẤT DÙ MÀN HÌNH MÁY LÀ 720P
                 addOption(":adaptive-logic=highest")

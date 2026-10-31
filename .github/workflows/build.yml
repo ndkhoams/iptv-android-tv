@@ -55,23 +55,20 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "v1.9.15 - Nâng cấp Deinterlace Yadif PC (Khử xé hình & nét mịn), Tùy chỉnh bộ lọc & Gỡ drop-frames"
+        name: "v1.9.16 - Chuyển kênh siêu tốc, Triệt tiêu đơ hình kênh cũ & Đồng bộ âm thanh - hình ảnh"
         body: |
-          ### Bản cập nhật v1.9.15 cho TV Play Android TV:
-          - **Nâng cấp thuật toán Deinterlace chuẩn Yadif (Yet Another Deinterlacing Filter):**
-            - Thuật toán khử xen kẽ tiêu chuẩn vàng trên PC VLC: kết hợp nội suy không gian và thời gian theo hướng cạnh của hình ảnh.
-            - Vùng tĩnh giữ trọn $100\%$ độ sắc nét 1080p, vùng chuyển động được khử răng cưa mượt mà không còn hiện tượng bóng ma (ghosting), sọc ngang hay noise hạt như thuật toán Blend trước đây.
-          - **Loại bỏ `--skip-frames` và `--drop-late-frames`:**
-            - Đảm bảo bộ giải mã phần cứng MediaCodec giải mã nguyên vẹn $100\%$ từng trường quét (field) và khung hình, triệt tiêu hiện tượng vỡ khối nén macroblock và nhiễu viền.
-          - **Bổ sung tùy chọn Deinterlace ngay trong Menu Cài đặt (Phần 3):**
-            - Dễ dàng bấm phím Menu để chọn giữa các chế độ:
-              + **Yadif (Mặc định - Khuyên dùng):** Cực kỳ sắc nét và mịn màng như xem trên PC.
-              + **Linear:** Nội suy tuyến tính, mượt mà và nhẹ máy cho TV Box cấu hình yếu.
-              + **Blend:** Gộp 2 trường quét (chế độ cơ bản).
-              + **Tắt Deinterlace:** Giữ nguyên luồng gốc cho các kênh progressive.
-          - **Kế thừa toàn bộ tính năng vượt trội từ các bản trước:**
-            - OSD 3 dòng thông minh góc dưới màn hình: Tên kênh/Logo, Lịch phát sóng EPG (màu cam), và Thông số kỹ thuật độ phân giải @ FPS thực tế, Bitrate thực và Audio (màu cyan).
-            - Không bao giờ bị kẹt ở "Đang nhận diện video...", tải luồng siêu tốc 0.5s không bị đen màn hình.
+          ### Bản cập nhật v1.9.16 cho TV Play Android TV:
+          - **Triệt tiêu 100% hiện tượng đứng hình kênh cũ khi chuyển kênh:**
+            - Ngay khi bấm đổi kênh, layout video cũ được ẩn lập tức (`View.INVISIBLE`), trả lại nền đen tĩnh và spinner tải kênh. Người xem không bao giờ còn thấy khung hình đơ của kênh cũ.
+            - Chỉ hiển thị video mới khi LibVLC giải mã xong khung hình đầu tiên (`Event.Vout`), khắc phục việc spinner bị tắt sớm do luồng âm thanh.
+          - **Đồng bộ âm thanh và hình ảnh chuẩn Master Clock:**
+            - Khôi phục cơ chế đồng bộ A/V chuẩn của VLC, loại bỏ hoàn toàn tình trạng âm thanh chạy trước vài giây trong khi hình ảnh chưa tải xong.
+          - **Tối ưu bộ đệm chuyển kênh siêu tốc 300ms:**
+            - Giảm `caching` từ 800ms xuống 300ms cho mạng nội bộ LAN / udpxy / multicast FPT, giúp bắt kênh nhanh hơn gấp đôi.
+          - **Kế thừa các tính năng hoàn hảo từ v1.9.15:**
+            - Thuật toán Deinterlace Yadif PC siêu nét, loại bỏ bóng ma và răng cưa 1080i.
+            - Tùy chọn Deinterlace trực tiếp trong Menu Cài đặt (Yadif, Linear, Blend, Tắt).
+            - OSD 3 dòng thông minh góc dưới màn hình.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
