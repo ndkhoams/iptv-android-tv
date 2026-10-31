@@ -416,11 +416,9 @@ class MainActivity : AppCompatActivity() {
                 // 1. Tối ưu bộ giải mã phần cứng cho Amlogic / Mali-450: Ưu tiên MediaCodec NDK
                 "--codec=mediacodec_ndk,mediacodec_jni,all",
                 "--avcodec-hw=any",
-                // 2. Chống xé hình/răng cưa với thuật toán khử xen kẽ phần cứng: Gộp 2 frame thành 1 (Blend mode -> 25fps chuẩn PC)
-                "--video-filter=deinterlace",
+                // 2. Chống xé hình/răng cưa phần cứng
                 "--deinterlace=1",
                 "--deinterlace-mode=blend",
-                "--avcodec-deinterlace=1",
                 // 3. Tối ưu bộ nhớ đệm (Giảm áp lực RAM 1GB của Mi Box 3c, chuyển kênh siêu nhanh 0.8s)
                 "--network-caching=800",
                 "--live-caching=800",
@@ -839,11 +837,8 @@ class MainActivity : AppCompatActivity() {
                 setHWDecoderEnabled(true, false)
                 addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
                 addOption(":avcodec-hw=any")
-                // Khử xé hình 1080i50: Gộp 2 field xen kẽ thành 1 khung hình đầy đủ (Blend mode -> 25fps như trên PC)
-                addOption(":video-filter=deinterlace")
                 addOption(":deinterlace=1")
                 addOption(":deinterlace-mode=blend")
-                addOption(":avcodec-deinterlace=1")
                 addOption(":network-caching=800")
                 addOption(":live-caching=800")
                 addOption(":file-caching=800")
