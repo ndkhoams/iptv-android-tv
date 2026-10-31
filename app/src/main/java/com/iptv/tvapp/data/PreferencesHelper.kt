@@ -124,8 +124,8 @@ class PreferencesHelper(context: Context) {
 
         // Đảm bảo luôn có ít nhất 1 danh sách được chọn (ưu tiên KTV Playlist)
         if (cleanedList.isNotEmpty() && cleanedList.none { it.isSelected }) {
-            cleanedList.firstOrNull { it.url == DEFAULT_URL }?.isSelected = true
-                ?: run { cleanedList[0].isSelected = true }
+            val target = cleanedList.firstOrNull { it.url == DEFAULT_URL } ?: cleanedList[0]
+            target.isSelected = true
         }
 
         if (cleanedList != list) {
