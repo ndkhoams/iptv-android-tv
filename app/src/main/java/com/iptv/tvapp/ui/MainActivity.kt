@@ -76,6 +76,13 @@ class MainActivity : AppCompatActivity() {
     private var webServer: TvWebServer? = null
     private var multicastLock: WifiManager.MulticastLock? = null
 
+    private val extractorsFactory = DefaultExtractorsFactory().apply {
+        setTsExtractorFlags(
+            DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+            DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
+        )
+    }
+
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var channelAdapter: ChannelAdapter
     private lateinit var epgTimelineAdapter: EpgTimelineAdapter
@@ -532,15 +539,7 @@ class MainActivity : AppCompatActivity() {
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
-        // 3. Tối ưu cấu hình phân tích luồng MPEG-TS từ đài truyền hình
-        val extractorsFactory = DefaultExtractorsFactory().apply {
-            setTsExtractorFlags(
-                DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
-                DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
-            )
-        }
-
-        // 4. Bắt buộc ExoPlayer luôn chọn độ phân giải 1080/cao nhất trong HLS dù màn hình là 720p
+        // 3. Bắt buộc ExoPlayer luôn chọn độ phân giải 1080/cao nhất trong HLS dù màn hình là 720p
         val trackSelector = DefaultTrackSelector(this).apply {
             parameters = buildUponParameters()
                 .setForceHighestSupportedBitrate(true)
