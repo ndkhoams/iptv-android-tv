@@ -4,6 +4,8 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_fpt_glass_panel"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:padding="18dp">
 
     <!-- Header trận đấu -->
@@ -38,23 +40,28 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2E2C48"
+        android:background="#2E2E2E"
         android:layout_marginBottom="10dp" />
 
-    <!-- RecyclerView danh sách nguồn phát -->
+    <!-- RecyclerView danh sách nguồn phát (Có padding & không clip để khi item scale phóng to không bị tràn cắt) -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvMatchSources"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:maxHeight="340dp"
+        android:clipChildren="false"
         android:clipToPadding="false"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
         android:focusable="true"
         android:focusableInTouchMode="true" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2E2C48"
+        android:background="#2E2E2E"
         android:layout_marginTop="10dp"
         android:layout_marginBottom="10dp" />
 
@@ -67,4 +74,3 @@
         android:textColor="@color/text_muted"
         android:textSize="11sp" />
 </LinearLayout>
-

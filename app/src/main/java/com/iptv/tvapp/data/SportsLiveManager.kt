@@ -40,20 +40,65 @@ class SportsLiveManager(private val context: Context) {
 
     data class EspnFixture(val team1: String, val team2: String, val league: String)
 
-    private val matchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
-    private val espnFixturesCache = ConcurrentHashMap<String, List<EspnFixture>>()
-    @Volatile private var lastEspnFetchTimeMs: Long = 0L
-
-    fun getMatch(key: String): MatchGroup? = matchGroupsMap[key]
+    fun getMatch(key: String): MatchGroup? {
+        matchGroupsMap[key]?.let { return it }
+        // Fallback 1: Khớp theo đuôi key (loại bỏ chênh lệch giờ thi đấu)
+        val cleanKey = key.substringAfter("_")
+        for ((k, v) in matchGroupsMap) {
+            if (k.substringAfter("_") == cleanKey) return v
+        }
+        // Fallback 2: Khớp theo tên CLB đã chuẩn hóa
+        for (v in matchGroupsMap.values) {
+            if (v.key == key || key.contains(v.key) || v.key.contains(key)) return v
+            val vHome = canonicalizeTeam(v.homeTeam)
+            val vAway = canonicalizeTeam(v.awayTeam)
+            if (vHome.isNotBlank() && key.contains(vHome)) {
+                if (vAway.isBlank() || key.contains(vAway)) return v
+            }
+        }
+        // Fallback 3: Tìm kiếm trong danh sách kênh thô của các danh mục hiện có
+        val foundSources = mutableListOf<Channel>()
+        for (cat in (cachedCategories ?: emptyList())) {
+            for (ch in cat.channels) {
+                if (ch.streamUrl.startsWith("match://") || ch.id == ACTION_REFRESH_SPORTS) continue
+                val cClean = canonicalizeTeam(ch.name)
+                val cParts = key.split("_")
+                val matchesAll = cParts.all { part -> part.length <= 2 || cClean.contains(part) }
+                if (matchesAll) {
+                    foundSources.add(ch)
+                }
+            }
+        }
+        if (foundSources.isNotEmpty()) {
+            val fallbackGroup = MatchGroup(
+                key = key,
+                homeTeam = foundSources.first().name,
+                awayTeam = "",
+                time = "LIVE",
+                league = "OTHER",
+                leagueName = "Trực tiếp",
+                sources = foundSources
+            )
+            matchGroupsMap[key] = fallbackGroup
+            return fallbackGroup
+        }
+        return null
+    }
 
     companion object {
         const val ACTION_REFRESH_SPORTS = "action_refresh_sports"
+        const val CATEGORY_LIVE_EVENTS = "🔴 LIVE EVENTS"
+        const val CATEGORY_SPORT_TV = "📺 SPORT 24/7 TV"
+        private val matchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
+        private val espnFixturesCache = ConcurrentHashMap<String, List<EspnFixture>>()
+        @Volatile private var lastEspnFetchTimeMs: Long = 0L
         private const val CACHE_TTL_MS = 30 * 60 * 1000L // Tự động cập nhật 30 phút 1 lần
         private const val ESPN_CACHE_TTL_MS = 60 * 60 * 1000L // Cache lịch thi đấu 1 tiếng
         const val DEFAULT_SPORTS_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao.m3u"
         private const val CHROME_UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
         val PRIORITY_LEAGUES = listOf("UCL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1")
+        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA")
 
         val LEAGUE_LABELS = mapOf(
             "UCL" to "🏆 UEFA Champions League",
@@ -63,7 +108,71 @@ class SportsLiveManager(private val context: Context) {
             "BUNDESLIGA" to "🇩🇪 Bundesliga",
             "SERIE_A" to "🇮🇹 Serie A",
             "LIGUE1" to "🇫🇷 Ligue 1",
+            "F1" to "🏎️ Formula 1",
+            "TENNIS" to "🎾 Tennis ATP / Grand Slam",
+            "NBA" to "🏀 Bóng rổ NBA",
             "OTHER" to "🌐 Trực tiếp"
+        )
+
+        // Bảng ánh xạ định danh chuẩn hóa cho các CLB để gom nhóm các cách viết khác nhau thành 1 trận duy nhất
+        val TEAM_ALIASES = listOf(
+            "bilbao" to listOf("athletic bilbao", "athletic club", "ath bilbao", "bilbao"),
+            "realsociedad" to listOf("real sociedad", "sociedad"),
+            "tphcm" to listOf("công an tp.hồ chí minh", "cong an ho chi minh", "tp. hồ chí minh", "tp.hồ chí minh", "hồ chí minh", "ho chi minh", "tp.hcm", "tphcm", "clb tp.hcm"),
+            "danang" to listOf("shb đà nẵng", "shb da nang", "đà nẵng", "da nang"),
+            "manutd" to listOf("manchester united", "manchester utd", "man united", "man utd", "mu"),
+            "mancity" to listOf("manchester city", "man city", "mc"),
+            "tottenham" to listOf("tottenham hotspur", "tottenham", "spurs"),
+            "wolves" to listOf("wolverhampton", "wolves"),
+            "newcastle" to listOf("newcastle united", "newcastle"),
+            "westham" to listOf("west ham united", "west ham"),
+            "brighton" to listOf("brighton & hove albion", "brighton"),
+            "nottingham" to listOf("nottingham forest", "nottingham"),
+            "leicester" to listOf("leicester city", "leicester"),
+            "ipswich" to listOf("ipswich town", "ipswich"),
+            "atleticomadrid" to listOf("atletico madrid", "atletico de madrid", "atletico", "atleti"),
+            "realmadrid" to listOf("real madrid"),
+            "betis" to listOf("real betis", "betis"),
+            "celtavigo" to listOf("celta vigo", "celta"),
+            "rayovallecano" to listOf("rayo vallecano", "rayo"),
+            "alaves" to listOf("deportivo alaves", "alaves"),
+            "valladolid" to listOf("real valladolid", "valladolid"),
+            "santander" to listOf("racing santander", "santander"),
+            "bayern" to listOf("bayern munich", "bayern munchen", "bayern"),
+            "dortmund" to listOf("borussia dortmund", "dortmund"),
+            "leverkusen" to listOf("bayer leverkusen", "leverkusen"),
+            "leipzig" to listOf("rb leipzig", "leipzig"),
+            "frankfurt" to listOf("eintracht frankfurt", "frankfurt"),
+            "stuttgart" to listOf("vfb stuttgart", "stuttgart"),
+            "monchengladbach" to listOf("borussia monchengladbach", "monchengladbach", "gladbach"),
+            "unionberlin" to listOf("1. fc union berlin", "union berlin"),
+            "bremen" to listOf("werder bremen", "bremen"),
+            "koln" to listOf("1. fc koln", "fc koln", "fc köln", "koln", "köln"),
+            "hamburg" to listOf("hamburg sv", "hamburg"),
+            "intermilan" to listOf("internazionale", "inter milan", "inter"),
+            "acmilan" to listOf("ac milan", "milan"),
+            "juventus" to listOf("juventus", "juve"),
+            "roma" to listOf("as roma", "roma"),
+            "lazio" to listOf("s.s. lazio", "ss lazio", "lazio"),
+            "verona" to listOf("hellas verona", "verona"),
+            "psg" to listOf("paris saint-germain", "paris sg", "psg"),
+            "marseille" to listOf("olympique marseille", "marseille"),
+            "lyon" to listOf("olympique lyon", "lyon"),
+            "monaco" to listOf("as monaco", "monaco"),
+            "auxerre" to listOf("aj auxerre", "auxerre"),
+            "strasbourg" to listOf("strasbourg alsace", "strasbourg"),
+            "viettel" to listOf("thể công viettel", "thể công", "viettel"),
+            "hagl" to listOf("hoàng anh gia lai", "hagl"),
+            "cahn" to listOf("công an hà nội", "cahn"),
+            "slna" to listOf("sông lam nghệ an", "slna"),
+            "namdinh" to listOf("thép xanh nam định", "nam định", "nam dinh"),
+            "haiphong" to listOf("hải phòng", "hai phong"),
+            "thanhhoa" to listOf("đông á thanh hóa", "thanh hóa", "thanh hoa"),
+            "binhduong" to listOf("becamex bình dương", "bình dương", "binh duong"),
+            "binhdinh" to listOf("quy nhơn bình định", "bình định", "binh dinh"),
+            "quangnam" to listOf("quảng nam", "quang nam"),
+            "hatinh" to listOf("hồng lĩnh hà tĩnh", "hà tĩnh", "ha tinh"),
+            "hanoi" to listOf("hà nội fc", "clb hà nội", "hà nội", "ha noi")
         )
 
         val EPL_CLUBS = listOf(
@@ -118,6 +227,18 @@ class SportsLiveManager(private val context: Context) {
         fun clearCache() {
             cachedCategories = null
             lastFetchTimeMs = 0L
+        }
+
+        fun canonicalizeTeam(name: String): String {
+            val t = name.lowercase().trim()
+            for ((canon, aliases) in TEAM_ALIASES) {
+                for (al in aliases) {
+                    if (t.contains(al) || al.contains(t)) {
+                        return canon
+                    }
+                }
+            }
+            return t.replace(Regex("""[^a-z0-9]"""), "")
         }
     }
 
@@ -205,17 +326,30 @@ class SportsLiveManager(private val context: Context) {
     /**
      * Nhận diện giải đấu:
      * 1. Đối chiếu lịch thi đấu thực tế hôm nay từ ESPN
-     * 2. Kiểm tra từ khóa giải đấu trực tiếp trong tiêu đề
-     * 3. So sánh CẢ 2 CLB để chắc chắn chứ không chỉ 1 CLB
+     * 2. Kiểm tra các môn thể thao nổi bật (F1, Tennis ATP/Grand Slam, NBA)
+     * 3. Kiểm tra từ khóa giải đấu trực tiếp trong tiêu đề
+     * 4. So sánh CẢ 2 CLB để chắc chắn chứ không chỉ 1 CLB
      */
     private fun detectLeague(text: String, homeTeam: String, awayTeam: String): String {
-        // 1. Đối chiếu lịch thi đấu thực tế hôm nay
+        val t = text.lowercase()
+
+        // 1. Kiểm tra các môn thể thao nổi bật được yêu cầu (F1, Tennis Grand Slam/ATP, NBA)
+        if (t.contains("f1") || t.contains("formula 1") || t.contains("formula one") || t.contains("grand prix") || t.contains("công thức 1")) {
+            return "F1"
+        }
+        if (t.contains("grand slam") || t.contains("atp 1000") || t.contains("atp1000") || t.contains("wimbledon") ||
+            t.contains("us open") || t.contains("australian open") || t.contains("roland garros") || t.contains("tennis") || t.contains("quần vợt")) {
+            return "TENNIS"
+        }
+        if (t.contains("nba") || t.contains("bóng rổ nba")) {
+            return "NBA"
+        }
+
+        // 2. Đối chiếu lịch thi đấu thực tế hôm nay
         val espnLeague = matchEspnFixture(homeTeam, awayTeam)
         if (espnLeague != null) return espnLeague
 
-        val t = text.lowercase()
-
-        // 2. Kiểm tra trực tiếp tên giải đấu trong tiêu đề
+        // 3. Kiểm tra trực tiếp tên giải đấu trong tiêu đề
         if ((t.contains("uefa champions") || t.contains("cúp c1") || t.contains("cup c1") || t.contains("champions league")) &&
             !t.contains("afc") && !t.contains("women")) {
             return "UCL"
@@ -227,7 +361,7 @@ class SportsLiveManager(private val context: Context) {
         if ((t.contains("ligue 1") || t.contains("ligue1")) && !t.contains("ligue 2")) return "LIGUE1"
         if (t.contains("v.league 1") || t.contains("v-league 1") || t.contains("vleague 1") || t.contains("v.league-1")) return "VLEAGUE"
 
-        // 3. So sánh CẢ 2 CLB để chắc chắn (không nhầm khi chỉ có 1 đội hoặc đội bóng chuyền)
+        // 4. So sánh CẢ 2 CLB để chắc chắn (không nhầm khi chỉ có 1 đội hoặc đội bóng chuyền)
         val h = homeTeam.lowercase()
         val a = awayTeam.lowercase()
         if (h.isNotBlank() && a.isNotBlank()) {
@@ -260,14 +394,12 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
-     * Lọc bỏ hoàn toàn các môn thể thao khác (bóng chuyền, tennis, bóng rổ...)
+     * Lọc các môn thể thao: Giữ bóng đá, F1, Quần vợt (ATP/Grand Slam), Bóng rổ NBA
+     * Loại bỏ bóng chuyền 🏐, bóng bàn 🏓, cầu lông 🏸, bida 🎱
      */
-    private fun isFootballMatch(name: String, groupTitle: String): Boolean {
-        val nonFootballEmojis = listOf("🏐", "🏀", "🎾", "🏸", "🏓", "🎱", "🏎️", "🥊", "🥋", "🏒", "⚾")
-        if (nonFootballEmojis.any { name.contains(it) }) return false
-        val g = groupTitle.lowercase()
-        if (g.contains("bóng chuyền") || g.contains("bóng rổ") || g.contains("tennis") ||
-            g.contains("quốc tế") || g.contains("f1") || g.contains("quần vợt")) {
+    private fun isEligibleSportsMatch(name: String, groupTitle: String): Boolean {
+        val nonSports = listOf("🏐", "🏸", "🏓", "🎱", "🥊", "🥋", "🏒", "bóng chuyền", "bóng bàn", "cầu lông")
+        if (nonSports.any { name.contains(it) || groupTitle.contains(it, ignoreCase = true) }) {
             return false
         }
         return true
@@ -314,12 +446,6 @@ class SportsLiveManager(private val context: Context) {
         // 8. Cắt các ký tự phân cách ở đầu và cuối chuỗi
         s = s.replace(Regex("""^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$"""), "")
         return s.replace(Regex("""\s+"""), " ").trim()
-    }
-
-    private fun normalizeKey(str: String): String {
-        val s = str.lowercase().replace(Regex("""[^a-z0-9\s]"""), "")
-        val words = s.split(Regex("""\s+""")).filter { it.length > 1 && it != "vs" }.sorted()
-        return words.joinToString(" ")
     }
 
     /**
@@ -377,11 +503,11 @@ class SportsLiveManager(private val context: Context) {
                 }
 
                 // 3. Phân nhóm các category:
-                // Nhóm 1: "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)" - Nhóm gom các luồng cùng 1 trận đấu thành 1 title duy nhất
+                // Nhóm 1: "⚽ TRỰC TIẾP THỂ THAO (HÔM NAY)" - Nhóm gom các luồng cùng 1 trận đấu thành 1 title duy nhất
                 val matchChannels = channels.filter {
                     !it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) &&
                     !it.name.contains("[24/7]", ignoreCase = true) &&
-                    isFootballMatch(it.name, it.groupTitle) &&
+                    isEligibleSportsMatch(it.name, it.groupTitle) &&
                     isDateTodayOrUpcoming(it.name)
                 }
 
@@ -404,10 +530,12 @@ class SportsLiveManager(private val context: Context) {
                             cleaned.trim() to ""
                         }
 
-                        val normKey = if (awayTeam.isNotBlank()) {
-                            "${timeStr}_${normalizeKey("$homeTeam $awayTeam")}"
+                        val cHome = canonicalizeTeam(homeTeam)
+                        val cAway = canonicalizeTeam(awayTeam)
+                        val normKey = if (cAway.isNotBlank()) {
+                            "${timeStr}_${listOf(cHome, cAway).sorted().joinToString("_")}"
                         } else {
-                            "${timeStr}_${normalizeKey(cleaned)}"
+                            "${timeStr}_$cHome"
                         }
 
                         val existing = grouped[normKey]
@@ -439,18 +567,31 @@ class SportsLiveManager(private val context: Context) {
                         }
                     }
 
-                    // Tách thành giải ưu tiên và giải khác
+                    // Tách thành:
+                    // 1. Giải bóng đá ưu tiên (7 giải hàng đầu)
                     val priorityMatches = grouped.values.filter { it.league in PRIORITY_LEAGUES }
-                    val otherMatches = grouped.values.filter { it.league !in PRIORITY_LEAGUES }
+                    // 2. Các trận thể thao lớn nổi bật (F1, Tennis Grand Slam/ATP, NBA)
+                    val featuredSportsMatches = grouped.values.filter { it.league in FEATURED_SPORTS }
+                    // 3. Các trận bóng đá khác
+                    val otherMatches = grouped.values.filter { it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS }
 
-                    // Sắp xếp: Ưu tiên UCL -> EPL -> VLEAGUE -> LALIGA -> BUNDESLIGA -> SERIE_A -> LIGUE1, sau đó theo giờ
+                    // Sắp xếp:
+                    // - Ưu tiên UCL -> EPL -> VLEAGUE -> LALIGA -> BUNDESLIGA -> SERIE_A -> LIGUE1, sau đó theo giờ
                     val sortedPriority = priorityMatches.sortedWith(
                         compareBy({ PRIORITY_LEAGUES.indexOf(it.league) }, { it.time })
                     )
                     val sortedOther = otherMatches.sortedBy { it.time }
+                    val sortedFeaturedSports = featuredSportsMatches.sortedBy { it.time }
 
-                    // Nếu có trận thuộc 7 giải ưu tiên thì chỉ hiển thị giải ưu tiên, nếu không có mới hiện giải khác
-                    val targetMatches = if (sortedPriority.isNotEmpty()) sortedPriority else sortedOther
+                    // Điểm 6: Vẫn hiển thị các trận bóng rổ NBA, Tennis ATP1000/Grand Slam, F1 ở DƯỚI các trận bóng đá ưu tiên
+                    val targetMatches = mutableListOf<MatchGroup>()
+                    if (sortedPriority.isNotEmpty()) {
+                        targetMatches.addAll(sortedPriority)
+                    } else {
+                        targetMatches.addAll(sortedOther)
+                    }
+                    // Thêm các môn thể thao nổi bật (NBA, Tennis, F1) ở dưới các trận ưu tiên
+                    targetMatches.addAll(sortedFeaturedSports)
 
                     // Lưu vào cache Map để MatchSourcesDialog truy xuất khi click
                     for (m in grouped.values) {
@@ -463,16 +604,22 @@ class SportsLiveManager(private val context: Context) {
                         name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
                         logoUrl = null,
                         streamUrl = "action://refresh_sports",
-                        groupTitle = "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
+                        groupTitle = CATEGORY_LIVE_EVENTS,
                         number = 0
                     )
                     matchesWithRefresh.add(refreshItem)
 
                     targetMatches.forEachIndexed { idx, mg ->
+                        val sportIcon = when (mg.league) {
+                            "F1" -> "🏎️"
+                            "TENNIS" -> "🎾"
+                            "NBA" -> "🏀"
+                            else -> "⚽"
+                        }
                         val matchName = if (mg.awayTeam.isNotBlank()) {
-                            "⚽ [${mg.time}] ${mg.homeTeam} vs ${mg.awayTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                            "$sportIcon [${mg.time}] ${mg.homeTeam} vs ${mg.awayTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
                         } else {
-                            "⚽ [${mg.time}] ${mg.homeTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                            "$sportIcon [${mg.time}] ${mg.homeTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
                         }
                         val leagueLogoUri = getLeagueLogoUri(mg.league)
                         val matchChannel = Channel(
@@ -480,30 +627,33 @@ class SportsLiveManager(private val context: Context) {
                             name = matchName,
                             logoUrl = leagueLogoUri,
                             streamUrl = "match://${mg.key}",
-                            groupTitle = "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
+                            groupTitle = CATEGORY_LIVE_EVENTS,
                             number = idx + 1
                         )
                         matchesWithRefresh.add(matchChannel)
                     }
 
-                    categories.add(Category("⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)", matchesWithRefresh))
+                    categories.add(Category(CATEGORY_LIVE_EVENTS, matchesWithRefresh))
                 }
 
-                // Nhóm 2: "🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)"
+                // Nhóm 2: "📺 SPORT 24/7 TV"
                 val intlChannels = channels.filter {
+                    it.groupTitle.contains("SPORT 24/7", ignoreCase = true) ||
                     it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) ||
                     it.name.contains("[24/7]", ignoreCase = true)
                 }
                 if (intlChannels.isNotEmpty()) {
                     intlChannels.forEachIndexed { idx, ch -> ch.number = idx + 1 }
-                    categories.add(Category("🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)", intlChannels.toMutableList()))
+                    categories.add(Category(CATEGORY_SPORT_TV, intlChannels.toMutableList()))
                 }
 
                 // Các nhóm theo nguồn: "🍌 Chuối Chiên TV", "🐔 Gà Vàng / Tiếu Lâm", "🌶️ Cà Khịa TV", ...
                 val groupedBySource = channels.groupBy { it.groupTitle }
                 for ((groupName, groupList) in groupedBySource) {
                     if (groupName.isNotBlank() &&
+                        !groupName.contains("LIVE EVENTS", ignoreCase = true) &&
                         !groupName.contains("TRỰC TIẾP", ignoreCase = true) &&
+                        !groupName.contains("SPORT 24/7", ignoreCase = true) &&
                         !groupName.contains("QUỐC TẾ", ignoreCase = true)) {
                         groupList.forEachIndexed { idx, ch -> ch.number = idx + 1 }
                         categories.add(Category(groupName, groupList.toMutableList()))

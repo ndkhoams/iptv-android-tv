@@ -11,7 +11,7 @@
 
     <!-- Nền màn hình TV tối -->
     <path
-        android:fillColor="#161526"
+        android:fillColor="#1e1e1e"
         android:pathData="M26,34h56v40h-56z" />
 
     <!-- Chữ T màu trắng nổi bật, căn giữa hoàn hảo -->

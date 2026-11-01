@@ -568,7 +568,7 @@
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:singleLine="true"
+                    android:maxLines="3"
                     android:ellipsize="end" />
 
                 <!-- Nhãn Tags: Độ phân giải + Nguồn CDN -->
@@ -611,16 +611,17 @@
                         android:visibility="gone" />
                 </LinearLayout>
 
-                <!-- KHU VỰC EPG TIMELINE LỊCH PHÁT SÓNG THỜI GIAN THỰC -->
+                <!-- KHU VỰC EPG HOẶC BẢNG XẾP HẠNG THỂ THAO -->
                 <LinearLayout
+                    android:id="@+id/layoutRightPanelContainer"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
                     android:layout_marginTop="8dp"
                     android:orientation="vertical"
-                    android:background="#151329"
-                    android:clipChildren="true"
-                    android:clipToPadding="true"
+                    android:background="@drawable/bg_fpt_glass_panel"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
                     android:padding="8dp">
 
                     <LinearLayout
@@ -628,10 +629,10 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#151329"
                         android:paddingBottom="4dp">
 
                         <TextView
+                            android:id="@+id/tvRightPanelTitle"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -649,40 +650,138 @@
                             android:textSize="9sp" />
                     </LinearLayout>
 
-                    <!-- Danh sách timeline EPG (Được giới hạn khung nhìn chuẩn xác, không tràn đè chữ) -->
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvSpotlightEpg"
+                    <!-- Khung EPG cho TV thông thường -->
+                    <LinearLayout
+                        android:id="@+id/layoutEpgTimeline"
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="1"
-                        android:layout_marginTop="2dp"
-                        android:layout_marginBottom="4dp"
-                        android:clipChildren="true"
-                        android:clipToPadding="true"
-                        android:overScrollMode="never"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"
-                        android:descendantFocusability="afterDescendants"
-                        android:nextFocusLeft="@+id/rvChannels" />
+                        android:orientation="vertical">
 
-                    <!-- Thông báo khi chưa có EPG -->
-                    <TextView
-                        android:id="@+id/tvEpgEmpty"
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rvSpotlightEpg"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:layout_marginTop="2dp"
+                            android:layout_marginBottom="4dp"
+                            android:clipChildren="true"
+                            android:clipToPadding="true"
+                            android:overScrollMode="never"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:descendantFocusability="afterDescendants"
+                            android:nextFocusLeft="@+id/rvChannels" />
+
+                        <TextView
+                            android:id="@+id/tvEpgEmpty"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="Đang tải lịch phát sóng..."
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <!-- Khung BẢNG XẾP HẠNG cho Trực tiếp Thể Thao -->
+                    <LinearLayout
+                        android:id="@+id/layoutLeagueStandings"
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="1"
-                        android:gravity="center"
-                        android:text="Đang tải lịch phát sóng..."
-                        android:textColor="@color/text_muted"
-                        android:textSize="11sp"
-                        android:visibility="gone" />
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <!-- Header bảng xếp hạng -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="22dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:background="#242424"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:layout_marginBottom="2dp">
+
+                            <TextView
+                                android:layout_width="22dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:text="#"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:text="CÂU LẠC BỘ"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="30dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:text="TRẬN"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="30dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:text="HS"
+                                android:textColor="@color/text_muted"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="32dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:text="ĐIỂM"
+                                android:textColor="@color/fpt_orange"
+                                android:textSize="10sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rvSpotlightStandings"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:clipChildren="true"
+                            android:clipToPadding="true"
+                            android:overScrollMode="never"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:descendantFocusability="afterDescendants"
+                            android:nextFocusLeft="@+id/rvChannels" />
+
+                        <TextView
+                            android:id="@+id/tvStandingsEmpty"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="Đang tải bảng xếp hạng giải đấu..."
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvSpotlightStreamInfo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:background="#151329"
                         android:paddingTop="2dp"
                         android:text="Giao thức: UDP / udpxy"
                         android:textColor="@color/text_muted"

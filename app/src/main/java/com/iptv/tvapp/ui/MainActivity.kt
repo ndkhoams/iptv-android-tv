@@ -49,6 +49,8 @@ import com.iptv.tvapp.server.TvWebServer
 import com.iptv.tvapp.ui.adapter.CategoryAdapter
 import com.iptv.tvapp.ui.adapter.ChannelAdapter
 import com.iptv.tvapp.ui.adapter.EpgTimelineAdapter
+import com.iptv.tvapp.ui.adapter.StandingsAdapter
+import com.iptv.tvapp.data.SportsStandingsManager
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.QuickPlaylistDialog
 import com.iptv.tvapp.ui.dialog.MatchSourcesDialog
@@ -78,6 +80,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var playlistManager: PlaylistManager
     private lateinit var epgManager: EpgManager
     private lateinit var appUpdateManager: AppUpdateManager
+    private lateinit var standingsManager: SportsStandingsManager
+    private lateinit var standingsAdapter: StandingsAdapter
 
     private var player: ExoPlayer? = null
     private var libVLC: LibVLC? = null
@@ -108,6 +112,7 @@ class MainActivity : AppCompatActivity() {
     private var allChannels = mutableListOf<Channel>()
     private var currentCategoryChannels = mutableListOf<Channel>()
     private var currentPlayingChannel: Channel? = null
+    private var currentPlayingMatchGroup: SportsLiveManager.MatchGroup? = null
     private var currentFocusedChannel: Channel? = null
     private var currentSelectedCategory: Category? = null
     private var isInitialAppStart = true
@@ -288,6 +293,9 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "Không tìm thấy nguồn phát cho trận đấu này", Toast.LENGTH_SHORT).show()
                     }
                 } else {
+                    if (currentAppMode == AppMode.TV) {
+                        currentPlayingMatchGroup = null
+                    }
                     playChannel(channel)
                     hideHandler.postDelayed({ hideOverlay() }, 800)
                 }
@@ -374,6 +382,16 @@ class MainActivity : AppCompatActivity() {
             adapter = epgTimelineAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(10)
+            itemAnimator = null
+        }
+
+        standingsManager = SportsStandingsManager(this)
+        standingsAdapter = StandingsAdapter()
+        binding.rvSpotlightStandings.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = standingsAdapter
+            setHasFixedSize(true)
+            setItemViewCacheSize(20)
             itemAnimator = null
         }
 
@@ -827,6 +845,7 @@ class MainActivity : AppCompatActivity() {
 
         allCategories.clear()
         if (mode == AppMode.TV) {
+            currentPlayingMatchGroup = null
             val activeSource = prefs.getActivePlaylist()
             binding.tvActivePlaylistBadge.text = "Danh sách: ${activeSource.name}"
             allCategories.addAll(tvCategories)
@@ -842,7 +861,9 @@ class MainActivity : AppCompatActivity() {
 
         // Xác định danh mục cần hiển thị
         val playing = currentPlayingChannel
-        val targetCategory = if (playing != null) {
+        val targetCategory = if (mode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+            allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
+        } else if (playing != null) {
             allCategories.firstOrNull { cat -> cat.channels.any { it.streamUrl == playing.streamUrl } }
         } else null
 
@@ -853,7 +874,12 @@ class MainActivity : AppCompatActivity() {
         if (catToSelect != null) {
             currentSelectedCategory = catToSelect
             categoryAdapter.setSelectedCategory(catToSelect)
-            displayCategoryChannels(catToSelect, focusChannel = if (catToSelect == targetCategory) playing else null)
+            val channelToFocus = if (mode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+                catToSelect.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" } ?: playing
+            } else if (catToSelect == targetCategory) {
+                playing
+            } else null
+            displayCategoryChannels(catToSelect, focusChannel = channelToFocus)
         } else {
             currentCategoryChannels.clear()
             channelAdapter.submitList(emptyList())
@@ -920,7 +946,11 @@ class MainActivity : AppCompatActivity() {
             currentFocusedChannel = channel
             val matchKey = channel.streamUrl.removePrefix("match://")
             val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
-            binding.tvSpotlightName.text = if (matchGroup != null && matchGroup.awayTeam.isNotBlank()) "${matchGroup.homeTeam} vs ${matchGroup.awayTeam}" else channel.name
+            val titleText = if (matchGroup != null && matchGroup.awayTeam.isNotBlank()) {
+                if (matchGroup.time.isNotBlank()) "[${matchGroup.time}] ${matchGroup.homeTeam} vs ${matchGroup.awayTeam}"
+                else "${matchGroup.homeTeam} vs ${matchGroup.awayTeam}"
+            } else channel.name
+            binding.tvSpotlightName.text = titleText
             binding.tvSpotlightResolution.text = if (matchGroup != null) "${matchGroup.sources.size} NGUỒN" else "TRẬN ĐẤU"
             binding.tvSpotlightCategory.text = matchGroup?.leagueName ?: "Trực Tiếp Bóng Đá"
             binding.tvSpotlightStatus.visibility = View.GONE
@@ -963,6 +993,9 @@ class MainActivity : AppCompatActivity() {
         if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
             binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
             binding.tvSpotlightStreamInfo.text = "Tác vụ: Cập nhật dữ liệu trận đấu mới nhất hôm nay"
+            binding.layoutEpgTimeline.visibility = View.VISIBLE
+            binding.layoutLeagueStandings.visibility = View.GONE
+            binding.tvRightPanelTitle.text = "LỊCH THI ĐẤU THỂ THAO"
             binding.rvSpotlightEpg.visibility = View.GONE
             binding.tvEpgEmpty.visibility = View.VISIBLE
             binding.tvEpgEmpty.text = "Nhấn OK trên điều khiển để tải lại trận đấu"
@@ -986,11 +1019,49 @@ class MainActivity : AppCompatActivity() {
                 binding.ivSpotlightLogo.setImageResource(R.drawable.ic_nav_sports)
             }
             binding.tvSpotlightStreamInfo.text = "Trận đấu: ${channel.name}\nBấm phím OK để xem danh sách nguồn phát"
-            binding.rvSpotlightEpg.visibility = View.GONE
-            binding.tvEpgEmpty.visibility = View.VISIBLE
-            binding.tvEpgEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát"
+
+            binding.layoutEpgTimeline.visibility = View.GONE
+            binding.layoutLeagueStandings.visibility = View.VISIBLE
+            val leagueName = matchGroup?.leagueName ?: "Giải đấu"
+            binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
+            binding.tvEpgSourceTag.text = "FotMob / ESPN"
+
+            val targetLeague = matchGroup?.league ?: "OTHER"
+            if (targetLeague in listOf("EPL", "LALIGA", "SERIE_A", "BUNDESLIGA", "LIGUE1", "UCL", "VLEAGUE")) {
+                binding.rvSpotlightStandings.visibility = View.GONE
+                binding.tvStandingsEmpty.visibility = View.VISIBLE
+                binding.tvStandingsEmpty.text = "Đang tải bảng xếp hạng $leagueName..."
+                lifecycleScope.launch(Dispatchers.Main) {
+                    val standings = standingsManager.getStandings(targetLeague)
+                    if (currentFocusedChannel?.streamUrl == channel.streamUrl) {
+                        if (standings.isNotEmpty()) {
+                            binding.tvStandingsEmpty.visibility = View.GONE
+                            binding.rvSpotlightStandings.visibility = View.VISIBLE
+                            standingsAdapter.submitList(standings, matchGroup?.homeTeam ?: "", matchGroup?.awayTeam ?: "")
+                            val highlightIdx = standingsAdapter.getHighlightedIndex()
+                            if (highlightIdx != -1) {
+                                binding.rvSpotlightStandings.scrollToPosition(highlightIdx.coerceAtLeast(0))
+                            }
+                        } else {
+                            binding.rvSpotlightStandings.visibility = View.GONE
+                            binding.tvStandingsEmpty.visibility = View.VISIBLE
+                            binding.tvStandingsEmpty.text = "Chưa có bảng xếp hạng cho giải đấu này"
+                        }
+                    }
+                }
+            } else {
+                binding.rvSpotlightStandings.visibility = View.GONE
+                binding.tvStandingsEmpty.visibility = View.VISIBLE
+                binding.tvStandingsEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát trực tiếp"
+            }
             return
         }
+
+        // TV Channel mode:
+        binding.layoutLeagueStandings.visibility = View.GONE
+        binding.layoutEpgTimeline.visibility = View.VISIBLE
+        binding.tvRightPanelTitle.text = "LỊCH PHÁT SÓNG (EPG)"
+        binding.tvEpgSourceTag.text = "lichphatsong.io.vn" 
 
         // Logo chính hãng FPT CDN hoặc M3U (Khống chế kích thước và RGB_565 tiết kiệm RAM)
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
@@ -1798,15 +1869,27 @@ class MainActivity : AppCompatActivity() {
                         focusPlayingChannel()
                         return true
                     }
-                    hideOverlay()
-                    return true
+                    if (System.currentTimeMillis() - backPressedTime < 2000) {
+                        finish()
+                        return true
+                    } else {
+                        backPressedTime = System.currentTimeMillis()
+                        hideOverlay()
+                        showBottomNotification("Bấm QUAY LẠI 2 lần để thoát ứng dụng")
+                        return true
+                    }
                 } else {
                     if (System.currentTimeMillis() - backPressedTime < 2000) {
                         finish()
+                        return true
+                    }
+                    if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+                        // Điểm 3: Khi đang xem thể thao trực tiếp, bấm BACK 1 lần quay về màn hình lựa chọn nguồn phát
+                        showMatchSourcesDialog(currentPlayingMatchGroup!!)
+                        return true
                     } else {
-                        backPressedTime = System.currentTimeMillis()
-                        // Chỉ hiển thị thông báo xác nhận thoát, không gọi showQuickChannelInfo để tránh đè 2 bảng lên nhau
-                        showBottomNotification("Bấm QUAY LẠI lần nữa để thoát ứng dụng")
+                        // Điểm 5: Khi đang xem TV toàn màn hình, bấm BACK 1 lần quay về màn hình danh sách kênh
+                        showOverlay()
                         return true
                     }
                 }
@@ -1822,11 +1905,25 @@ class MainActivity : AppCompatActivity() {
         startTelemetryUpdates()
 
         val playing = currentPlayingChannel
-        val shouldBeSports = isSportsLiveMatch(playing)
+        val shouldBeSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
         val targetMode = if (shouldBeSports) AppMode.SPORTS else AppMode.TV
 
         if (currentAppMode != targetMode) {
             switchAppMode(targetMode, focusCategories = false)
+        }
+
+        // Điểm 4: Đối với các trận đấu trong "Trực tiếp thể thao", khi đang xem nhấn nút OK 1 lần,
+        // quay về màn hình danh sách các trận đấu của mục TRỰC TIẾP BÓNG ĐÁ HÔM NAY thay vì hiển thị link lẻ trong các nguồn
+        if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+            val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
+            if (liveCat != null) {
+                currentSelectedCategory = liveCat
+                categoryAdapter.setSelectedCategory(liveCat)
+                val matchChannel = liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                displayCategoryChannels(liveCat, focusChannel = matchChannel)
+                focusPlayingChannel()
+                return
+            }
         }
 
         if (playing != null) {
@@ -1853,6 +1950,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun focusPlayingChannel() {
+        if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+            val matchUrl = "match://${currentPlayingMatchGroup?.key}"
+            val matchIndex = currentCategoryChannels.indexOfFirst { it.streamUrl == matchUrl }
+            if (matchIndex != -1) {
+                val matchChannel = currentCategoryChannels[matchIndex]
+                binding.rvChannels.scrollToPosition(matchIndex)
+                binding.rvChannels.post {
+                    val vh = binding.rvChannels.findViewHolderForAdapterPosition(matchIndex)
+                    if (vh != null) {
+                        vh.itemView.requestFocus()
+                    } else {
+                        binding.rvChannels.postDelayed({
+                            binding.rvChannels.findViewHolderForAdapterPosition(matchIndex)?.itemView?.requestFocus()
+                        }, 60)
+                    }
+                }
+                updateSpotlight(matchChannel)
+                return
+            }
+        }
+
         val playing = currentPlayingChannel ?: return
         val playingIndex = currentCategoryChannels.indexOfFirst { it.streamUrl == playing.streamUrl }
         if (playingIndex != -1) {
@@ -1876,6 +1994,7 @@ class MainActivity : AppCompatActivity() {
     private fun showMatchSourcesDialog(matchGroup: SportsLiveManager.MatchGroup) {
         resetOverlayTimer()
         val dialog = MatchSourcesDialog(this, matchGroup) { selectedChannel ->
+            currentPlayingMatchGroup = matchGroup
             playChannel(selectedChannel)
             hideHandler.postDelayed({ hideOverlay() }, 800)
         }
@@ -2103,8 +2222,11 @@ class MainActivity : AppCompatActivity() {
                 channel.groupTitle.contains("Xôi Lạc") ||
                 channel.groupTitle.contains("Cà Khịa") ||
                 channel.groupTitle.contains("StreamFree") ||
+                channel.groupTitle.contains("LIVE EVENTS") ||
+                channel.groupTitle.contains("SPORT 24/7") ||
                 channel.groupTitle.contains("THỂ THAO QUỐC TẾ") ||
                 channel.groupTitle.contains("TRỰC TIẾP") ||
+                channel.name.startsWith("🔴") ||
                 channel.name.startsWith("⚽") ||
                 channel.name.startsWith("🏎️") ||
                 channel.name.startsWith("🎾") ||

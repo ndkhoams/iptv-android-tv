@@ -101,7 +101,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2E2C48"
+        android:background="#2E2E2E"
         android:layout_marginBottom="14dp" />
 
     <!-- Nút bấm hành động -->

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layoutStandingItem"
+    android:layout_width="match_parent"
+    android:layout_height="28dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:layout_marginTop="1dp"
+    android:layout_marginBottom="1dp">
+
+    <!-- Thứ hạng -->
+    <TextView
+        android:id="@+id/tvStandingRank"
+        android:layout_width="22dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="01"
+        android:textColor="@color/text_secondary"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <!-- Logo CLB -->
+    <ImageView
+        android:id="@+id/ivStandingLogo"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="4dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_tv_placeholder" />
+
+    <!-- Tên CLB -->
+    <TextView
+        android:id="@+id/tvStandingTeam"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="4dp"
+        android:text="Liverpool"
+        android:textColor="@color/text_primary"
+        android:textSize="11sp"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
+    <!-- Số trận đã đấu -->
+    <TextView
+        android:id="@+id/tvStandingPlayed"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="9"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+
+    <!-- Hiệu số bàn thắng bại -->
+    <TextView
+        android:id="@+id/tvStandingGd"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="+10"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+
+    <!-- Điểm -->
+    <TextView
+        android:id="@+id/tvStandingPoints"
+        android:layout_width="32dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="21"
+        android:textColor="@color/text_primary"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+</LinearLayout>
+

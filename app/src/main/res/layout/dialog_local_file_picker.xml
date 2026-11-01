@@ -66,7 +66,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#151329"
+        android:background="#1A1A1A"
         android:padding="8dp"
         android:layout_marginBottom="8dp">
 

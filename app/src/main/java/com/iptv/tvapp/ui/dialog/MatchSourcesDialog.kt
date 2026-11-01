@@ -76,6 +76,7 @@ class MatchSourcesDialog(
                     }
                 }
                 binding.root.setOnFocusChangeListener { v, hasFocus ->
+                    v.elevation = if (hasFocus) 8f else 0f
                     if (hasFocus) {
                         v.animate().scaleX(1.02f).scaleY(1.02f).setDuration(120).start()
                     } else {

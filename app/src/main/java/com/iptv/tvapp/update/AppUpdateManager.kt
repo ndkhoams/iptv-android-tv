@@ -228,8 +228,14 @@ class AppUpdateManager(private val context: Context) {
 
                 withContext(Dispatchers.Main) {
                     if (downloadedFile != null && downloadedFile.exists()) {
-                        tvProgressStatus.text = "Tải thành công! Đang mở trình cài đặt..."
-                        dialog.dismiss()
+                        tvProgressStatus.text = "Tải thành công! Bấm 'Cài đặt ngay' nếu chưa hiển thị trình cài đặt..."
+                        btnUpdateNow.text = "Cài đặt ngay"
+                        btnUpdateNow.isEnabled = true
+                        btnUpdateNow.setOnClickListener {
+                            installApk(activity, downloadedFile)
+                        }
+                        btnUpdateNow.requestFocus()
+                        btnDismiss.text = "Đóng"
                         installApk(activity, downloadedFile)
                     } else {
                         btnUpdateNow.isEnabled = true
@@ -285,6 +291,7 @@ class AppUpdateManager(private val context: Context) {
                     output.flush()
                 }
             }
+            apkFile.setReadable(true, false)
             return@withContext apkFile
         } catch (e: Exception) {
             e.printStackTrace()
@@ -311,6 +318,10 @@ class AppUpdateManager(private val context: Context) {
                 setDataAndType(uri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val resolveInfos = context.packageManager.queryIntentActivities(intent, 0)
+            for (info in resolveInfos) {
+                context.grantUriPermission(info.activityInfo.packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
