@@ -414,4 +414,10 @@ class SettingsDialog(
             hasChangedPlaylist = true
         }
     }
+
+    fun refreshPlaylists() {
+        if (!isShowing) return
+        playlistList = prefs.getPlaylists()
+        adapter.submitList(playlistList.toList())
+    }
 }

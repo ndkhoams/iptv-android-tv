@@ -146,6 +146,10 @@ object WebPageTemplate {
                 <label>Đường link URL (M3U / M3U8)</label>
                 <input type="url" id="newPlUrl" class="form-input" placeholder="http://... hoặc https://...">
             </div>
+            <div style="margin-top:10px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="newPlSelectNow" checked style="width:18px; height:18px; accent-color:#ff6500; cursor:pointer;">
+                <label for="newPlSelectNow" style="font-size:13px; color:var(--text-main); cursor:pointer;">Kích hoạt phát danh sách này ngay trên TV</label>
+            </div>
             <button class="submit-btn" onclick="addNewPlaylist()">+ Thêm &amp; Lưu Vào TV</button>
         </div>
 
@@ -159,6 +163,10 @@ object WebPageTemplate {
             <div class="form-group">
                 <label>Chọn file (.m3u, .m3u8, .txt)</label>
                 <input type="file" id="fileLocalM3u" accept=".m3u,.m3u8,.txt" class="form-input" style="padding:6px;">
+            </div>
+            <div style="margin-top:10px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="uploadPlSelectNow" checked style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;">
+                <label for="uploadPlSelectNow" style="font-size:13px; color:var(--text-main); cursor:pointer;">Kích hoạt phát danh sách này ngay trên TV</label>
             </div>
             <button class="submit-btn" style="background:#10b981;" onclick="uploadLocalPlaylist()">⬆ Tải File Lên TV</button>
         </div>
@@ -342,7 +350,7 @@ object WebPageTemplate {
         }
 
         function fetchStatus() {
-            fetch('/api/status').then(function(res) { return res.json(); })
+            fetch('/api/status?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
             .then(function(data) {
                 document.getElementById('bannerChName').innerText = data.nowPlaying || 'Chưa phát kênh';
                 document.getElementById('tvIpBadge').innerText = 'TV: ' + data.ip;
@@ -351,7 +359,7 @@ object WebPageTemplate {
 
         function loadChannels() {
             var container = document.getElementById('channelsContainer');
-            fetch('/api/channels').then(function(res) { return res.json(); })
+            fetch('/api/channels?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
             .then(function(data) {
                 allChannels = data;
                 renderChannels(allChannels);
@@ -398,7 +406,7 @@ object WebPageTemplate {
 
         function loadFavorites() {
             var container = document.getElementById('favoritesContainer');
-            fetch('/api/channels').then(function(res) { return res.json(); })
+            fetch('/api/channels?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
             .then(function(data) {
                 allChannels = data;
                 filterFavorites();
@@ -482,13 +490,18 @@ object WebPageTemplate {
 
         function loadPlaylists() {
             var container = document.getElementById('playlistsContainer');
-            fetch('/api/playlists').then(function(res) { return res.json(); })
+            fetch('/api/playlists?t=' + Date.now(), { cache: 'no-store' })
+            .then(function(res) { return res.json(); })
             .then(function(list) {
                 var html = '';
+                if (!list || list.length === 0) {
+                    container.innerHTML = '<div style="color:var(--text-sub); padding:12px;">Chưa có playlist nào.</div>';
+                    return;
+                }
                 for (var i = 0; i < list.length; i++) {
                     var item = list[i];
                     var itemClass = item.isSelected ? 'playlist-item selected' : 'playlist-item';
-                    var selBadge = item.isSelected ? ' ✓ (Đang chọn)' : '';
+                    var selBadge = item.isSelected ? ' ✓ (Đang phát)' : '';
                     var selectBtn = !item.isSelected ? '<button class="btn-sm btn-select" onclick="selectPlaylist(\'' + item.id + '\')">Chọn</button>' : '';
                     html += '<div class="' + itemClass + '">' +
                         '<div class="playlist-info">' +
@@ -510,21 +523,29 @@ object WebPageTemplate {
         function addNewPlaylist() {
             var name = document.getElementById('newPlName').value.trim();
             var url = document.getElementById('newPlUrl').value.trim();
+            var selectNow = document.getElementById('newPlSelectNow') ? document.getElementById('newPlSelectNow').checked : true;
             if (!name || !url) {
                 showToast('Vui lòng nhập tên và link M3U!');
                 return;
             }
+            showToast('Đang thêm playlist...');
             fetch('/api/playlist/add', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name: name, url: url })
+                body: JSON.stringify({ name: name, url: url, selectImmediately: selectNow })
             }).then(function(res) { return res.json(); })
             .then(function(data) {
                 if (data.success) {
-                    showToast('Đã thêm playlist mới!');
+                    showToast('Đã thêm playlist mới lên TV thành công!');
                     document.getElementById('newPlName').value = '';
                     document.getElementById('newPlUrl').value = '';
                     loadPlaylists();
+                    if (selectNow) {
+                        setTimeout(loadChannels, 600);
+                        setTimeout(fetchStatus, 600);
+                    }
+                } else {
+                    showToast('Lỗi: ' + (data.error || 'Không thể thêm playlist'));
                 }
             }).catch(function() {
                 showToast('Lỗi thêm playlist!');
@@ -539,6 +560,8 @@ object WebPageTemplate {
             }
             var file = fileInput.files[0];
             var customName = document.getElementById('uploadPlName').value.trim();
+            var selectNow = document.getElementById('uploadPlSelectNow') ? document.getElementById('uploadPlSelectNow').checked : true;
+            showToast('Đang tải file lên TV...');
             var reader = new FileReader();
             reader.onload = function(e) {
                 var content = e.target.result;
@@ -548,7 +571,8 @@ object WebPageTemplate {
                     body: JSON.stringify({
                         name: customName,
                         filename: file.name,
-                        content: content
+                        content: content,
+                        selectImmediately: selectNow
                     })
                 }).then(function(res) { return res.json(); })
                 .then(function(data) {
@@ -557,6 +581,10 @@ object WebPageTemplate {
                         fileInput.value = '';
                         document.getElementById('uploadPlName').value = '';
                         loadPlaylists();
+                        if (selectNow) {
+                            setTimeout(loadChannels, 600);
+                            setTimeout(fetchStatus, 600);
+                        }
                     } else {
                         showToast('Lỗi tải file lên TV!');
                     }
@@ -568,6 +596,7 @@ object WebPageTemplate {
         }
 
         function selectPlaylist(id) {
+            showToast('Đang chuyển playlist trên TV...');
             fetch('/api/playlist/select', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -575,25 +604,34 @@ object WebPageTemplate {
             }).then(function() {
                 showToast('Đã chuyển playlist trên TV!');
                 loadPlaylists();
+                setTimeout(loadChannels, 600);
+                setTimeout(fetchStatus, 600);
             }).catch(function() {});
         }
 
         function deletePlaylist(id) {
-            if (!confirm('Xóa danh sách này?')) return;
+            if (!confirm('Bạn có chắc chắn muốn xóa danh sách này?')) return;
             fetch('/api/playlist/delete', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ id: id })
-            }).then(function() {
-                showToast('Đã xóa playlist!');
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    showToast('Đã xóa playlist!');
+                } else {
+                    showToast(data.error || 'Không thể xóa danh sách!');
+                }
                 loadPlaylists();
+                setTimeout(loadChannels, 600);
+                setTimeout(fetchStatus, 600);
             }).catch(function() {});
         }
 
         var DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; ZTE B866V2F Build/STTC.230104.002) IPTV/9.1.16";
 
         function loadSettings() {
-            fetch('/api/settings').then(function(res) { return res.json(); })
+            fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
             .then(function(data) {
                 // 1. Player Engine
                 if (data.playerEngine === 'EXOPLAYER') {

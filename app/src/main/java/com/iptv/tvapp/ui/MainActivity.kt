@@ -52,6 +52,7 @@ import com.iptv.tvapp.ui.adapter.EpgTimelineAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.QuickPlaylistDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
+import com.iptv.tvapp.sniffer.StreamSnifferManager
 import com.iptv.tvapp.update.AppUpdateManager
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var playlistManager: PlaylistManager
     private lateinit var epgManager: EpgManager
     private lateinit var appUpdateManager: AppUpdateManager
+    private lateinit var streamSnifferManager: StreamSnifferManager
 
     private var player: ExoPlayer? = null
     private var libVLC: LibVLC? = null
@@ -156,10 +158,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         prefs = PreferencesHelper(this)
-        prefs.ensureKtvActiveOnStartup()
         playlistManager = PlaylistManager(this)
         epgManager = EpgManager(this)
         appUpdateManager = AppUpdateManager(this)
+        streamSnifferManager = StreamSnifferManager(this)
 
         acquireMulticastLock()
         checkStoragePermission()
@@ -380,7 +382,8 @@ class MainActivity : AppCompatActivity() {
                 handleRemoteAction(action)
             },
             onPlaylistChanged = {
-                loadPlaylist(forceRefresh = false)
+                loadPlaylist(forceRefresh = true)
+                activeSettingsDialog?.refreshPlaylists()
             },
             onChannelsUpdated = {
                 refreshChannelsState()
@@ -891,7 +894,37 @@ class MainActivity : AppCompatActivity() {
 
         val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
 
-        // Nếu là trận đấu thể thao trực tiếp từ web (Xôi Lạc, Cà Khịa, StreamFree), giải mã link m3u8 động
+        // Luôn ngắt bóc tách webview trước đó nếu người dùng chuyển kênh khác
+        streamSnifferManager.cancel()
+
+        // 1. Nếu là luồng yêu cầu WebView Sniffer (sniffer://, web://, embed.st, ppv.st, streamfree player...)
+        if (isSnifferUrl(channel.streamUrl)) {
+            binding.tvQuickBufferingText.text = "Đang bóc tách luồng trực tiếp qua WebView..."
+            binding.layoutQuickBuffering.visibility = View.VISIBLE
+            val targetEmbedUrl = channel.streamUrl
+                .removePrefix("sniffer://")
+                .removePrefix("web://")
+                .trim()
+
+            streamSnifferManager.sniffStream(targetEmbedUrl, timeoutMs = 12000L) { result ->
+                if (currentPlayingChannel?.id != channel.id) return@sniffStream
+                result.onSuccess { resolvedUrl ->
+                    val streamUriString = normalizeStreamUrl(resolvedUrl, isVlc)
+                    if (isVlc) {
+                        playWithVlc(streamUriString)
+                    } else {
+                        playWithExoPlayer(streamUriString)
+                    }
+                }.onFailure { err ->
+                    binding.layoutQuickBuffering.visibility = View.GONE
+                    binding.tvErrorMessage.visibility = View.VISIBLE
+                    binding.tvErrorDetail.text = "Lỗi bóc tách luồng trực tiếp.\nBấm ▲ ▼ để đổi kênh khác."
+                }
+            }
+            return
+        }
+
+        // 2. Nếu là trận đấu thể thao trực tiếp từ web (Xôi Lạc, Cà Khịa, StreamFree), giải mã link m3u8 động
         if (channel.streamUrl.contains("/truc-tiep/") || channel.streamUrl.startsWith("streamfree://")) {
             binding.tvQuickBufferingText.text = "Đang kết nối luồng trực tiếp..."
             binding.layoutQuickBuffering.visibility = View.VISIBLE
@@ -900,11 +933,34 @@ class MainActivity : AppCompatActivity() {
                     playlistManager.sportsLiveManager.resolveLiveStreamUrl(channel.streamUrl)
                 }
                 if (currentPlayingChannel?.id == channel.id) {
-                    val streamUriString = normalizeStreamUrl(resolved, isVlc)
-                    if (isVlc) {
-                        playWithVlc(streamUriString)
+                    if (isSnifferUrl(resolved)) {
+                        binding.tvQuickBufferingText.text = "Đang bóc tách luồng trực tiếp qua WebView..."
+                        val targetEmbedUrl = resolved
+                            .removePrefix("sniffer://")
+                            .removePrefix("web://")
+                            .trim()
+                        streamSnifferManager.sniffStream(targetEmbedUrl, timeoutMs = 12000L) { result ->
+                            if (currentPlayingChannel?.id != channel.id) return@sniffStream
+                            result.onSuccess { sniffedUrl ->
+                                val streamUriString = normalizeStreamUrl(sniffedUrl, isVlc)
+                                if (isVlc) {
+                                    playWithVlc(streamUriString)
+                                } else {
+                                    playWithExoPlayer(streamUriString)
+                                }
+                            }.onFailure {
+                                binding.layoutQuickBuffering.visibility = View.GONE
+                                binding.tvErrorMessage.visibility = View.VISIBLE
+                                binding.tvErrorDetail.text = "Không thể bóc tách luồng từ web.\nBấm ▲ ▼ để đổi kênh khác."
+                            }
+                        }
                     } else {
-                        playWithExoPlayer(streamUriString)
+                        val streamUriString = normalizeStreamUrl(resolved, isVlc)
+                        if (isVlc) {
+                            playWithVlc(streamUriString)
+                        } else {
+                            playWithExoPlayer(streamUriString)
+                        }
                     }
                 }
             }
@@ -918,6 +974,16 @@ class MainActivity : AppCompatActivity() {
         } else {
             playWithExoPlayer(streamUriString)
         }
+    }
+
+    private fun isSnifferUrl(url: String): Boolean {
+        val trimmed = url.trim().lowercase()
+        return trimmed.startsWith("sniffer://") ||
+                trimmed.startsWith("web://") ||
+                trimmed.contains("embed.st/") ||
+                trimmed.contains("ppv.st/") ||
+                trimmed.contains("streamfree.top/player/") ||
+                trimmed.contains("streamfree.top/embed/")
     }
 
     private fun parseStreamUrlAndHeaders(rawUrl: String): Pair<String, Map<String, String>> {
@@ -1987,6 +2053,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        streamSnifferManager.destroy()
         stopTelemetryUpdates()
         telemetryHandler.removeCallbacksAndMessages(null)
         hideHandler.removeCallbacksAndMessages(null)

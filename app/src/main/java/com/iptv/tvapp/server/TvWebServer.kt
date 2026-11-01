@@ -203,12 +203,22 @@ class TvWebServer(
             }
             method == "POST" && path == "/api/playlist/add" -> {
                 val json = JSONObject(body)
-                val name = json.getString("name")
-                val url = json.getString("url")
+                val name = json.getString("name").trim()
+                val url = json.getString("url").trim()
+                val selectImmediately = json.optBoolean("selectImmediately", true)
                 val list = prefs.getPlaylists()
-                list.add(PlaylistSource(UUID.randomUUID().toString(), name, url, false))
+                val newId = UUID.randomUUID().toString()
+                if (selectImmediately) {
+                    list.forEach { it.isSelected = false }
+                }
+                list.add(PlaylistSource(newId, name, url, selectImmediately))
                 prefs.savePlaylists(list)
-                val resp = JSONObject().apply { put("success", true) }
+                mainHandler.post { onPlaylistChanged() }
+                val resp = JSONObject().apply {
+                    put("success", true)
+                    put("id", newId)
+                    put("name", name)
+                }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
             method == "POST" && path == "/api/playlist/upload" -> {
@@ -223,8 +233,12 @@ class TvWebServer(
                 val targetFile = File(context.filesDir, "playlist_${newId.replace("-", "_")}.m3u")
                 targetFile.writeText(content, Charsets.UTF_8)
 
+                val selectImmediately = json.optBoolean("selectImmediately", true)
                 val list = prefs.getPlaylists()
-                list.add(PlaylistSource(newId, name, "file://${targetFile.absolutePath}", false))
+                if (selectImmediately) {
+                    list.forEach { it.isSelected = false }
+                }
+                list.add(PlaylistSource(newId, name, "file://${targetFile.absolutePath}", selectImmediately))
                 prefs.savePlaylists(list)
                 mainHandler.post { onPlaylistChanged() }
 
@@ -247,13 +261,28 @@ class TvWebServer(
                 val id = json.getString("id")
                 val list = prefs.getPlaylists()
                 if (list.size > 1) {
+                    val removed = list.firstOrNull { it.id == id }
                     list.removeAll { it.id == id }
-                    if (list.none { it.isSelected }) list[0].isSelected = true
+                    if (removed != null && removed.url.startsWith("file://")) {
+                        try {
+                            val f = File(removed.url.removePrefix("file://"))
+                            if (f.exists()) f.delete()
+                        } catch (e: Exception) {}
+                    }
+                    if (list.none { it.isSelected }) {
+                        list[0].isSelected = true
+                    }
                     prefs.savePlaylists(list)
                     mainHandler.post { onPlaylistChanged() }
+                    val resp = JSONObject().apply { put("success", true) }
+                    sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                } else {
+                    val resp = JSONObject().apply {
+                        put("success", false)
+                        put("error", "Cần giữ lại ít nhất 1 danh sách!")
+                    }
+                    sendResponse(output, "application/json; charset=utf-8", resp.toString())
                 }
-                val resp = JSONObject().apply { put("success", true) }
-                sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
             method == "POST" && path == "/api/settings/decoder" -> {
                 val json = JSONObject(body)
@@ -348,6 +377,11 @@ class TvWebServer(
                 "Content-Type: $contentType\r\n" +
                 "Content-Length: ${bytes.size}\r\n" +
                 "Access-Control-Allow-Origin: *\r\n" +
+                "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
+                "Access-Control-Allow-Headers: Content-Type\r\n" +
+                "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+                "Pragma: no-cache\r\n" +
+                "Expires: 0\r\n" +
                 "Connection: close\r\n\r\n"
         output.write(header.toByteArray(Charsets.UTF_8))
         output.write(bytes)
