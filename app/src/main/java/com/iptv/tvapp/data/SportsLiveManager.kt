@@ -560,7 +560,6 @@ class SportsLiveManager(private val context: Context) {
 
             val embedUrl = "https://streamfree.top/embed/$category/$encodedKey$quality"
             val playerReferer = "https://streamfree.top/player/$category/$encodedKey"
-            fallbackPlayerUrl = playerReferer
 
             // 1. Lấy mã nhúng HTML để trích xuất token chữ ký bảo mật _0x
             val embedReq = Request.Builder()
