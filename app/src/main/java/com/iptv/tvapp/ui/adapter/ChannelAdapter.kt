@@ -61,8 +61,6 @@ class ChannelAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
-            binding.root.nextFocusLeftId = com.iptv.tvapp.R.id.rvCategories
-
             binding.root.setOnClickListener {
                 val pos = adapterPosition
                 if (pos != RecyclerView.NO_POSITION) {

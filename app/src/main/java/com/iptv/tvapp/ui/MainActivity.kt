@@ -273,7 +273,9 @@ class MainActivity : AppCompatActivity() {
             displayCategoryChannels(category)
         }
         binding.rvCategories.apply {
-            layoutManager = TvLinearLayoutManager(this@MainActivity) { binding.rvCategories }
+            layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvCategories }) { focused, direction ->
+                if (direction == View.FOCUS_RIGHT) findHorizontallyAlignedChannelView(focused) else null
+            }
             adapter = categoryAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(10)
@@ -310,7 +312,9 @@ class MainActivity : AppCompatActivity() {
             }
         )
         binding.rvChannels.apply {
-            layoutManager = TvLinearLayoutManager(this@MainActivity) { binding.rvChannels }
+            layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvChannels }) { focused, direction ->
+                if (direction == View.FOCUS_LEFT) findHorizontallyAlignedCategoryView(focused) else null
+            }
             adapter = channelAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(20)
@@ -801,7 +805,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 // Luôn cập nhật trực tiếp thể thao ngầm trong nền
-                fetchSportsInBackground(forceRefresh = forceRefresh, showNotification = !isStartup)
+                fetchSportsInBackground(forceRefresh = forceRefresh, showNotification = !isStartup, delayMs = 2500L)
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
@@ -812,11 +816,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true) {
+    private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true, delayMs: Long = 0L) {
         sportsFetchJob?.cancel()
         sportsFetchJob = lifecycleScope.launch {
-            // Cho kênh TV phát ổn định 2.5s trước khi quét luồng thể thao ngầm
-            delay(2500)
+            if (delayMs > 0) {
+                delay(delayMs)
+            }
             try {
                 val sportsCategories = withContext(Dispatchers.IO) {
                     playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
@@ -833,6 +838,8 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 // Giữ trải nghiệm phát kênh truyền hình liền mạch, không làm gián đoạn
+            } finally {
+                binding.layoutQuickBuffering.visibility = View.GONE
             }
         }
     }
@@ -853,7 +860,11 @@ class MainActivity : AppCompatActivity() {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
             allCategories.addAll(sportsCategoriesList)
             if (sportsCategoriesList.isEmpty()) {
-                fetchSportsInBackground(forceRefresh = true, showNotification = true)
+                binding.tvCategoryHeader.text = "🔴 LIVE EVENTS"
+                binding.tvChannelCount.text = "Đang tải dữ liệu..."
+                binding.tvQuickBufferingText.text = "Đang tải trận đấu trực tiếp..."
+                binding.layoutQuickBuffering.visibility = View.VISIBLE
+                fetchSportsInBackground(forceRefresh = true, showNotification = false, delayMs = 0L)
             }
         }
 
@@ -895,6 +906,62 @@ class MainActivity : AppCompatActivity() {
                     ?: binding.rvCategories.requestFocus()
             }
         }
+    }
+
+    private fun findHorizontallyAlignedCategoryView(focusedChannelView: View): View? {
+        if (binding.rvCategories.childCount == 0) return null
+
+        val focusedLoc = IntArray(2)
+        focusedChannelView.getLocationOnScreen(focusedLoc)
+        val focusedCenterY = focusedLoc[1] + (focusedChannelView.height / 2)
+
+        var closestChild: View? = null
+        var minDiff = Int.MAX_VALUE
+
+        for (i in 0 until binding.rvCategories.childCount) {
+            val child = binding.rvCategories.getChildAt(i) ?: continue
+            if (!child.isShown || !child.isFocusable) continue
+
+            val childLoc = IntArray(2)
+            child.getLocationOnScreen(childLoc)
+            val childCenterY = childLoc[1] + (child.height / 2)
+
+            val diff = Math.abs(childCenterY - focusedCenterY)
+            if (diff < minDiff) {
+                minDiff = diff
+                closestChild = child
+            }
+        }
+
+        return closestChild
+    }
+
+    private fun findHorizontallyAlignedChannelView(focusedCategoryView: View): View? {
+        if (binding.rvChannels.childCount == 0) return null
+
+        val focusedLoc = IntArray(2)
+        focusedCategoryView.getLocationOnScreen(focusedLoc)
+        val focusedCenterY = focusedLoc[1] + (focusedCategoryView.height / 2)
+
+        var closestChild: View? = null
+        var minDiff = Int.MAX_VALUE
+
+        for (i in 0 until binding.rvChannels.childCount) {
+            val child = binding.rvChannels.getChildAt(i) ?: continue
+            if (!child.isShown || !child.isFocusable) continue
+
+            val childLoc = IntArray(2)
+            child.getLocationOnScreen(childLoc)
+            val childCenterY = childLoc[1] + (child.height / 2)
+
+            val diff = Math.abs(childCenterY - focusedCenterY)
+            if (diff < minDiff) {
+                minDiff = diff
+                closestChild = child
+            }
+        }
+
+        return closestChild
     }
 
     private fun displayCategoryChannels(category: Category, focusChannel: Channel? = null) {
@@ -1852,7 +1919,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    if (binding.rvChannels.hasFocus()) {
+                        val focused = currentFocus ?: binding.rvChannels.findFocus()
+                        if (focused != null) {
+                            val targetCat = findHorizontallyAlignedCategoryView(focused)
+                            if (targetCat != null) {
+                                targetCat.requestFocus()
+                                return true
+                            }
+                        }
+                    }
+                } else {
                     val playing = currentPlayingChannel
                     val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
                     if (isSports) {
@@ -1888,7 +1966,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    if (binding.rvCategories.hasFocus()) {
+                        val focused = currentFocus ?: binding.rvCategories.findFocus()
+                        if (focused != null) {
+                            val targetChan = findHorizontallyAlignedChannelView(focused)
+                            if (targetChan != null) {
+                                targetChan.requestFocus()
+                                return true
+                            }
+                        }
+                    }
+                } else {
                     // Phím Phải khi xem toàn màn hình: Mở menu chọn danh sách phát nhanh
                     showQuickPlaylistDialog()
                     return true
@@ -2365,20 +2454,7 @@ class MainActivity : AppCompatActivity() {
         showBottomNotification("🔄 Đang làm mới danh sách trận đấu thể thao...")
         binding.tvQuickBufferingText.text = "Đang quét trận đấu..."
         binding.layoutQuickBuffering.visibility = View.VISIBLE
-
-        lifecycleScope.launch(Dispatchers.Main) {
-            val sportsCategories = withContext(Dispatchers.IO) {
-                playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
-            }
-            binding.layoutQuickBuffering.visibility = View.GONE
-            if (sportsCategories.isNotEmpty()) {
-                applyUpdatedSportsCategories(sportsCategories)
-                val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
-                showBottomNotification("✅ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
-            } else {
-                showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
-            }
-        }
+        fetchSportsInBackground(forceRefresh = true, showNotification = true, delayMs = 0L)
     }
 
     private fun startPeriodicSportsRefresh() {

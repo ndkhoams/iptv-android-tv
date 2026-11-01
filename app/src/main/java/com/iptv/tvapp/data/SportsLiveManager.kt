@@ -5,7 +5,12 @@ import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.parser.M3UParser
 import com.iptv.tvapp.data.PreferencesHelper
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -461,61 +466,72 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
-     * Tự động lấy lịch thi đấu thực tế hôm nay từ ESPN Scoreboard API để đối chiếu lần 2
+     * Tự động lấy lịch thi đấu thực tế hôm nay từ ESPN Scoreboard API bất đồng bộ trong nền,
+     * chạy song song không làm nghẽn tiến trình nạp trực tiếp thể thao.
      */
-    private fun fetchTodayEspnFixtures() {
+    private fun triggerAsyncEspnFixturesFetch() {
         val now = System.currentTimeMillis()
         if (espnFixturesCache.isNotEmpty() && (now - lastEspnFetchTimeMs) < ESPN_CACHE_TTL_MS) {
             return
         }
 
-        val leagues = mapOf(
-            "EPL" to "eng.1",
-            "UCL" to "uefa.champions",
-            "LALIGA" to "esp.1",
-            "BUNDESLIGA" to "ger.1",
-            "SERIE_A" to "ita.1",
-            "LIGUE1" to "fra.1"
-        )
+        CoroutineScope(Dispatchers.IO).launch {
+            val leagues = mapOf(
+                "EPL" to "eng.1",
+                "UCL" to "uefa.champions",
+                "LALIGA" to "esp.1",
+                "BUNDESLIGA" to "ger.1",
+                "SERIE_A" to "ita.1",
+                "LIGUE1" to "fra.1"
+            )
 
-        for ((leagueKey, code) in leagues) {
             try {
-                val url = "https://site.api.espn.com/apis/site/v2/sports/soccer/$code/scoreboard"
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", CHROME_UA)
-                    .build()
-                val response = httpClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val bodyStr = response.body?.string()
-                    if (!bodyStr.isNullOrBlank()) {
-                        val root = JSONObject(bodyStr)
-                        val events = root.optJSONArray("events")
-                        if (events != null) {
-                            val fixtures = mutableListOf<EspnFixture>()
-                            for (i in 0 until events.length()) {
-                                val ev = events.getJSONObject(i)
-                                val comps = ev.optJSONArray("competitions")
-                                if (comps != null && comps.length() > 0) {
-                                    val competitors = comps.getJSONObject(0).optJSONArray("competitors")
-                                    if (competitors != null && competitors.length() >= 2) {
-                                        val t1 = competitors.getJSONObject(0).optJSONObject("team")?.optString("name", "") ?: ""
-                                        val t2 = competitors.getJSONObject(1).optJSONObject("team")?.optString("name", "") ?: ""
-                                        if (t1.isNotBlank() && t2.isNotBlank()) {
-                                            fixtures.add(EspnFixture(t1, t2, leagueKey))
+                coroutineScope {
+                    leagues.map { (leagueKey, code) ->
+                        async {
+                            try {
+                                val url = "https://site.api.espn.com/apis/site/v2/sports/soccer/$code/scoreboard"
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .header("User-Agent", CHROME_UA)
+                                    .build()
+                                val response = httpClient.newCall(request).execute()
+                                if (response.isSuccessful) {
+                                    val bodyStr = response.body?.string()
+                                    if (!bodyStr.isNullOrBlank()) {
+                                        val root = JSONObject(bodyStr)
+                                        val events = root.optJSONArray("events")
+                                        if (events != null) {
+                                            val fixtures = mutableListOf<EspnFixture>()
+                                            for (i in 0 until events.length()) {
+                                                val ev = events.getJSONObject(i)
+                                                val comps = ev.optJSONArray("competitions")
+                                                if (comps != null && comps.length() > 0) {
+                                                    val competitors = comps.getJSONObject(0).optJSONArray("competitors")
+                                                    if (competitors != null && competitors.length() >= 2) {
+                                                        val t1 = competitors.getJSONObject(0).optJSONObject("team")?.optString("name", "") ?: ""
+                                                        val t2 = competitors.getJSONObject(1).optJSONObject("team")?.optString("name", "") ?: ""
+                                                        if (t1.isNotBlank() && t2.isNotBlank()) {
+                                                            fixtures.add(EspnFixture(t1, t2, leagueKey))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            espnFixturesCache[leagueKey] = fixtures
                                         }
                                     }
                                 }
+                            } catch (e: Exception) {
+                                // Bỏ qua lỗi mạng cục bộ với từng giải
                             }
-                            espnFixturesCache[leagueKey] = fixtures
                         }
-                    }
+                    }.awaitAll()
                 }
+                lastEspnFetchTimeMs = System.currentTimeMillis()
             } catch (e: Exception) {
-                // Bỏ qua lỗi mạng cục bộ với 1 giải
+                // Bỏ qua lỗi chung
             }
         }
-        lastEspnFetchTimeMs = now
     }
 
     private fun matchEspnFixture(home: String, away: String): String? {
@@ -663,10 +679,12 @@ class SportsLiveManager(private val context: Context) {
         val todayD = cal.get(Calendar.DAY_OF_MONTH)
         val todayM = cal.get(Calendar.MONTH) + 1
 
-        if (m == todayM && (d == todayD || d == todayD + 1)) return true
-        if (m == todayM + 1 && d == 1 && todayD >= 28) return true
+        // Chấp nhận các trận đấu từ hôm qua, hôm nay đến 2 ngày tới (phòng ngừa chênh lệch múi giờ quốc tế/Android TV)
+        if (m == todayM && (d in (todayD - 1)..(todayD + 2))) return true
+        if (m == todayM + 1 && d <= 2 && todayD >= 28) return true
+        if (m == todayM - 1 && todayD <= 2 && d >= 28) return true
 
-        return false
+        return true // File thethao.m3u được máy chủ cập nhật định kỳ mỗi 30 phút, đảm bảo link luôn mới
     }
 
     /**
@@ -699,16 +717,12 @@ class SportsLiveManager(private val context: Context) {
     suspend fun getSportsCategories(forceRefresh: Boolean = false): List<Category> =
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
-            if (forceRefresh) {
-                clearCache()
-            } else if (cachedCategories != null && (now - lastFetchTimeMs) < CACHE_TTL_MS) {
+            if (!forceRefresh && cachedCategories != null && (now - lastFetchTimeMs) < CACHE_TTL_MS) {
                 return@withContext cachedCategories!!
             }
 
             val cacheFile = File(context.cacheDir, "thethao_sports_cache.m3u")
-            if (forceRefresh && cacheFile.exists()) {
-                cacheFile.delete()
-            }
+            val tempFile = File(context.cacheDir, "thethao_sports_cache.tmp")
 
             val baseSportsUrl = prefs.sportsPlaylistUrl.ifBlank { DEFAULT_SPORTS_URL }
             val sportsUrl = if (forceRefresh) {
@@ -716,7 +730,7 @@ class SportsLiveManager(private val context: Context) {
             } else baseSportsUrl
 
             try {
-                // 1. Tải file thethao.m3u từ GitHub
+                // 1. Tải file thethao.m3u từ GitHub vào file tạm, không xóa cache cũ để đề phòng rớt mạng
                 val request = Request.Builder()
                     .url(sportsUrl)
                     .header("User-Agent", CHROME_UA)
@@ -727,7 +741,11 @@ class SportsLiveManager(private val context: Context) {
                 if (response.isSuccessful) {
                     val bodyBytes = response.body?.bytes()
                     if (bodyBytes != null && bodyBytes.isNotEmpty()) {
-                        FileOutputStream(cacheFile).use { it.write(bodyBytes) }
+                        FileOutputStream(tempFile).use { it.write(bodyBytes) }
+                        if (tempFile.exists() && tempFile.length() > 0L) {
+                            tempFile.copyTo(cacheFile, overwrite = true)
+                            tempFile.delete()
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -739,8 +757,8 @@ class SportsLiveManager(private val context: Context) {
             }
 
             try {
-                // Lấy lịch thi đấu thực tế hôm nay từ ESPN
-                fetchTodayEspnFixtures()
+                // Kích hoạt nạp lịch thi đấu ESPN bất đồng bộ trong nền, không làm nghẽn tiến trình nạp
+                triggerAsyncEspnFixturesFetch()
 
                 // 2. Parse file thethao.m3u thành danh sách Channels
                 val rawChannels = FileInputStream(cacheFile).use { input ->
@@ -890,11 +908,8 @@ class SportsLiveManager(private val context: Context) {
                     val sortedFeaturedSports = featuredSportsMatches.sortedBy { it.timestamp }
 
                     val targetMatches = mutableListOf<MatchGroup>()
-                    if (sortedPriority.isNotEmpty()) {
-                        targetMatches.addAll(sortedPriority)
-                    } else {
-                        targetMatches.addAll(sortedOther)
-                    }
+                    targetMatches.addAll(sortedPriority)
+                    targetMatches.addAll(sortedOther)
                     targetMatches.addAll(sortedFeaturedSports)
 
                     // Lưu vào cache Map để MatchSourcesDialog truy xuất khi click

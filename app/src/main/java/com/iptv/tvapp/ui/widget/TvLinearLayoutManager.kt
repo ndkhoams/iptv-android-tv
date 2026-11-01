@@ -13,7 +13,8 @@ import androidx.recyclerview.widget.RecyclerView
  */
 class TvLinearLayoutManager(
     context: Context,
-    private val recyclerViewProvider: () -> RecyclerView?
+    private val recyclerViewProvider: () -> RecyclerView?,
+    var onHorizontalFocusSearch: ((focused: View, direction: Int) -> View?)? = null
 ) : LinearLayoutManager(context, VERTICAL, false) {
 
     override fun onInterceptFocusSearch(focused: View, direction: Int): View? {
@@ -78,6 +79,13 @@ class TvLinearLayoutManager(
                 return focused
             } else {
                 return focused
+            }
+        }
+
+        if (direction == View.FOCUS_LEFT || direction == View.FOCUS_RIGHT) {
+            val customTarget = onHorizontalFocusSearch?.invoke(focused, direction)
+            if (customTarget != null) {
+                return customTarget
             }
         }
 
