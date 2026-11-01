@@ -2,6 +2,7 @@ package com.iptv.tvapp.data
 
 import android.content.Context
 import com.iptv.tvapp.model.Category
+import com.iptv.tvapp.util.NetworkUtils
 import com.iptv.tvapp.model.Channel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -15,16 +16,17 @@ import java.util.regex.Pattern
 
 class SportsLiveManager(private val context: Context) {
 
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(6, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .build()
+    private val httpClient = NetworkUtils.configureTrustAllSsl(
+        OkHttpClient.Builder()
+            .connectTimeout(6, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+    ).build()
 
     companion object {
         const val ACTION_REFRESH_SPORTS = "action_refresh_sports"
-        private const val CACHE_TTL_MS = 15 * 60 * 1000L // Tự động cập nhật 15 phút 1 lần
+        private const val CACHE_TTL_MS = 30 * 60 * 1000L // Tự động cập nhật 30 phút 1 lần
 
         // Chuối Chiên TV
         private const val CHUOICHIEN_API =

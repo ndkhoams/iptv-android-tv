@@ -128,6 +128,11 @@ class MainActivity : AppCompatActivity() {
 
     fun showBottomNotification(message: String) {
         bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
+        // Ẩn bảng thông tin kênh nhanh nếu đang mở để tránh hai thông báo bị đè lên nhau
+        hideHandler.removeCallbacks(hideQuickBannerRunnable)
+        binding.quickChannelInfo.visibility = View.GONE
+        binding.layoutQuickBuffering.visibility = View.GONE
+
         binding.tvBottomNotificationText.text = message
         binding.layoutBottomNotification.alpha = 0f
         binding.layoutBottomNotification.translationY = 30f
@@ -1421,6 +1426,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showQuickChannelInfo(channel: Channel) {
+        // Ẩn thông báo cạnh dưới nếu đang mở để tránh hai bảng đè lên nhau
+        bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
+        binding.layoutBottomNotification.visibility = View.GONE
+
         binding.tvQuickNumber.text = String.format("%02d", channel.number)
         binding.tvQuickName.text = channel.name
 
@@ -1672,7 +1681,7 @@ class MainActivity : AppCompatActivity() {
                         finish()
                     } else {
                         backPressedTime = System.currentTimeMillis()
-                        currentPlayingChannel?.let { showQuickChannelInfo(it) }
+                        // Chỉ hiển thị thông báo xác nhận thoát, không gọi showQuickChannelInfo để tránh đè 2 bảng lên nhau
                         showBottomNotification("Bấm QUAY LẠI lần nữa để thoát ứng dụng")
                         return true
                     }
@@ -2057,7 +2066,7 @@ class MainActivity : AppCompatActivity() {
     private fun startPeriodicSportsRefresh() {
         lifecycleScope.launch {
             while (isActive) {
-                delay(15 * 60 * 1000L) // Chu kỳ quét tự động 15 phút 1 lần
+                delay(30 * 60 * 1000L) // Chu kỳ quét tự động 30 phút 1 lần
                 try {
                     val sportsCategories = withContext(Dispatchers.IO) {
                         playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)

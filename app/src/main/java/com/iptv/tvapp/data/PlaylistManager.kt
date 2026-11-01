@@ -2,6 +2,7 @@ package com.iptv.tvapp.data
 
 import android.content.Context
 import com.iptv.tvapp.model.Category
+import com.iptv.tvapp.util.NetworkUtils
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.parser.M3UParser
 import kotlinx.coroutines.Dispatchers
@@ -26,22 +27,23 @@ class PlaylistManager(private val context: Context) {
 
     private val cookieStore = ConcurrentHashMap<String, MutableList<Cookie>>()
 
-    private val httpClient: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .cookieJar(object : CookieJar {
-            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-                val list = cookieStore.getOrPut(url.host) { CopyOnWriteArrayList() }
-                list.addAll(cookies)
-            }
+    private val httpClient: OkHttpClient = NetworkUtils.configureTrustAllSsl(
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(25, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .cookieJar(object : CookieJar {
+                override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+                    val list = cookieStore.getOrPut(url.host) { CopyOnWriteArrayList() }
+                    list.addAll(cookies)
+                }
 
-            override fun loadForRequest(url: HttpUrl): List<Cookie> {
-                return cookieStore[url.host] ?: emptyList()
-            }
-        })
-        .build()
+                override fun loadForRequest(url: HttpUrl): List<Cookie> {
+                    return cookieStore[url.host] ?: emptyList()
+                }
+            })
+    ).build()
 
     companion object {
         // Danh sách các User-Agent xoay vòng: Mặc định ưu tiên FPT Play Box chuẩn IPTV

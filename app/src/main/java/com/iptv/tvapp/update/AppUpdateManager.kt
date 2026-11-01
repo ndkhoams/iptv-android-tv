@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.iptv.tvapp.util.NetworkUtils
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -44,10 +45,11 @@ class AppUpdateManager(private val context: Context) {
             "https://api.github.com/repos/ndkhoams/iptv-android-tv/releases?per_page=5"
     }
 
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val httpClient = NetworkUtils.configureTrustAllSsl(
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+    ).build()
 
     fun getAppVersion(ctx: Context = context): String {
         return try {

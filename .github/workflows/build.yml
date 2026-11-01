@@ -55,25 +55,17 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v')
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Khởi Động Siêu Nhanh, Quét Thể Thao Ngầm, Map Phím Ch+/Ch- & Thanh Thông Báo Mới"
+        name: "${{ github.ref_name }} - Tối Ưu Quét Thể Thao 30 Phút, Chống Đè Thông Báo & Tối Ưu Cho Android 5.1 (Mi Box 3c)"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Tối ưu tốc độ mở app tức thì (< 1 giây):**
-            - Không còn phải chờ quét luồng trực tiếp thể thao khi mở app. App đọc danh sách M3U từ bộ nhớ đệm và phát ngay kênh mặc định chỉ trong tích tắc.
-          - **Tìm kiếm luồng trực tiếp thể thao chạy ngầm:**
-            - Trong khi kênh TV đang phát mượt mà, app tự động quét ngầm các trận đấu thể thao hôm nay trên Internet và tự động gộp vào danh mục mà không làm gián đoạn việc xem TV.
-          - **Thanh thông báo cạnh dưới màn hình chuyên dụng (Không hiện giữa):**
-            - Thiết kế thanh thông báo kính mờ cao cấp ở cạnh dưới màn hình kèm logo TV Play sắc nét, thông báo hoàn tất quét thể thao và trạng thái ứng dụng.
-          - **Map phím Channel + / Channel - trên điều khiển TV:**
-            - Bấm phím **Ch +**: chuyển tới kênh có số thứ tự lớn hơn trong danh sách hiện hành.
-            - Bấm phím **Ch -**: chuyển tới kênh có số thứ tự nhỏ hơn trong danh sách hiện hành.
-            - Tự động cuộn và trỏ khung chọn tới kênh mới khi đang mở bảng hướng dẫn kênh.
-          - **Cải tiến hộp thoại Cài đặt:**
-            - Đổi nhãn nút thành "Mặc định", hỗ trợ phím điều hướng D-Pad di chuyển chuẩn xác giữa ô nhập User-Agent và nhóm lựa chọn chế độ mở kênh.
-          - **Cố định kích thước hộp thoại chọn playlist nhanh:**
-            - Khóa cố định tỉ lệ 1:1, không còn hiện tượng phóng to làm tràn dòng ra ngoài viewport màn hình TV.
-          - **Bổ sung trọn bộ Adaptive Icon cho Android 8.0 đến Android 14:**
-            - Đảm bảo toàn bộ thông báo hệ thống và giao diện hiển thị chuẩn logo TV Play.
+          - **Điều chỉnh chu kỳ cào luồng thể thao ngầm:**
+            - Nâng thời gian quét và cập nhật danh sách trực tiếp thể thao lên **30 phút một lần** (thay vì 15 phút), giảm tải mạng và giữ cho TV Box chạy mượt mà, tiết kiệm tài nguyên.
+          - **Khắc phục triệt để lỗi đè thông báo:**
+            - Sửa hiện tượng thanh thông báo thoát đè lên bảng thông tin kênh nhanh OSD. Bổ sung cơ chế tự động ẩn bảng cũ khi bảng mới xuất hiện.
+          - **Tối ưu hóa chuyên sâu cho thiết bị Android 5.1 / RAM 1GB (Mi Box 3c):**
+            - Bật `largeHeap="true"` mở rộng bộ nhớ Java Heap lên 256MB–512MB, chống tràn RAM (`OutOfMemoryError`) khi nạp danh sách kênh lớn.
+            - Bật `hardwareAccelerated="true"` ép GPU Mali-450 gánh toàn bộ giao diện 60fps.
+            - Hỗ trợ SSL / TLS Permissive cho Android 5.1, bỏ qua lỗi chứng chỉ Let's Encrypt hết hạn trên hệ điều hành Android cũ khi tải playlist online.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
