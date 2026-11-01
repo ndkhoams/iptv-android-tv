@@ -1339,8 +1339,7 @@ class MainActivity : AppCompatActivity() {
             player?.pause()
             binding.playerView.visibility = View.GONE
 
-            // Che ngay lập tức khung hình tĩnh của kênh cũ để triệt tiêu hiện tượng đơ hình kênh cũ
-            binding.vlcVideoLayout.visibility = View.INVISIBLE
+            binding.vlcVideoLayout.visibility = View.VISIBLE
             binding.layoutQuickBuffering.visibility = View.VISIBLE
 
             val vlc = libVLC ?: return
@@ -1866,28 +1865,99 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
+            val isOverlayVisible = (binding.channelGuideOverlay.visibility == View.VISIBLE)
+            val isSettingsShowing = (activeSettingsDialog?.isShowing == true)
+
+            // Phím cài đặt / menu luôn hoạt động
             when (event.keyCode) {
-                // Phím Channel + (Ch+) trên điều khiển TV -> Kênh có số thứ tự lớn hơn
-                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
-                    if (activeSettingsDialog?.isShowing != true) {
-                        switchChannel(next = true)
-                        resetOverlayTimer()
-                        return true
-                    }
-                }
-                // Phím Channel - (Ch-) trên điều khiển TV -> Kênh có số thứ tự nhỏ hơn
-                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
-                    if (activeSettingsDialog?.isShowing != true) {
-                        switchChannel(next = false)
-                        resetOverlayTimer()
-                        return true
-                    }
-                }
                 KeyEvent.KEYCODE_MENU,
                 KeyEvent.KEYCODE_SETTINGS,
                 KeyEvent.KEYCODE_HELP -> {
                     showSettingsDialog()
                     return true
+                }
+                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+                    if (!isSettingsShowing) {
+                        switchChannel(next = true)
+                        resetOverlayTimer()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    if (!isSettingsShowing) {
+                        switchChannel(next = false)
+                        resetOverlayTimer()
+                        return true
+                    }
+                }
+            }
+
+            // Khi đang xem toàn màn hình (Overlay KHÔNG hiển thị):
+            // Bắt trực tiếp mọi phím D-pad trên điều khiển để tránh bị Android ViewGroup nuốt phím khi không có view focus
+            if (!isOverlayVisible && !isSettingsShowing) {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        showOverlay()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        switchChannel(next = false)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        switchChannel(next = true)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        val playing = currentPlayingChannel
+                        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+                        if (isSports) {
+                            if (currentAppMode != AppMode.SPORTS) {
+                                switchAppMode(AppMode.SPORTS, focusCategories = false)
+                            }
+                            val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
+                            if (liveCat != null) {
+                                currentSelectedCategory = liveCat
+                                categoryAdapter.setSelectedCategory(liveCat)
+                                val matchChannel = if (currentPlayingMatchGroup != null) {
+                                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                                } else null
+                                displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS })
+                            }
+                            showOverlay()
+                        } else {
+                            if (currentAppMode != AppMode.TV) {
+                                switchAppMode(AppMode.TV, focusCategories = false)
+                            }
+                            val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
+                            if (favCat != null) {
+                                currentSelectedCategory = favCat
+                                categoryAdapter.setSelectedCategory(favCat)
+                                displayCategoryChannels(favCat)
+                            }
+                            showOverlay()
+                        }
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        showQuickPlaylistDialog()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_BACK -> {
+                        if (System.currentTimeMillis() - backPressedTime < 2000) {
+                            finish()
+                            return true
+                        }
+                        if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+                            showMatchSourcesDialog(currentPlayingMatchGroup!!)
+                            return true
+                        } else {
+                            showOverlay()
+                            return true
+                        }
+                    }
                 }
             }
         }

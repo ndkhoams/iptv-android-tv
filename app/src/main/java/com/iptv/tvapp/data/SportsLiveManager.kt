@@ -721,35 +721,53 @@ class SportsLiveManager(private val context: Context) {
         cachedCategories?.let { if (it.isNotEmpty()) return it }
 
         val cacheFile = File(context.cacheDir, "thethao_sports_cache.m3u")
-        if (!cacheFile.exists() || cacheFile.length() == 0L) {
+        if (!cacheFile.exists() || cacheFile.length() < 1000L) {
             try {
                 context.assets.open("builtin_sports.m3u").use { input ->
                     FileOutputStream(cacheFile).use { output ->
                         input.copyTo(output)
                     }
                 }
-            } catch (e: Exception) {
-                return emptyList()
+            } catch (e: Exception) {}
+        }
+
+        var channels: List<Channel> = emptyList()
+        if (cacheFile.exists() && cacheFile.length() > 1000L) {
+            try {
+                channels = FileInputStream(cacheFile).use { input ->
+                    M3UParser.parse(input)
+                }
+            } catch (e: Exception) {}
+        }
+
+        if (channels.isEmpty()) {
+            try {
+                channels = context.assets.open("builtin_sports.m3u").use { input ->
+                    M3UParser.parse(input)
+                }
+                try {
+                    context.assets.open("builtin_sports.m3u").use { input ->
+                        FileOutputStream(cacheFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                } catch (e: Exception) {}
+            } catch (e: Exception) {}
+        }
+
+        val filteredChannels = channels.filter {
+            !it.streamUrl.contains("/refresh") && it.streamUrl.isNotBlank()
+        }
+
+        if (filteredChannels.isNotEmpty()) {
+            val cats = buildCategoriesFromChannels(filteredChannels)
+            if (cats.isNotEmpty()) {
+                cachedCategories = cats
+                return cats
             }
         }
 
-        return try {
-            val rawChannels = FileInputStream(cacheFile).use { input ->
-                M3UParser.parse(input)
-            }
-            val channels = rawChannels.filter {
-                !it.streamUrl.contains("/refresh") && it.streamUrl.isNotBlank()
-            }
-            if (channels.isNotEmpty()) {
-                val cats = buildCategoriesFromChannels(channels)
-                cachedCategories = cats
-                cats
-            } else {
-                emptyList()
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
+        return cachedCategories ?: emptyList()
     }
 
     /**
@@ -857,12 +875,12 @@ class SportsLiveManager(private val context: Context) {
      * Phân nhóm và xử lý các sự kiện thể thao từ danh sách Channels
      */
     fun buildCategoriesFromChannels(channels: List<Channel>): List<Category> {
-        val matchChannels = channels.filter {
+        val allValidSports = channels.filter {
             !it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) &&
             !it.name.contains("[24/7]", ignoreCase = true) &&
-            isEligibleSportsMatch(it.name, it.groupTitle) &&
-            isDateTodayOrUpcoming(it.name)
+            isEligibleSportsMatch(it.name, it.groupTitle)
         }
+        val matchChannels = allValidSports.filter { isDateTodayOrUpcoming(it.name) }.ifEmpty { allValidSports }
 
         val categories = mutableListOf<Category>()
 
