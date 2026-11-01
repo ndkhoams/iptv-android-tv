@@ -112,7 +112,7 @@ class PlaylistManager(private val context: Context) {
         playlistId: String,
         url: String,
         forceRefresh: Boolean = false,
-        includeSports: Boolean = true
+        includeSports: Boolean = false
     ): List<Category> =
         withContext(Dispatchers.IO) {
             val channels = mutableListOf<Channel>()

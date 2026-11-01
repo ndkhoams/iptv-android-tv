@@ -336,21 +336,53 @@
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/navFavorites"
                     android:nextFocusRight="@+id/rvCategories"
-                    android:nextFocusDown="@+id/navPlaylists"
+                    android:nextFocusDown="@+id/navModeTv"
                     android:contentDescription="Kênh yêu thích" />
 
-                <!-- 2. Chọn Danh Sách Phát Nhanh -->
+                <!-- 2. Xem TV (Danh mục truyền hình từ M3U) -->
+                <ImageButton
+                    android:id="@+id/navModeTv"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/selector_fpt_sidebar"
+                    android:src="@drawable/ic_nav_tv"
+                    android:scaleType="centerInside"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusUp="@+id/navFavorites"
+                    android:nextFocusRight="@+id/rvCategories"
+                    android:nextFocusDown="@+id/navModeSports"
+                    android:contentDescription="Xem TV" />
+
+                <!-- 3. Trực tiếp Thể Thao (Nguồn từ thethao.m3u) -->
+                <ImageButton
+                    android:id="@+id/navModeSports"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/selector_fpt_sidebar"
+                    android:src="@drawable/ic_nav_sports"
+                    android:scaleType="centerInside"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusUp="@+id/navModeTv"
+                    android:nextFocusRight="@+id/rvCategories"
+                    android:nextFocusDown="@+id/navPlaylists"
+                    android:contentDescription="Trực tiếp thể thao" />
+
+                <!-- 4. Chọn Danh Sách Phát Nhanh -->
                 <ImageButton
                     android:id="@+id/navPlaylists"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="12dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_nav_playlist"
                     android:scaleType="centerInside"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navFavorites"
+                    android:nextFocusUp="@+id/navModeSports"
                     android:nextFocusRight="@+id/rvCategories"
                     android:nextFocusDown="@+id/navSidebarSettings"
                     android:contentDescription="Chọn danh sách phát nhanh" />
@@ -360,7 +392,7 @@
                     android:id="@+id/navSidebarSettings"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="12dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_settings"
                     android:scaleType="centerInside"
@@ -376,7 +408,7 @@
                     android:id="@+id/navRefreshPlaylists"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="12dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_refresh"
                     android:scaleType="centerInside"
@@ -392,7 +424,7 @@
                     android:id="@+id/navCheckUpdate"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="12dp"
                     android:background="@drawable/selector_fpt_sidebar"
                     android:src="@drawable/ic_update"
                     android:scaleType="centerInside"

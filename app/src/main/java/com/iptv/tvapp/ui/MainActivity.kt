@@ -95,6 +95,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var channelAdapter: ChannelAdapter
     private lateinit var epgTimelineAdapter: EpgTimelineAdapter
 
+    enum class AppMode {
+        TV,
+        SPORTS
+    }
+
+    private var currentAppMode = AppMode.TV
+    private val tvCategories = mutableListOf<Category>()
+    private val sportsCategoriesList = mutableListOf<Category>()
     private val allCategories = mutableListOf<Category>()
     private var allChannels = mutableListOf<Channel>()
     private var currentCategoryChannels = mutableListOf<Channel>()
@@ -362,6 +370,10 @@ class MainActivity : AppCompatActivity() {
 
         // Sidebar Navigation Buttons
         binding.navFavorites.setOnClickListener {
+            resetOverlayTimer()
+            if (currentAppMode != AppMode.TV) {
+                switchAppMode(AppMode.TV, focusCategories = false)
+            }
             val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
             if (favCat != null) {
                 currentSelectedCategory = favCat
@@ -371,6 +383,16 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Chưa có kênh yêu thích nào. Hãy bấm phím Yêu thích ★ ở kênh bạn muốn lưu!", Toast.LENGTH_LONG).show()
             }
+        }
+
+        binding.navModeTv.setOnClickListener {
+            resetOverlayTimer()
+            switchAppMode(AppMode.TV, focusCategories = true)
+        }
+
+        binding.navModeSports.setOnClickListener {
+            resetOverlayTimer()
+            switchAppMode(AppMode.SPORTS, focusCategories = true)
         }
 
         binding.navPlaylists.setOnClickListener {
@@ -684,7 +706,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadPlaylist(forceRefresh: Boolean, isStartup: Boolean = false) {
         val activeSource = prefs.getActivePlaylist()
-        binding.tvActivePlaylistBadge.text = "Danh sách: ${activeSource.name}"
+        if (currentAppMode == AppMode.TV) {
+            binding.tvActivePlaylistBadge.text = "Danh sách: ${activeSource.name}"
+        }
 
         binding.layoutBuffering.visibility = View.VISIBLE
         binding.tvBufferingText.text = getString(R.string.loading_playlist)
@@ -696,10 +720,10 @@ class MainActivity : AppCompatActivity() {
                     activeSource.id,
                     activeSource.url,
                     forceRefresh = forceRefresh,
-                    includeSports = !isStartup
+                    includeSports = false
                 )
-                allCategories.clear()
-                allCategories.addAll(categories)
+                tvCategories.clear()
+                tvCategories.addAll(categories)
 
                 allChannels.clear()
                 val allCat = categories.firstOrNull { it.name == "Tất cả" }
@@ -709,12 +733,7 @@ class MainActivity : AppCompatActivity() {
                     allChannels.addAll(categories.flatMap { it.channels })
                 }
 
-                categoryAdapter.submitList(allCategories.toList())
-
-                if (allCategories.isNotEmpty()) {
-                    currentSelectedCategory = allCategories[0]
-                    displayCategoryChannels(allCategories[0])
-                }
+                switchAppMode(AppMode.TV, focusCategories = false)
 
                 binding.layoutBuffering.visibility = View.GONE
 
@@ -754,10 +773,8 @@ class MainActivity : AppCompatActivity() {
                     showOverlay()
                 }
 
-                // Nếu là khởi động app, quét luồng thể thao ngầm trong khi TV đã đang phát mượt mà
-                if (isStartup) {
-                    fetchSportsInBackground(forceRefresh = false, showNotification = true)
-                }
+                // Luôn cập nhật trực tiếp thể thao ngầm trong nền
+                fetchSportsInBackground(forceRefresh = forceRefresh, showNotification = !isStartup)
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
@@ -789,6 +806,64 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 // Giữ trải nghiệm phát kênh truyền hình liền mạch, không làm gián đoạn
+            }
+        }
+    }
+
+    private fun isSportsLiveMatch(channel: Channel?): Boolean {
+        if (channel == null) return false
+        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return true
+        return sportsCategoriesList.any { cat -> cat.channels.any { it.streamUrl == channel.streamUrl } }
+    }
+
+    private fun switchAppMode(mode: AppMode, focusCategories: Boolean = false) {
+        currentAppMode = mode
+        binding.navModeTv.isSelected = (mode == AppMode.TV)
+        binding.navModeSports.isSelected = (mode == AppMode.SPORTS)
+        binding.rvCategories.nextFocusLeftId = if (mode == AppMode.TV) R.id.navModeTv else R.id.navModeSports
+
+        allCategories.clear()
+        if (mode == AppMode.TV) {
+            val activeSource = prefs.getActivePlaylist()
+            binding.tvActivePlaylistBadge.text = "Danh sách: ${activeSource.name}"
+            allCategories.addAll(tvCategories)
+        } else {
+            binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
+            allCategories.addAll(sportsCategoriesList)
+            if (sportsCategoriesList.isEmpty()) {
+                fetchSportsInBackground(forceRefresh = true, showNotification = true)
+            }
+        }
+
+        categoryAdapter.submitList(allCategories.toList())
+
+        // Xác định danh mục cần hiển thị
+        val playing = currentPlayingChannel
+        val targetCategory = if (playing != null) {
+            allCategories.firstOrNull { cat -> cat.channels.any { it.streamUrl == playing.streamUrl } }
+        } else null
+
+        val catToSelect = targetCategory
+            ?: allCategories.firstOrNull { it.name != "★ KÊNH YÊU THÍCH" }
+            ?: allCategories.firstOrNull()
+
+        if (catToSelect != null) {
+            currentSelectedCategory = catToSelect
+            categoryAdapter.setSelectedCategory(catToSelect)
+            displayCategoryChannels(catToSelect, focusChannel = if (catToSelect == targetCategory) playing else null)
+        } else {
+            currentCategoryChannels.clear()
+            channelAdapter.submitList(emptyList())
+            binding.tvCategoryHeader.text = if (mode == AppMode.TV) "Xem TV" else "Trực tiếp Thể thao"
+            binding.tvChannelCount.text = getString(R.string.channels_count, 0)
+        }
+
+        if (focusCategories) {
+            binding.rvCategories.post {
+                val catIndex = if (catToSelect != null) allCategories.indexOf(catToSelect).coerceAtLeast(0) else 0
+                binding.rvCategories.scrollToPosition(catIndex)
+                binding.rvCategories.findViewHolderForAdapterPosition(catIndex)?.itemView?.requestFocus()
+                    ?: binding.rvCategories.requestFocus()
             }
         }
     }
@@ -1528,17 +1603,23 @@ class MainActivity : AppCompatActivity() {
             ch.isDefaultStartup = (ch.streamUrl == defaultUrl)
         }
 
-        allCategories.clear()
-        allCategories.addAll(playlistManager.groupChannels(allChannels))
-        categoryAdapter.submitList(allCategories)
+        tvCategories.clear()
+        tvCategories.addAll(playlistManager.groupChannels(allChannels))
 
-        val activeCat = currentSelectedCategory?.let { sel ->
-            allCategories.firstOrNull { it.name == sel.name }
-        } ?: allCategories.firstOrNull()
+        if (currentAppMode == AppMode.TV) {
+            allCategories.clear()
+            allCategories.addAll(tvCategories)
+            categoryAdapter.submitList(allCategories.toList())
 
-        if (activeCat != null) {
-            currentSelectedCategory = activeCat
-            displayCategoryChannels(activeCat)
+            val activeCat = currentSelectedCategory?.let { sel ->
+                allCategories.firstOrNull { it.name == sel.name }
+            } ?: allCategories.firstOrNull()
+
+            if (activeCat != null) {
+                currentSelectedCategory = activeCat
+                categoryAdapter.setSelectedCategory(activeCat)
+                displayCategoryChannels(activeCat)
+            }
         }
     }
 
@@ -1549,7 +1630,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             allCategories.firstOrNull { cat ->
                 cat.name != "★ KÊNH YÊU THÍCH" && cat.channels.any { it.streamUrl == currentPlayingChannel?.streamUrl }
-            }?.channels ?: allChannels
+            }?.channels ?: (if (currentAppMode == AppMode.TV) allChannels else sportsCategoriesList.flatMap { it.channels })
         }).filter { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !it.streamUrl.startsWith("action://") }
 
         if (activeChannels.isEmpty()) return
@@ -1641,6 +1722,9 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     // Phím Trái khi xem toàn màn hình: Mở nhanh danh sách Yêu Thích
+                    if (currentAppMode != AppMode.TV) {
+                        switchAppMode(AppMode.TV, focusCategories = false)
+                    }
                     val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
                     if (favCat != null) {
                         currentSelectedCategory = favCat
@@ -1668,7 +1752,8 @@ class MainActivity : AppCompatActivity() {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
                     val focused = currentFocus
                     if (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
-                                focused.id == R.id.navFavorites || focused.id == R.id.navPlaylists ||
+                                focused.id == R.id.navFavorites || focused.id == R.id.navModeTv || focused.id == R.id.navModeSports ||
+                                focused.id == R.id.navPlaylists ||
                                 focused.id == R.id.navSidebarSettings || focused.id == R.id.navRefreshPlaylists ||
                                 focused.id == R.id.navCheckUpdate)) {
                         focusPlayingChannel()
@@ -1698,13 +1783,20 @@ class MainActivity : AppCompatActivity() {
         startTelemetryUpdates()
 
         val playing = currentPlayingChannel
+        val shouldBeSports = isSportsLiveMatch(playing)
+        val targetMode = if (shouldBeSports) AppMode.SPORTS else AppMode.TV
+
+        if (currentAppMode != targetMode) {
+            switchAppMode(targetMode, focusCategories = false)
+        }
+
         if (playing != null) {
             // Đảm bảo danh mục đang chọn có chứa kênh đang phát
             val inCurrentCat = currentCategoryChannels.any { it.streamUrl == playing.streamUrl }
             if (!inCurrentCat) {
                 val matchedCat = allCategories.firstOrNull { cat ->
                     cat.channels.any { it.streamUrl == playing.streamUrl }
-                } ?: allCategories.firstOrNull { it.name == "Tất cả" }
+                } ?: allCategories.firstOrNull { it.name == "Tất cả" } ?: allCategories.firstOrNull()
 
                 if (matchedCat != null) {
                     currentSelectedCategory = matchedCat
@@ -1827,14 +1919,13 @@ class MainActivity : AppCompatActivity() {
                     playlistManager.refreshAllPlaylistCaches()
                 }
 
-                // 2. Tải lại active playlist và các luồng thể thao trực tiếp mới nhất
+                // 2. Tải lại active TV playlist
                 val activeSource = prefs.getActivePlaylist()
                 val categories = withContext(Dispatchers.IO) {
-                    playlistManager.loadPlaylist(activeSource.id, activeSource.url, forceRefresh = true)
+                    playlistManager.loadPlaylist(activeSource.id, activeSource.url, forceRefresh = true, includeSports = false)
                 }
-
-                allCategories.clear()
-                allCategories.addAll(categories)
+                tvCategories.clear()
+                tvCategories.addAll(categories)
 
                 allChannels.clear()
                 val allCat = categories.firstOrNull { it.name == "Tất cả" }
@@ -1844,15 +1935,15 @@ class MainActivity : AppCompatActivity() {
                     allChannels.addAll(categories.flatMap { it.channels })
                 }
 
-                categoryAdapter.submitList(allCategories)
-
-                // Cập nhật lại danh mục đang chọn (nếu có)
-                val targetCat = allCategories.firstOrNull { it.name == currentSelectedCategory?.name } ?: allCategories.firstOrNull()
-                if (targetCat != null) {
-                    currentSelectedCategory = targetCat
-                    categoryAdapter.setSelectedCategory(targetCat)
-                    displayCategoryChannels(targetCat)
+                // 3. Tải lại trực tiếp thể thao
+                val sports = withContext(Dispatchers.IO) {
+                    playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
                 }
+                sportsCategoriesList.clear()
+                sportsCategoriesList.addAll(sports)
+
+                // 4. Cập nhật giao diện
+                switchAppMode(currentAppMode, focusCategories = false)
 
                 // Tải lại EPG
                 loadEpgData()
@@ -2082,31 +2173,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyUpdatedSportsCategories(sportsCategories: List<Category>) {
-        val sportsNames = sportsCategories.map { it.name }.toSet() + setOf(
-            "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
-            "🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)",
-            "🌐 KÊNH THỂ THAO QUỐC TẾ (F1 / TENNIS)",
-            "🍌 Chuối Chiên TV",
-            "🐔 Gà Vàng / Tiếu Lâm",
-            "🍚 Xôi Lạc TV",
-            "🌶️ Cà Khịa TV"
-        )
-        val nonSports = allCategories.filter { it.name !in sportsNames }
-        allCategories.clear()
-        val favCat = nonSports.firstOrNull { it.name == "★ KÊNH YÊU THÍCH" }
-        if (favCat != null) allCategories.add(favCat)
-        allCategories.addAll(sportsCategories)
-        nonSports.filter { it.name != "★ KÊNH YÊU THÍCH" }.forEach { allCategories.add(it) }
+        sportsCategoriesList.clear()
+        sportsCategoriesList.addAll(sportsCategories)
 
-        categoryAdapter.submitList(allCategories.toList())
+        if (currentAppMode == AppMode.SPORTS) {
+            allCategories.clear()
+            allCategories.addAll(sportsCategoriesList)
+            categoryAdapter.submitList(allCategories.toList())
 
-        // Giữ nguyên danh mục đang duyệt nếu có
-        val currentCatName = currentSelectedCategory?.name ?: ""
-        val updatedCat = allCategories.firstOrNull { it.name == currentCatName } ?: allCategories.firstOrNull()
-        if (updatedCat != null) {
-            currentSelectedCategory = updatedCat
-            if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                displayCategoryChannels(updatedCat)
+            val currentCatName = currentSelectedCategory?.name ?: ""
+            val updatedCat = allCategories.firstOrNull { it.name == currentCatName } ?: allCategories.firstOrNull()
+            if (updatedCat != null) {
+                currentSelectedCategory = updatedCat
+                categoryAdapter.setSelectedCategory(updatedCat)
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    displayCategoryChannels(updatedCat)
+                }
             }
         }
     }
