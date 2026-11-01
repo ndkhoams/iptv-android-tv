@@ -101,7 +101,7 @@ class SportsLiveManager(private val context: Context) {
         const val DEFAULT_SPORTS_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao.m3u"
         private const val CHROME_UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-        val PRIORITY_LEAGUES = listOf("UCL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1")
+        val PRIORITY_LEAGUES = listOf("UCL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1", "NBA")
         val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA")
 
         val LEAGUE_LABELS = mapOf(
@@ -178,7 +178,38 @@ class SportsLiveManager(private val context: Context) {
             "binhdinh" to listOf("quy nhơn bình định", "bình định", "binh dinh"),
             "quangnam" to listOf("quảng nam", "quang nam"),
             "hatinh" to listOf("hồng lĩnh hà tĩnh", "hà tĩnh", "ha tinh"),
-            "hanoi" to listOf("hà nội fc", "clb hà nội", "hà nội", "ha noi")
+            "hanoi" to listOf("hà nội fc", "clb hà nội", "hà nội", "ha noi"),
+            // NBA Teams
+            "lakers" to listOf("los angeles lakers", "la lakers", "lakers"),
+            "warriors" to listOf("golden state warriors", "golden state", "warriors"),
+            "celtics" to listOf("boston celtics", "boston", "celtics"),
+            "bulls" to listOf("chicago bulls", "bulls"),
+            "heat" to listOf("miami heat", "heat"),
+            "knicks" to listOf("new york knicks", "ny knicks", "knicks"),
+            "nets" to listOf("brooklyn nets", "brooklyn", "nets"),
+            "76ers" to listOf("philadelphia 76ers", "philadelphia", "76ers", "sixers"),
+            "bucks" to listOf("milwaukee bucks", "milwaukee", "bucks"),
+            "cavaliers" to listOf("cleveland cavaliers", "cleveland", "cavaliers", "cavs"),
+            "pacers" to listOf("indiana pacers", "indiana", "pacers"),
+            "pistons" to listOf("detroit pistons", "detroit", "pistons"),
+            "raptors" to listOf("toronto raptors", "toronto", "raptors"),
+            "magic" to listOf("orlando magic", "orlando", "magic"),
+            "hawks" to listOf("atlanta hawks", "atlanta", "hawks"),
+            "hornets" to listOf("charlotte hornets", "charlotte", "hornets"),
+            "wizards" to listOf("washington wizards", "washington", "wizards"),
+            "nuggets" to listOf("denver nuggets", "denver", "nuggets"),
+            "timberwolves" to listOf("minnesota timberwolves", "timberwolves"),
+            "thunder" to listOf("oklahoma city thunder", "okc thunder", "thunder"),
+            "trailblazers" to listOf("portland trail blazers", "trail blazers", "blazers"),
+            "jazz" to listOf("utah jazz", "utah", "jazz"),
+            "suns" to listOf("phoenix suns", "phoenix", "suns"),
+            "clippers" to listOf("la clippers", "los angeles clippers", "clippers"),
+            "kings" to listOf("sacramento kings", "sacramento", "kings"),
+            "mavericks" to listOf("dallas mavericks", "dallas", "mavericks", "mavs"),
+            "rockets" to listOf("houston rockets", "houston", "rockets"),
+            "grizzlies" to listOf("memphis grizzlies", "memphis", "grizzlies"),
+            "pelicans" to listOf("new orleans pelicans", "new orleans", "pelicans"),
+            "spurs" to listOf("san antonio spurs", "san antonio", "spurs")
         )
 
         val EPL_CLUBS = listOf(
@@ -362,7 +393,39 @@ class SportsLiveManager(private val context: Context) {
             "quangnam" to "Quảng Nam",
             "slna" to "Sông Lam Nghệ An",
             "danang" to "SHB Đà Nẵng",
-            "binhdinh" to "Quy Nhơn Bình Định"
+            "binhdinh" to "Quy Nhơn Bình Định",
+
+            // NBA (Bóng rổ NBA)
+            "lakers" to "Los Angeles Lakers",
+            "warriors" to "Golden State Warriors",
+            "celtics" to "Boston Celtics",
+            "bulls" to "Chicago Bulls",
+            "heat" to "Miami Heat",
+            "knicks" to "New York Knicks",
+            "nets" to "Brooklyn Nets",
+            "76ers" to "Philadelphia 76ers",
+            "bucks" to "Milwaukee Bucks",
+            "cavaliers" to "Cleveland Cavaliers",
+            "pacers" to "Indiana Pacers",
+            "pistons" to "Detroit Pistons",
+            "raptors" to "Toronto Raptors",
+            "magic" to "Orlando Magic",
+            "hawks" to "Atlanta Hawks",
+            "hornets" to "Charlotte Hornets",
+            "wizards" to "Washington Wizards",
+            "nuggets" to "Denver Nuggets",
+            "timberwolves" to "Minnesota Timberwolves",
+            "thunder" to "Oklahoma City Thunder",
+            "trailblazers" to "Portland Trail Blazers",
+            "jazz" to "Utah Jazz",
+            "suns" to "Phoenix Suns",
+            "clippers" to "LA Clippers",
+            "kings" to "Sacramento Kings",
+            "mavericks" to "Dallas Mavericks",
+            "rockets" to "Houston Rockets",
+            "grizzlies" to "Memphis Grizzlies",
+            "pelicans" to "New Orleans Pelicans",
+            "spurs" to "San Antonio Spurs"
         )
 
         fun getStandardTeamName(rawName: String): String {
