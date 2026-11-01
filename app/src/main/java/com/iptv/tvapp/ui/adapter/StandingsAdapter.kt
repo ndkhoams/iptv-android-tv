@@ -87,20 +87,35 @@ class StandingsAdapter : RecyclerView.Adapter<StandingsAdapter.ViewHolder>() {
             val cTeam = SportsLiveManager.canonicalizeTeam(entry.teamName)
             val isHighlighted = isMatch(cTeam)
 
+            binding.root.nextFocusLeftId = R.id.rvChannels
+
+            fun updateBackground(hasFocus: Boolean) {
+                if (hasFocus) {
+                    binding.layoutStandingItem.setBackgroundResource(R.drawable.selector_standing_item)
+                } else if (isHighlighted) {
+                    // Highlight nổi bật 2 đội đang thi đấu với khung cam & chữ trắng đậm
+                    binding.layoutStandingItem.setBackgroundResource(R.drawable.bg_standing_highlight)
+                } else {
+                    if (position % 2 == 1) {
+                        binding.layoutStandingItem.setBackgroundColor(Color.parseColor("#171717"))
+                    } else {
+                        binding.layoutStandingItem.setBackgroundColor(Color.TRANSPARENT)
+                    }
+                }
+            }
+
+            binding.root.setOnFocusChangeListener { _, hasFocus ->
+                updateBackground(hasFocus)
+            }
+            updateBackground(binding.root.hasFocus())
+
             if (isHighlighted) {
-                // Highlight nổi bật 2 đội đang thi đấu với khung cam & chữ trắng đậm
-                binding.layoutStandingItem.setBackgroundResource(R.drawable.bg_standing_highlight)
                 binding.tvStandingRank.setTextColor(ContextCompat.getColor(context, R.color.fpt_orange))
                 binding.tvStandingTeam.setTextColor(Color.WHITE)
                 binding.tvStandingTeam.typeface = Typeface.DEFAULT_BOLD
                 binding.tvStandingPoints.setTextColor(Color.parseColor("#FF8533"))
                 binding.tvStandingPoints.typeface = Typeface.DEFAULT_BOLD
             } else {
-                if (position % 2 == 1) {
-                    binding.layoutStandingItem.setBackgroundColor(Color.parseColor("#171717"))
-                } else {
-                    binding.layoutStandingItem.setBackgroundColor(Color.TRANSPARENT)
-                }
                 binding.tvStandingRank.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
                 binding.tvStandingTeam.setTextColor(ContextCompat.getColor(context, R.color.text_primary))
                 binding.tvStandingTeam.typeface = Typeface.DEFAULT

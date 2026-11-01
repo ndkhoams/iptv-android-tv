@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Trạng thái Focus bằng điều khiển D-pad -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#383838" />
+            <stroke android:width="1.5dp" android:color="#FF6500" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    
+    <!-- Trạng thái Bình thường: Trong suốt -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+</selector>
+

@@ -96,7 +96,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="10dp"
                 android:layout_marginTop="8dp">
 
@@ -113,7 +113,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="38dp"
                     android:layout_marginTop="6dp"
-                    android:background="#0F0E1D"
+                    android:background="#141414"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:hint="Tên danh sách (Ví dụ: FPT IPTV, Thể Thao...)"
@@ -134,7 +134,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="38dp"
                     android:layout_marginTop="6dp"
-                    android:background="#0F0E1D"
+                    android:background="#141414"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:hint="Đường link URL hoặc đường dẫn file local"
@@ -223,7 +223,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="8dp"
                 android:layout_marginTop="4dp">
 
@@ -231,7 +231,7 @@
                     android:id="@+id/etUdpxyServer"
                     android:layout_width="match_parent"
                     android:layout_height="38dp"
-                    android:background="#0F0E1D"
+                    android:background="#141414"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:hint="IP:Port (Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022)"
@@ -270,7 +270,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="8dp">
 
                 <RadioButton
@@ -316,7 +316,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="8dp">
 
                 <RadioButton
@@ -390,7 +390,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="8dp"
                 android:layout_marginTop="6dp">
 
@@ -398,7 +398,7 @@
                     android:id="@+id/etHttpUserAgent"
                     android:layout_width="match_parent"
                     android:layout_height="38dp"
-                    android:background="#0F0E1D"
+                    android:background="#141414"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:hint="Mozilla/5.0... (IPTV User Agent)"
@@ -463,7 +463,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="8dp"
                 android:layout_marginTop="6dp">
 
@@ -540,7 +540,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#1B1930"
+                android:background="#181818"
                 android:padding="8dp"
                 android:layout_marginTop="4dp">
 

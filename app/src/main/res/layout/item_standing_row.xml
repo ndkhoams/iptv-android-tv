@@ -8,7 +8,11 @@
     android:paddingStart="4dp"
     android:paddingEnd="4dp"
     android:layout_marginTop="1dp"
-    android:layout_marginBottom="1dp">
+    android:layout_marginBottom="1dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:nextFocusLeft="@+id/rvChannels"
+    android:background="@drawable/selector_standing_item">
 
     <!-- Thứ hạng -->
     <TextView
@@ -50,29 +54,29 @@
         android:layout_width="30dp"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="9"
-        android:textColor="@color/text_muted"
+        android:text="0"
+        android:textColor="@color/text_secondary"
         android:textSize="11sp" />
 
-    <!-- Hiệu số bàn thắng bại -->
+    <!-- Hiệu số bàn thắng bại (GD) -->
     <TextView
         android:id="@+id/tvStandingGd"
-        android:layout_width="30dp"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="+10"
-        android:textColor="@color/text_muted"
-        android:textSize="11sp" />
-
-    <!-- Điểm -->
-    <TextView
-        android:id="@+id/tvStandingPoints"
         android:layout_width="32dp"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="21"
-        android:textColor="@color/text_primary"
+        android:text="+0"
+        android:textColor="@color/text_secondary"
+        android:textSize="11sp" />
+
+    <!-- Điểm số (PTS) -->
+    <TextView
+        android:id="@+id/tvStandingPoints"
+        android:layout_width="34dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="0"
+        android:textColor="@color/fpt_orange"
         android:textSize="11sp"
         android:textStyle="bold" />
-</LinearLayout>
 
+</LinearLayout>

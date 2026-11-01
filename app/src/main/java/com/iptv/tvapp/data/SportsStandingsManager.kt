@@ -50,9 +50,10 @@ class SportsStandingsManager(private val context: Context) {
             return@withContext cached
         }
 
-        // 1. Nếu là V-League 1
+        // 1. Nếu là V-League 1: Lấy trực tiếp từ FotMob API (Mùa giải hiện tại)
         if (league == "VLEAGUE") {
-            val vleague = getVLeagueStandings()
+            val liveVLeague = fetchFotMobVLeagueStandings()
+            val vleague = if (liveVLeague.isNotEmpty()) liveVLeague else getVLeagueStandingsFallback()
             cache[league] = vleague
             lastFetchTime[league] = now
             return@withContext vleague
@@ -155,23 +156,81 @@ class SportsStandingsManager(private val context: Context) {
         return list
     }
 
-    private fun getVLeagueStandings(): List<StandingEntry> {
-        // Bảng xếp hạng chuẩn hóa chính thức của LPBank V.League 1
+    private fun fetchFotMobVLeagueStandings(): List<StandingEntry> {
+        val url = "https://www.fotmob.com/leagues/9088/table/v-league"
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .build()
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val html = response.body?.string() ?: ""
+                val regex = Regex("""<script id="__NEXT_DATA__" type="application/json">(.*?)</script>""")
+                val match = regex.find(html)
+                if (match != null) {
+                    val jsonStr = match.groupValues[1]
+                    val root = JSONObject(jsonStr)
+                    val props = root.optJSONObject("props")?.optJSONObject("pageProps")
+                    val tableArr = props?.optJSONArray("table")
+                    if (tableArr != null && tableArr.length() > 0) {
+                        val composite = tableArr.getJSONObject(0).optJSONObject("data")?.optJSONObject("table")?.optJSONArray("all")
+                        if (composite != null && composite.length() > 0) {
+                            val list = mutableListOf<StandingEntry>()
+                            for (i in 0 until composite.length()) {
+                                val r = composite.getJSONObject(i)
+                                val teamId = r.optInt("id", 0)
+                                val teamName = r.optString("name", "")
+                                val shortName = r.optString("shortName", teamName)
+                                val logoUrl = if (teamId > 0) "https://images.fotmob.com/image_resources/logo/teamlogo/$teamId.png" else null
+                                val idx = r.optInt("idx", i + 1)
+                                val played = r.optInt("played", 0)
+                                val pts = r.optInt("pts", 0)
+                                val gd = r.optString("goalConDiff", "0")
+                                list.add(
+                                    StandingEntry(
+                                        rank = idx,
+                                        teamName = teamName,
+                                        shortName = shortName,
+                                        logoUrl = logoUrl,
+                                        played = played,
+                                        gd = if (!gd.startsWith("-") && gd != "0") "+$gd" else gd,
+                                        points = pts
+                                    )
+                                )
+                            }
+                            if (list.isNotEmpty()) {
+                                saveToDiskCache("VLEAGUE", html)
+                                return list
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return emptyList()
+    }
+
+    private fun getVLeagueStandingsFallback(): List<StandingEntry> {
+        // Bảng xếp hạng mùa giải hiện tại 2025/2026 của LPBank V.League 1 từ FotMob
         val vleagueRaw = listOf(
-            Triple("Thép Xanh Nam Định", "+33", 57),
-            Triple("Hà Nội FC", "+21", 49),
-            Triple("Công An Hà Nội (CAHN)", "+22", 45),
-            Triple("Thể Công - Viettel", "+14", 44),
-            Triple("Hồng Lĩnh Hà Tĩnh", "+4", 36),
-            Triple("Hải Phòng", "+2", 35),
-            Triple("Becamex Bình Dương", "-9", 32),
-            Triple("Đông Á Thanh Hóa", "-1", 31),
-            Triple("Hoàng Anh Gia Lai (HAGL)", "-7", 29),
-            Triple("TP. Hồ Chí Minh", "-17", 28),
-            Triple("Quảng Nam", "-9", 26),
-            Triple("Sông Lam Nghệ An (SLNA)", "-14", 26),
-            Triple("SHB Đà Nẵng", "-18", 25),
-            Triple("Quy Nhơn Bình Định", "-21", 21)
+            Triple("Thép Xanh Nam Định", "+9", 13),
+            Triple("Sông Lam Nghệ An (SLNA)", "+6", 12),
+            Triple("Công An Hà Nội (CAHN)", "+5", 11),
+            Triple("Hồng Lĩnh Hà Tĩnh", "+2", 11),
+            Triple("Ninh Bình Club", "+3", 10),
+            Triple("Công An TP. Hồ Chí Minh", "+2", 10),
+            Triple("Hải Phòng", "+2", 9),
+            Triple("SHB Đà Nẵng", "-3", 9),
+            Triple("Hà Nội FC", "-3", 9),
+            Triple("Đông Á Thanh Hóa", "-1", 8),
+            Triple("Bắc Ninh FC", "0", 8),
+            Triple("Thể Công - Viettel", "-4", 4),
+            Triple("Hoàng Anh Gia Lai (HAGL)", "-7", 3),
+            Triple("Trường Tươi Đồng Nai", "-11", 1)
         )
 
         return vleagueRaw.mapIndexed { idx, item ->
@@ -180,7 +239,7 @@ class SportsStandingsManager(private val context: Context) {
                 teamName = item.first,
                 shortName = item.first,
                 logoUrl = null,
-                played = 26,
+                played = 6,
                 gd = item.second,
                 points = item.third
             )

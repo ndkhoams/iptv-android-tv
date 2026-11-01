@@ -31,26 +31,24 @@ class TvLinearLayoutManager(
                     return nextView
                 }
 
-                // Item tiếp theo chưa hiển thị trên màn hình:
-                // Pre-scroll ngay lập tức đến item mục tiêu và lên lịch chuyển focus
-                scrollToPosition(nextPos)
+                scrollToPositionWithOffset(nextPos, 0)
                 val rv = recyclerViewProvider()
                 rv?.post {
                     val vh = rv.findViewHolderForAdapterPosition(nextPos)
                     if (vh != null) {
                         vh.itemView.requestFocus()
                     } else {
-                        rv.postDelayed({
-                            rv.findViewHolderForAdapterPosition(nextPos)?.itemView?.requestFocus()
-                        }, 50)
+                        findViewByPosition(nextPos)?.requestFocus() ?: run {
+                            rv.postDelayed({
+                                rv.findViewHolderForAdapterPosition(nextPos)?.itemView?.requestFocus()
+                                    ?: findViewByPosition(nextPos)?.requestFocus()
+                            }, 40)
+                        }
                     }
                 }
 
-                // BẪY FOCUS: Giữ focus tại item hiện tại trong frame này,
-                // TUYỆT ĐỐI không trả về null khiến Android FocusFinder hủy focus hoặc nhảy ra ngoài
                 return focused
             } else {
-                // Đã chạm đáy danh sách: Khóa focus ở item cuối cùng
                 return focused
             }
         } else if (direction == View.FOCUS_UP) {
@@ -61,22 +59,24 @@ class TvLinearLayoutManager(
                     return prevView
                 }
 
-                scrollToPosition(prevPos)
+                scrollToPositionWithOffset(prevPos, 0)
                 val rv = recyclerViewProvider()
                 rv?.post {
                     val vh = rv.findViewHolderForAdapterPosition(prevPos)
                     if (vh != null) {
                         vh.itemView.requestFocus()
                     } else {
-                        rv.postDelayed({
-                            rv.findViewHolderForAdapterPosition(prevPos)?.itemView?.requestFocus()
-                        }, 50)
+                        findViewByPosition(prevPos)?.requestFocus() ?: run {
+                            rv.postDelayed({
+                                rv.findViewHolderForAdapterPosition(prevPos)?.itemView?.requestFocus()
+                                    ?: findViewByPosition(prevPos)?.requestFocus()
+                            }, 40)
+                        }
                     }
                 }
 
                 return focused
             } else {
-                // Đã ở đầu danh sách: Khóa focus ở item đầu tiên
                 return focused
             }
         }

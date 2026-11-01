@@ -11,8 +11,8 @@
     <color name="fpt_bg_dark">#121212</color>          <!-- Nền tối chuẩn FotMob #121212 -->
     <color name="fpt_surface">#1E1E1E</color>          <!-- Nền thẻ Card FotMob #1E1E1E -->
     <color name="fpt_surface_dark">#161616</color>     <!-- Nền sâu #161616 -->
-    <color name="fpt_overlay_bg">#E6141414</color>     <!-- Kính mờ toàn màn hình 90% #141414 -->
-    <color name="fpt_panel_bg">#D91E1E1E</color>       <!-- Kính mờ panel #1E1E1E -->
+    <color name="fpt_overlay_bg">#F5121212</color>     <!-- Kính mờ toàn màn hình 96% FotMob Dark #121212 -->
+    <color name="fpt_panel_bg">#F21E1E1E</color>       <!-- Nền panel FotMob #1E1E1E -->
     <color name="fpt_glass_border">#26FFFFFF</color>   <!-- Viền kính sáng mảnh -->
 
     <!-- Trạng thái Focus hàng kênh -->
@@ -36,8 +36,8 @@
     <color name="accent">#FF6500</color>
     <color name="accent_focused">#FF8533</color>
     <color name="tv_bg_dark">#121212</color>
-    <color name="tv_overlay_bg">#E6141414</color>
-    <color name="tv_panel_bg">#D91E1E1E</color>
+    <color name="tv_overlay_bg">#F5121212</color>
+    <color name="tv_panel_bg">#F21E1E1E</color>
     <color name="item_bg_normal">#1E1E1E</color>
     <color name="item_bg_focused">#F1F3F5</color>
     <color name="item_bg_selected">#2C2C2C</color>

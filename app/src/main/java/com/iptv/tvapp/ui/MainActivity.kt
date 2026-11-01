@@ -861,7 +861,7 @@ class MainActivity : AppCompatActivity() {
 
         // Xác định danh mục cần hiển thị
         val playing = currentPlayingChannel
-        val targetCategory = if (mode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+        val targetCategory = if (mode == AppMode.SPORTS) {
             allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
         } else if (playing != null) {
             allCategories.firstOrNull { cat -> cat.channels.any { it.streamUrl == playing.streamUrl } }
@@ -920,9 +920,13 @@ class MainActivity : AppCompatActivity() {
                         if (vh != null) {
                             vh.itemView.requestFocus()
                         } else {
-                            binding.rvChannels.postDelayed({
-                                binding.rvChannels.findViewHolderForAdapterPosition(index)?.itemView?.requestFocus()
-                            }, 60)
+                            binding.rvChannels.layoutManager?.findViewByPosition(index)?.requestFocus() ?: run {
+                                binding.rvChannels.postDelayed({
+                                    binding.rvChannels.findViewHolderForAdapterPosition(index)?.itemView?.requestFocus()
+                                        ?: binding.rvChannels.layoutManager?.findViewByPosition(index)?.requestFocus()
+                                        ?: binding.rvChannels.getChildAt(0)?.requestFocus()
+                                }, 60)
+                            }
                         }
                     }
                 }
@@ -1002,42 +1006,52 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (channel.streamUrl.startsWith("match://")) {
-            val matchKey = channel.streamUrl.removePrefix("match://")
-            val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
-            val leagueLogo = channel.logoUrl
-            if (!leagueLogo.isNullOrBlank()) {
-                Glide.with(this)
-                    .load(leagueLogo)
-                    .override(160, 100)
-                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.drawable.ic_nav_sports)
-                    .error(R.drawable.ic_nav_sports)
-                    .into(binding.ivSpotlightLogo)
+        val isSportsMode = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(channel)
+        if (channel.streamUrl.startsWith("match://") || isSportsMode) {
+            val (homeTeam, awayTeam, targetLeague) = if (channel.streamUrl.startsWith("match://")) {
+                val matchKey = channel.streamUrl.removePrefix("match://")
+                val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
+                Triple(matchGroup?.homeTeam ?: "", matchGroup?.awayTeam ?: "", matchGroup?.league ?: "OTHER")
             } else {
-                binding.ivSpotlightLogo.setImageResource(R.drawable.ic_nav_sports)
+                playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name)
             }
-            binding.tvSpotlightStreamInfo.text = "Trận đấu: ${channel.name}\nBấm phím OK để xem danh sách nguồn phát"
 
-            binding.layoutEpgTimeline.visibility = View.GONE
-            binding.layoutLeagueStandings.visibility = View.VISIBLE
-            val leagueName = matchGroup?.leagueName ?: "Giải đấu"
-            binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
-            binding.tvEpgSourceTag.text = "FotMob / ESPN"
+            val leagueName = SportsLiveManager.LEAGUE_LABELS[targetLeague] ?: "Giải đấu"
+            val leagueLogoUri = playlistManager.sportsLiveManager.getLeagueLogoUri(targetLeague)
 
-            val targetLeague = matchGroup?.league ?: "OTHER"
-            if (targetLeague in listOf("EPL", "LALIGA", "SERIE_A", "BUNDESLIGA", "LIGUE1", "UCL", "VLEAGUE")) {
+            Glide.with(this)
+                .load(leagueLogoUri)
+                .override(160, 100)
+                .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .placeholder(R.drawable.ic_nav_sports)
+                .error(R.drawable.ic_nav_sports)
+                .into(binding.ivSpotlightLogo)
+
+            binding.tvSpotlightStreamInfo.text = if (channel.streamUrl.startsWith("match://")) {
+                "Trận đấu: ${channel.name}\nBấm phím OK để xem danh sách nguồn phát"
+            } else {
+                "Trận đấu: ${channel.name}\nBấm phím OK để xem trực tiếp"
+            }
+
+            if (targetLeague in SportsLiveManager.PRIORITY_LEAGUES) {
+                binding.layoutEpgTimeline.visibility = View.GONE
+                binding.layoutLeagueStandings.visibility = View.VISIBLE
+                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
+                binding.tvEpgSourceTag.text = "FotMob / ESPN"
+                binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
+
                 binding.rvSpotlightStandings.visibility = View.GONE
                 binding.tvStandingsEmpty.visibility = View.VISIBLE
                 binding.tvStandingsEmpty.text = "Đang tải bảng xếp hạng $leagueName..."
+
                 lifecycleScope.launch(Dispatchers.Main) {
                     val standings = standingsManager.getStandings(targetLeague)
                     if (currentFocusedChannel?.streamUrl == channel.streamUrl) {
                         if (standings.isNotEmpty()) {
                             binding.tvStandingsEmpty.visibility = View.GONE
                             binding.rvSpotlightStandings.visibility = View.VISIBLE
-                            standingsAdapter.submitList(standings, matchGroup?.homeTeam ?: "", matchGroup?.awayTeam ?: "")
+                            standingsAdapter.submitList(standings, homeTeam, awayTeam)
                             val highlightIdx = standingsAdapter.getHighlightedIndex()
                             if (highlightIdx != -1) {
                                 binding.rvSpotlightStandings.scrollToPosition(highlightIdx.coerceAtLeast(0))
@@ -1049,15 +1063,22 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-            } else {
+                return
+            } else if (channel.streamUrl.startsWith("match://")) {
+                binding.layoutEpgTimeline.visibility = View.GONE
+                binding.layoutLeagueStandings.visibility = View.VISIBLE
+                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
+                binding.tvEpgSourceTag.text = "FotMob / ESPN"
                 binding.rvSpotlightStandings.visibility = View.GONE
                 binding.tvStandingsEmpty.visibility = View.VISIBLE
                 binding.tvStandingsEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát trực tiếp"
+                binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
+                return
             }
-            return
         }
 
         // TV Channel mode:
+        binding.rvChannels.nextFocusRightId = R.id.rvSpotlightEpg
         binding.layoutLeagueStandings.visibility = View.GONE
         binding.layoutEpgTimeline.visibility = View.VISIBLE
         binding.tvRightPanelTitle.text = "LỊCH PHÁT SÓNG (EPG)"
@@ -1831,18 +1852,38 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
-                    // Phím Trái khi xem toàn màn hình: Mở nhanh danh sách Yêu Thích
-                    if (currentAppMode != AppMode.TV) {
-                        switchAppMode(AppMode.TV, focusCategories = false)
+                    val playing = currentPlayingChannel
+                    val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+                    if (isSports) {
+                        // Khi đang ở chế độ sport thì khi ấn dpad left luôn luôn mở LIVE EVENTS
+                        if (currentAppMode != AppMode.SPORTS) {
+                            switchAppMode(AppMode.SPORTS, focusCategories = false)
+                        }
+                        val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
+                        if (liveCat != null) {
+                            currentSelectedCategory = liveCat
+                            categoryAdapter.setSelectedCategory(liveCat)
+                            val matchChannel = if (currentPlayingMatchGroup != null) {
+                                liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                            } else null
+                            displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS })
+                        }
+                        showOverlay()
+                        return true
+                    } else {
+                        // Chế độ TV: Mở nhanh danh sách Yêu Thích
+                        if (currentAppMode != AppMode.TV) {
+                            switchAppMode(AppMode.TV, focusCategories = false)
+                        }
+                        val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
+                        if (favCat != null) {
+                            currentSelectedCategory = favCat
+                            categoryAdapter.setSelectedCategory(favCat)
+                            displayCategoryChannels(favCat)
+                        }
+                        showOverlay()
+                        return true
                     }
-                    val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
-                    if (favCat != null) {
-                        currentSelectedCategory = favCat
-                        categoryAdapter.setSelectedCategory(favCat)
-                        displayCategoryChannels(favCat)
-                    }
-                    showOverlay()
-                    return true
                 }
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -1861,11 +1902,14 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_BACK -> {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
                     val focused = currentFocus
-                    if (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
+                    val isStandingsFocused = focused != null && (focused.id == R.id.rvSpotlightStandings ||
+                            focused.id == R.id.layoutStandingItem ||
+                            (focused.parent != null && focused.parent == binding.rvSpotlightStandings))
+                    if (isStandingsFocused || (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
                                 focused.id == R.id.navFavorites || focused.id == R.id.navModeTv || focused.id == R.id.navModeSports ||
                                 focused.id == R.id.navPlaylists ||
                                 focused.id == R.id.navSidebarSettings || focused.id == R.id.navRefreshPlaylists ||
-                                focused.id == R.id.navCheckUpdate)) {
+                                focused.id == R.id.navCheckUpdate))) {
                         focusPlayingChannel()
                         return true
                     }
@@ -1912,15 +1956,20 @@ class MainActivity : AppCompatActivity() {
             switchAppMode(targetMode, focusCategories = false)
         }
 
-        // Điểm 4: Đối với các trận đấu trong "Trực tiếp thể thao", khi đang xem nhấn nút OK 1 lần,
-        // quay về màn hình danh sách các trận đấu của mục TRỰC TIẾP BÓNG ĐÁ HÔM NAY thay vì hiển thị link lẻ trong các nguồn
-        if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
+        // Khi đang ở chế độ sport, nhấn OK hoặc mở overlay luôn luôn mở LIVE EVENTS
+        if (currentAppMode == AppMode.SPORTS) {
             val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
                 categoryAdapter.setSelectedCategory(liveCat)
-                val matchChannel = liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
-                displayCategoryChannels(liveCat, focusChannel = matchChannel)
+                val matchChannel = if (currentPlayingMatchGroup != null) {
+                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                } else null
+                displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: liveCat.channels.firstOrNull())
+                focusPlayingChannel()
+                return
+            }
+        }
                 focusPlayingChannel()
                 return
             }
@@ -1961,9 +2010,13 @@ class MainActivity : AppCompatActivity() {
                     if (vh != null) {
                         vh.itemView.requestFocus()
                     } else {
-                        binding.rvChannels.postDelayed({
-                            binding.rvChannels.findViewHolderForAdapterPosition(matchIndex)?.itemView?.requestFocus()
-                        }, 60)
+                        binding.rvChannels.layoutManager?.findViewByPosition(matchIndex)?.requestFocus() ?: run {
+                            binding.rvChannels.postDelayed({
+                                binding.rvChannels.findViewHolderForAdapterPosition(matchIndex)?.itemView?.requestFocus()
+                                    ?: binding.rvChannels.layoutManager?.findViewByPosition(matchIndex)?.requestFocus()
+                                    ?: binding.rvChannels.getChildAt(0)?.requestFocus()
+                            }, 60)
+                        }
                     }
                 }
                 updateSpotlight(matchChannel)
@@ -1980,9 +2033,13 @@ class MainActivity : AppCompatActivity() {
                 if (vh != null) {
                     vh.itemView.requestFocus()
                 } else {
-                    binding.rvChannels.postDelayed({
-                        binding.rvChannels.findViewHolderForAdapterPosition(playingIndex)?.itemView?.requestFocus()
-                    }, 60)
+                    binding.rvChannels.layoutManager?.findViewByPosition(playingIndex)?.requestFocus() ?: run {
+                        binding.rvChannels.postDelayed({
+                            binding.rvChannels.findViewHolderForAdapterPosition(playingIndex)?.itemView?.requestFocus()
+                                ?: binding.rvChannels.layoutManager?.findViewByPosition(playingIndex)?.requestFocus()
+                                ?: binding.rvChannels.getChildAt(0)?.requestFocus()
+                        }, 60)
+                    }
                 }
             }
             updateSpotlight(playing)
