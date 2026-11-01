@@ -1708,10 +1708,14 @@ class MainActivity : AppCompatActivity() {
             epgManager.getCurrentProgram(channel.id, channel.name)
         }
         if (currentProg != null) {
-            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-            val startStr = timeFormat.format(Date(currentProg.startTime))
-            val endStr = timeFormat.format(Date(currentProg.endTime))
-            binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title} ($startStr - $endStr)"
+            if (isSportsLiveMatch(channel)) {
+                binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title}"
+            } else {
+                val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val startStr = timeFormat.format(Date(currentProg.startTime))
+                val endStr = timeFormat.format(Date(currentProg.endTime))
+                binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title} ($startStr - $endStr)"
+            }
             binding.tvQuickProgramTitle.visibility = View.VISIBLE
         } else {
             binding.tvQuickProgramTitle.text = "● Đang phát: Chương trình trực tiếp"
@@ -1778,6 +1782,7 @@ class MainActivity : AppCompatActivity() {
             refreshChannelsState()
         }
         dialog.setOnDismissListener {
+            backPressedTime = 0L
             if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                 currentPlayingChannel?.let { showQuickChannelInfo(it) }
             }
@@ -1886,7 +1891,7 @@ class MainActivity : AppCompatActivity() {
                     KeyEvent.KEYCODE_DPAD_CENTER,
                     KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        showOverlay()
+                        handleRemoteOkFullscreen()
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
@@ -1897,53 +1902,14 @@ class MainActivity : AppCompatActivity() {
                         switchChannel(next = true)
                         return true
                     }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        val playing = currentPlayingChannel
-                        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
-                        if (isSports) {
-                            if (currentAppMode != AppMode.SPORTS) {
-                                switchAppMode(AppMode.SPORTS, focusCategories = false)
-                            }
-                            val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
-                            if (liveCat != null) {
-                                currentSelectedCategory = liveCat
-                                categoryAdapter.setSelectedCategory(liveCat)
-                                val matchChannel = if (currentPlayingMatchGroup != null) {
-                                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
-                                } else null
-                                displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS })
-                            }
-                            showOverlay()
-                        } else {
-                            if (currentAppMode != AppMode.TV) {
-                                switchAppMode(AppMode.TV, focusCategories = false)
-                            }
-                            val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
-                            if (favCat != null) {
-                                currentSelectedCategory = favCat
-                                categoryAdapter.setSelectedCategory(favCat)
-                                displayCategoryChannels(favCat)
-                            }
-                            showOverlay()
-                        }
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_BACK -> {
+                        handleRemoteBackOrLeftFullscreen()
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        showQuickPlaylistDialog()
+                        handleRemoteRightFullscreen()
                         return true
-                    }
-                    KeyEvent.KEYCODE_BACK -> {
-                        if (System.currentTimeMillis() - backPressedTime < 2000) {
-                            finish()
-                            return true
-                        }
-                        if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
-                            showMatchSourcesDialog(currentPlayingMatchGroup!!)
-                            return true
-                        } else {
-                            showOverlay()
-                            return true
-                        }
                     }
                 }
             }
@@ -1965,7 +1931,7 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
-                    showOverlay()
+                    handleRemoteOkFullscreen()
                     return true
                 }
             }
@@ -1994,38 +1960,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    val playing = currentPlayingChannel
-                    val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
-                    if (isSports) {
-                        // Khi đang ở chế độ sport thì khi ấn dpad left luôn luôn mở LIVE EVENTS
-                        if (currentAppMode != AppMode.SPORTS) {
-                            switchAppMode(AppMode.SPORTS, focusCategories = false)
-                        }
-                        val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
-                        if (liveCat != null) {
-                            currentSelectedCategory = liveCat
-                            categoryAdapter.setSelectedCategory(liveCat)
-                            val matchChannel = if (currentPlayingMatchGroup != null) {
-                                liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
-                            } else null
-                            displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS })
-                        }
-                        showOverlay()
-                        return true
-                    } else {
-                        // Chế độ TV: Mở nhanh danh sách Yêu Thích
-                        if (currentAppMode != AppMode.TV) {
-                            switchAppMode(AppMode.TV, focusCategories = false)
-                        }
-                        val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
-                        if (favCat != null) {
-                            currentSelectedCategory = favCat
-                            categoryAdapter.setSelectedCategory(favCat)
-                            displayCategoryChannels(favCat)
-                        }
-                        showOverlay()
-                        return true
-                    }
+                    handleRemoteBackOrLeftFullscreen()
+                    return true
                 }
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -2041,8 +1977,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    // Phím Phải khi xem toàn màn hình: Mở menu chọn danh sách phát nhanh
-                    showQuickPlaylistDialog()
+                    handleRemoteRightFullscreen()
                     return true
                 }
             }
@@ -2054,46 +1989,169 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_BACK -> {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    val focused = currentFocus
-                    val isStandingsFocused = focused != null && (focused.id == R.id.rvSpotlightStandings ||
-                            focused.id == R.id.layoutStandingItem ||
-                            (focused.parent != null && focused.parent == binding.rvSpotlightStandings))
-                    if (isStandingsFocused || (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
-                                focused.id == R.id.navFavorites || focused.id == R.id.navModeTv || focused.id == R.id.navModeSports ||
-                                focused.id == R.id.navPlaylists ||
-                                focused.id == R.id.navSidebarSettings || focused.id == R.id.navRefreshPlaylists ||
-                                focused.id == R.id.navCheckUpdate))) {
-                        focusPlayingChannel()
-                        return true
-                    }
-                    if (System.currentTimeMillis() - backPressedTime < 2000) {
-                        finish()
-                        return true
-                    } else {
-                        backPressedTime = System.currentTimeMillis()
-                        hideOverlay()
-                        showBottomNotification("Bấm QUAY LẠI 2 lần để thoát ứng dụng")
-                        return true
-                    }
+                    return handleBackInOverlay()
                 } else {
-                    if (System.currentTimeMillis() - backPressedTime < 2000) {
-                        finish()
-                        return true
-                    }
-                    if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
-                        // Điểm 3: Khi đang xem thể thao trực tiếp, bấm BACK 1 lần quay về màn hình lựa chọn nguồn phát
-                        showMatchSourcesDialog(currentPlayingMatchGroup!!)
-                        return true
-                    } else {
-                        // Điểm 5: Khi đang xem TV toàn màn hình, bấm BACK 1 lần quay về màn hình danh sách kênh
-                        showOverlay()
-                        return true
-                    }
+                    handleRemoteBackOrLeftFullscreen()
+                    return true
                 }
             }
         }
 
         return super.onKeyDown(keyCode, event)
+    }
+
+    private fun handleRemoteOkFullscreen() {
+        val playing = currentPlayingChannel
+        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        if (isSports) {
+            // Mục Thể Thao: Nhấn OK mở LIVE EVENTS với Highlight trận đấu đó
+            if (currentAppMode != AppMode.SPORTS) {
+                switchAppMode(AppMode.SPORTS, focusCategories = false)
+            }
+            val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
+            if (liveCat != null) {
+                currentSelectedCategory = liveCat
+                categoryAdapter.setSelectedCategory(liveCat)
+                val matchChannel = if (currentPlayingMatchGroup != null) {
+                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                } else null
+                displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: liveCat.channels.firstOrNull())
+            }
+            showOverlay()
+            focusPlayingChannel()
+        } else {
+            // Mục Xem TV: Nhấn OK mở danh mục Tất cả với Highlight kênh đó
+            if (currentAppMode != AppMode.TV) {
+                switchAppMode(AppMode.TV, focusCategories = false)
+            }
+            val allCat = allCategories.firstOrNull { it.name.equals("Tất cả", ignoreCase = true) } ?: allCategories.firstOrNull()
+            if (allCat != null) {
+                currentSelectedCategory = allCat
+                categoryAdapter.setSelectedCategory(allCat)
+                val targetChan = allCat.channels.firstOrNull { it.streamUrl == playing?.streamUrl || it.id == playing?.id } ?: playing
+                displayCategoryChannels(allCat, focusChannel = targetChan)
+            }
+            showOverlay()
+            focusPlayingChannel()
+        }
+    }
+
+    private fun handleRemoteBackOrLeftFullscreen() {
+        val playing = currentPlayingChannel
+        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        if (isSports) {
+            // Mục Thể Thao: Nhấn BACK/Dpad Trái mở danh mục Nguồn phát chứa link đó kèm highlight kênh đang phát
+            if (currentAppMode != AppMode.SPORTS) {
+                switchAppMode(AppMode.SPORTS, focusCategories = false)
+            }
+            val sourceCat = allCategories.firstOrNull { cat ->
+                !cat.name.contains("LIVE EVENTS", ignoreCase = true) && !cat.name.contains("TRỰC TIẾP", ignoreCase = true) &&
+                cat.channels.any { it.streamUrl == playing?.streamUrl }
+            } ?: allCategories.firstOrNull { cat ->
+                cat.channels.any { it.streamUrl == playing?.streamUrl }
+            } ?: allCategories.firstOrNull { cat ->
+                playing != null && cat.name.equals(playing.groupTitle, ignoreCase = true)
+            } ?: allCategories.firstOrNull { !it.name.contains("LIVE EVENTS", ignoreCase = true) }
+              ?: allCategories.firstOrNull()
+
+            if (sourceCat != null) {
+                currentSelectedCategory = sourceCat
+                categoryAdapter.setSelectedCategory(sourceCat)
+                val targetChan = sourceCat.channels.firstOrNull { it.streamUrl == playing?.streamUrl } ?: playing
+                displayCategoryChannels(sourceCat, focusChannel = targetChan)
+            }
+            showOverlay()
+            focusPlayingChannel()
+        } else {
+            // Mục Xem TV: Nhấn BACK/Dpad Trái mở danh mục con kèm highlight kênh đó
+            if (currentAppMode != AppMode.TV) {
+                switchAppMode(AppMode.TV, focusCategories = false)
+            }
+            val subCat = allCategories.firstOrNull { cat ->
+                !cat.name.equals("Tất cả", ignoreCase = true) &&
+                !cat.name.equals("Yêu thích", ignoreCase = true) &&
+                cat.channels.any { it.streamUrl == playing?.streamUrl || it.id == playing?.id }
+            } ?: allCategories.firstOrNull { cat ->
+                !cat.name.equals("Tất cả", ignoreCase = true) &&
+                playing != null && cat.name.equals(playing.groupTitle, ignoreCase = true)
+            } ?: (if (currentSelectedCategory?.name != "Tất cả") currentSelectedCategory else null)
+              ?: allCategories.firstOrNull { !it.name.equals("Tất cả", ignoreCase = true) }
+              ?: allCategories.firstOrNull()
+
+            if (subCat != null) {
+                currentSelectedCategory = subCat
+                categoryAdapter.setSelectedCategory(subCat)
+                val targetChan = subCat.channels.firstOrNull { it.streamUrl == playing?.streamUrl || it.id == playing?.id } ?: playing
+                displayCategoryChannels(subCat, focusChannel = targetChan)
+            }
+            showOverlay()
+            focusPlayingChannel()
+        }
+        backPressedTime = 0L
+    }
+
+    private fun handleRemoteRightFullscreen() {
+        val playing = currentPlayingChannel
+        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        if (isSports) {
+            // Mục Thể Thao: Nhấn Dpad Phải mở hộp thoại chọn nguồn phát trực tiếp của trận đấu
+            val mg = currentPlayingMatchGroup
+                ?: (if (playing != null) sportsLiveManager.getMatch(playing.name) else null)
+                ?: sportsLiveManager.matchGroupsMap.values.firstOrNull { it.sources.any { s -> s.streamUrl == playing?.streamUrl } }
+            if (mg != null) {
+                showMatchSourcesDialog(mg)
+            } else {
+                showBottomNotification("Không có danh sách nguồn phát khác cho trận đấu này")
+            }
+        } else {
+            // Mục Xem TV: Nhấn Dpad Phải mở hộp thoại chọn danh sách phát .m3u
+            showQuickPlaylistDialog()
+        }
+    }
+
+    private fun handleBackInOverlay(): Boolean {
+        val focused = currentFocus
+        val isStandingsFocused = focused != null && (focused.id == R.id.rvSpotlightStandings ||
+                focused.id == R.id.layoutStandingItem ||
+                (focused.parent != null && focused.parent == binding.rvSpotlightStandings))
+        val isEpgFocused = focused != null && (focused.id == R.id.rvSpotlightEpg ||
+                (focused.parent != null && focused.parent == binding.rvSpotlightEpg))
+
+        if (isStandingsFocused || isEpgFocused) {
+            focusPlayingChannel()
+            backPressedTime = 0L
+            return true
+        }
+
+        val isSidebarFocused = focused != null && (focused.id == R.id.navFavorites ||
+                focused.id == R.id.navModeTv || focused.id == R.id.navModeSports ||
+                focused.id == R.id.navPlaylists || focused.id == R.id.navSidebarSettings ||
+                focused.id == R.id.navRefreshPlaylists || focused.id == R.id.navCheckUpdate)
+
+        if (isSidebarFocused) {
+            if (System.currentTimeMillis() - backPressedTime < 2000) {
+                finish()
+                return true
+            } else {
+                backPressedTime = System.currentTimeMillis()
+                showBottomNotification("Bấm QUAY LẠI lần nữa để thoát ứng dụng")
+                return true
+            }
+        }
+
+        // Bất kỳ phím back nào để thoát từ các menu (danh sách kênh, danh mục) -> đóng overlay
+        // TUYỆT ĐỐI không tính là phím back lần 1 trong 2 lần ấn để thoát app
+        hideOverlay()
+        backPressedTime = 0L
+        return true
+    }
+
+    override fun onBackPressed() {
+        if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+            handleBackInOverlay()
+            return
+        }
+        handleRemoteBackOrLeftFullscreen()
     }
 
     private fun showOverlay() {
@@ -2204,6 +2262,9 @@ class MainActivity : AppCompatActivity() {
             playChannel(selectedChannel)
             hideHandler.postDelayed({ hideOverlay() }, 800)
         }
+        dialog.setOnDismissListener {
+            backPressedTime = 0L
+        }
         dialog.show()
     }
 
@@ -2220,6 +2281,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
         dialog.setOnDismissListener {
+            backPressedTime = 0L
             if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                 currentPlayingChannel?.let { showQuickChannelInfo(it) }
             }
@@ -2231,6 +2293,7 @@ class MainActivity : AppCompatActivity() {
         binding.channelGuideOverlay.visibility = View.GONE
         hideHandler.removeCallbacks(hideOverlayRunnable)
         currentPlayingChannel?.let { showQuickChannelInfo(it) }
+        backPressedTime = 0L
     }
 
     private fun toggleOverlay() {
@@ -2251,6 +2314,7 @@ class MainActivity : AppCompatActivity() {
     private fun showSettingsDialog() {
         if (activeSettingsDialog?.isShowing == true) {
             activeSettingsDialog?.dismiss()
+            backPressedTime = 0L
             return
         }
         resetOverlayTimer()
@@ -2274,6 +2338,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         activeSettingsDialog = dialog
+        dialog.setOnDismissListener {
+            activeSettingsDialog = null
+            backPressedTime = 0L
+        }
         dialog.show()
     }
 
