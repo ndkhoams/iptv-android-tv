@@ -194,6 +194,11 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getString(KEY_UDPXY_SERVER, "") ?: ""
         set(value) = prefs.edit().putString(KEY_UDPXY_SERVER, value.trim()).apply()
 
+    // ===== ĐƯỜNG DẪN FILE THỂ THAO TRỰC TIẾP (THETHAO.M3U TỪ GITHUB / ARMBIAN) =====
+    var sportsPlaylistUrl: String
+        get() = prefs.getString(KEY_SPORTS_PLAYLIST_URL, SportsLiveManager.DEFAULT_SPORTS_URL) ?: SportsLiveManager.DEFAULT_SPORTS_URL
+        set(value) = prefs.edit().putString(KEY_SPORTS_PLAYLIST_URL, value.trim().ifBlank { SportsLiveManager.DEFAULT_SPORTS_URL }).apply()
+
     // ===== SAO LƯU & KHÔI PHỤC TOÀN BỘ CẤU HÌNH (BACKUP / RESTORE) =====
     fun createBackupJson(): String {
         val root = JSONObject()
@@ -452,6 +457,7 @@ class PreferencesHelper(context: Context) {
         private const val KEY_DEINTERLACE_MODE = "key_deinterlace_mode"
         private const val KEY_HTTP_USER_AGENT = "key_http_user_agent"
         private const val KEY_UDPXY_SERVER = "key_udpxy_server"
+        private const val KEY_SPORTS_PLAYLIST_URL = "key_sports_playlist_url"
 
         const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 

@@ -2082,9 +2082,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyUpdatedSportsCategories(sportsCategories: List<Category>) {
-        val sportsNames = setOf(
+        val sportsNames = sportsCategories.map { it.name }.toSet() + setOf(
             "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
             "🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)",
+            "🌐 KÊNH THỂ THAO QUỐC TẾ (F1 / TENNIS)",
             "🍌 Chuối Chiên TV",
             "🐔 Gà Vàng / Tiếu Lâm",
             "🍚 Xôi Lạc TV",

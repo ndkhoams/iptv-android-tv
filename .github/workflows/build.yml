@@ -55,17 +55,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v')
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Tối Ưu Quét Thể Thao 30 Phút, Chống Đè Thông Báo & Tối Ưu Cho Android 5.1 (Mi Box 3c)"
+        name: "${{ github.ref_name }} - Đồng Bộ Trực Tiếp Thể Thao Từ GitHub thethao.m3u & Tối Ưu Siêu Nhẹ Cho TV"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Điều chỉnh chu kỳ cào luồng thể thao ngầm:**
-            - Nâng thời gian quét và cập nhật danh sách trực tiếp thể thao lên **30 phút một lần** (thay vì 15 phút), giảm tải mạng và giữ cho TV Box chạy mượt mà, tiết kiệm tài nguyên.
-          - **Khắc phục triệt để lỗi đè thông báo:**
-            - Sửa hiện tượng thanh thông báo thoát đè lên bảng thông tin kênh nhanh OSD. Bổ sung cơ chế tự động ẩn bảng cũ khi bảng mới xuất hiện.
-          - **Tối ưu hóa chuyên sâu cho thiết bị Android 5.1 / RAM 1GB (Mi Box 3c):**
-            - Bật `largeHeap="true"` mở rộng bộ nhớ Java Heap lên 256MB–512MB, chống tràn RAM (`OutOfMemoryError`) khi nạp danh sách kênh lớn.
-            - Bật `hardwareAccelerated="true"` ép GPU Mali-450 gánh toàn bộ giao diện 60fps.
-            - Hỗ trợ SSL / TLS Permissive cho Android 5.1, bỏ qua lỗi chứng chỉ Let's Encrypt hết hạn trên hệ điều hành Android cũ khi tải playlist online.
+          - **Chuyển sang đồng bộ trực tiếp từ `thethao.m3u` trên GitHub:**
+            - Loại bỏ hoàn toàn hơn 550 dòng code cào web phức tạp (Chuối Chiên, Gà Vàng, Xôi Lạc, Cà Khịa, StreamFree) khỏi ứng dụng trên TV.
+            - App chuyển sang tải trực tiếp file `thethao.m3u` (do máy chủ Armbian tự động đẩy lên GitHub), tốc độ tải chỉ mất 0.2 - 0.3 giây.
+            - Tiết kiệm tối đa bộ nhớ RAM và CPU cho TV Box (đặc biệt là Mi Box 3c 1GB RAM), không còn lo bị nhà mạng chặn DPI hay Cloudflare WAF trên TV.
+          - **Tự động phân nhóm và ánh xạ danh mục thể thao thông minh:**
+            - `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)`: Danh mục tổng hợp toàn bộ các trận đấu trong ngày kèm nút cập nhật nhanh ở dòng đầu.
+            - `🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)`: Kênh thể thao quốc tế 24/7 (F1, Tennis, Canal+, Eurosport...).
+            - Các danh mục theo nguồn: `🍌 Chuối Chiên TV`, `🐔 Gà Vàng / Tiếu Lâm`, `🌶️ Cà Khịa TV`...
+          - **Bộ nhớ đệm thông minh:**
+            - Tự động lưu cache offline trên TV, đảm bảo khi mất kết nối mạng vẫn phát kênh bình thường từ bộ nhớ đệm.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
