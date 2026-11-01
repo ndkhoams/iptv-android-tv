@@ -330,6 +330,14 @@ class SportsLiveManager(private val context: Context) {
     fun parseSportsDataJson(jsonStr: String) {
         try {
             val root = JSONObject(jsonStr)
+            parseSportsDataJson(root)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun parseSportsDataJson(root: JSONObject) {
+        try {
             val fixturesArr = root.optJSONArray("fixtures")
             if (fixturesArr != null) {
                 val byLeague = mutableMapOf<String, MutableList<EspnFixture>>()
@@ -357,6 +365,174 @@ class SportsLiveManager(private val context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    /**
+     * Tối ưu hiệu năng đột phá: Đọc trực tiếp dữ liệu đã gom nhóm sẵn từ thethao-data.json
+     * do máy chủ Armbian tính toán (chỉ mất ~2ms trên Android TV, không tốn CPU)
+     */
+    fun parseSportsCategoriesFromDataJson(root: JSONObject): List<Category> {
+        val categories = mutableListOf<Category>()
+
+        // 1. Cập nhật lịch thi đấu ESPN và bảng xếp hạng
+        parseSportsDataJson(root)
+
+        // 2. Danh mục LIVE EVENTS (Trận đấu trực tiếp hôm nay)
+        val liveEventsArr = root.optJSONArray("live_events")
+        if (liveEventsArr != null && liveEventsArr.length() > 0) {
+            val matchesWithRefresh = mutableListOf<Channel>()
+            val refreshItem = Channel(
+                id = ACTION_REFRESH_SPORTS,
+                name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
+                logoUrl = null,
+                streamUrl = "action://refresh_sports",
+                groupTitle = CATEGORY_LIVE_EVENTS,
+                number = 0
+            )
+            matchesWithRefresh.add(refreshItem)
+
+            for (i in 0 until liveEventsArr.length()) {
+                val item = liveEventsArr.getJSONObject(i)
+                val key = item.optString("key")
+                val homeTeam = item.optString("homeTeam")
+                val awayTeam = item.optString("awayTeam")
+                val time = item.optString("time")
+                val date = item.optString("date")
+                val timestamp = item.optLong("timestamp")
+                val league = item.optString("league")
+                val leagueName = item.optString("leagueName")
+                val logo = item.optString("logo")
+                val isOngoing = item.optBoolean("isOngoing", false)
+                val isCompleted = item.optBoolean("isCompleted", false)
+                val displayTitle = item.optString("displayTitle")
+
+                val srcArr = item.optJSONArray("sources")
+                val sourceChannels = mutableListOf<Channel>()
+                if (srcArr != null) {
+                    for (s in 0 until srcArr.length()) {
+                        val sObj = srcArr.getJSONObject(s)
+                        val sName = sObj.optString("name")
+                        val sUrl = sObj.optString("url")
+                        val sLogo = sObj.optString("logo").ifBlank { null }
+                        val sGroup = sObj.optString("group")
+                        sourceChannels.add(
+                            Channel(
+                                id = "src_${key}_${s}_${sUrl.hashCode()}",
+                                name = sName,
+                                logoUrl = sLogo,
+                                streamUrl = sUrl,
+                                groupTitle = sGroup,
+                                number = s + 1
+                            )
+                        )
+                    }
+                }
+
+                val mg = MatchGroup(
+                    key = key,
+                    homeTeam = homeTeam.ifBlank { "Đội nhà" },
+                    awayTeam = awayTeam.ifBlank { "Đội khách" },
+                    time = time,
+                    date = date,
+                    timestamp = timestamp,
+                    league = league,
+                    leagueName = leagueName,
+                    sources = sourceChannels,
+                    isCompleted = isCompleted,
+                    isOngoing = isOngoing
+                )
+                matchGroupsMap[key] = mg
+
+                // Chỉ hiển thị những trận chưa kết thúc (Full-time)
+                if (!isCompleted) {
+                    val matchName = if (displayTitle.isNotBlank()) {
+                        displayTitle
+                    } else {
+                        val sportIcon = when (league) {
+                            "F1" -> "🏎️"
+                            "TENNIS" -> "🎾"
+                            "NBA" -> "🏀"
+                            else -> if (isOngoing) "🔴" else "⚽"
+                        }
+                        val timePart = if (date.isNotBlank()) "[$time $date]" else "[$time]"
+                        if (awayTeam.isNotBlank()) "$sportIcon $timePart $homeTeam vs $awayTeam" else "$sportIcon $timePart $homeTeam"
+                    }
+                    val leagueLogoUri = if (logo.isNotBlank()) logo else getLeagueLogoUri(league)
+                    matchesWithRefresh.add(
+                        Channel(
+                            id = "match_$key",
+                            name = matchName,
+                            logoUrl = leagueLogoUri,
+                            streamUrl = "match://$key",
+                            groupTitle = CATEGORY_LIVE_EVENTS,
+                            number = matchesWithRefresh.size
+                        )
+                    )
+                }
+            }
+
+            if (matchesWithRefresh.size > 1) {
+                categories.add(Category(CATEGORY_LIVE_EVENTS, matchesWithRefresh))
+            }
+        }
+
+        // 3. Danh mục theo nguồn phát (Chuối Chiên, Gà Vàng, Cola, ...)
+        val sourceGroupsArr = root.optJSONArray("source_groups")
+        if (sourceGroupsArr != null) {
+            for (g in 0 until sourceGroupsArr.length()) {
+                val gObj = sourceGroupsArr.getJSONObject(g)
+                val gName = gObj.optString("name")
+                val chArr = gObj.optJSONArray("channels")
+                val channels = mutableListOf<Channel>()
+                if (chArr != null) {
+                    for (c in 0 until chArr.length()) {
+                        val cObj = chArr.getJSONObject(c)
+                        val cName = cObj.optString("name")
+                        val cUrl = cObj.optString("url")
+                        val cLogo = cObj.optString("logo").ifBlank { null }
+                        val cGroup = cObj.optString("group", gName)
+                        val cNum = cObj.optInt("number", c + 1)
+                        channels.add(
+                            Channel(
+                                id = "src_${gName.hashCode()}_$c",
+                                name = cName,
+                                logoUrl = cLogo,
+                                streamUrl = cUrl,
+                                groupTitle = cGroup,
+                                number = cNum
+                            )
+                        )
+                    }
+                }
+                if (channels.isNotEmpty()) {
+                    categories.add(Category(gName, channels))
+                }
+            }
+        }
+
+        return categories
+    }
+
+    /**
+     * Lấy ngay danh sách thể thao từ RAM hoặc bộ nhớ đệm cache file trên đĩa (< 3ms)
+     * Giúp mở tab Thể thao lên là hiển thị tức thì, không bị trống hay giật lag.
+     */
+    fun getCachedSportsCategories(): List<Category> {
+        cachedCategories?.let { if (it.isNotEmpty()) return it }
+        val dataCacheFile = File(context.cacheDir, "thethao_data_cache.json")
+        if (dataCacheFile.exists() && dataCacheFile.length() > 200L) {
+            try {
+                val jsonStr = dataCacheFile.readText(Charsets.UTF_8)
+                val root = JSONObject(jsonStr)
+                val list = parseSportsCategoriesFromDataJson(root)
+                if (list.isNotEmpty()) {
+                    cachedCategories = list
+                    lastFetchTimeMs = System.currentTimeMillis()
+                    return list
+                }
+            } catch (e: Exception) {}
+        }
+        return emptyList()
     }
 
     private fun loadLocalSportsDataJson(): Boolean {
@@ -620,92 +796,75 @@ class SportsLiveManager(private val context: Context) {
     suspend fun getSportsCategories(forceRefresh: Boolean = false): List<Category> =
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
+            val dataCacheFile = File(context.cacheDir, "thethao_data_cache.json")
             val cacheFile = File(context.cacheDir, "thethao_sports_cache.m3u")
             val baseSportsUrl = prefs.sportsPlaylistUrl.ifBlank { DEFAULT_SPORTS_URL }
 
-            // 1. Nếu đã có trong RAM và không yêu cầu ép buộc làm mới -> trả về tức thì (0ms)
-            if (!forceRefresh && cachedCategories != null && (now - lastFetchTimeMs) < CACHE_TTL_MS) {
+            // 1. Đã có trong RAM và không yêu cầu ép buộc làm mới -> trả về tức thì (0ms)
+            if (!forceRefresh && cachedCategories != null && cachedCategories!!.isNotEmpty() && (now - lastFetchTimeMs) < CACHE_TTL_MS) {
                 return@withContext cachedCategories!!
             }
 
-            // 2. ƯU TIÊN HIỂN THỊ CÁC KÊNH TRƯỚC:
-            // Nếu có cache file trên đĩa và chưa có trong RAM -> parse và trả về NGAY LẬP TỨC (< 20ms)
-            if (!forceRefresh && cacheFile.exists() && cacheFile.length() > 0 && cachedCategories == null) {
-                val initialList = parseSportsCategoriesFromFile(cacheFile, baseSportsUrl)
-                if (initialList.isNotEmpty()) {
-                    cachedCategories = initialList
-                    lastFetchTimeMs = now
-                    // Kích hoạt cập nhật ngầm không làm đơ giao diện
-                    CoroutineScope(Dispatchers.IO).launch {
-                        refreshSportsDataFromNetwork(cacheFile, baseSportsUrl)
+            // 2. ƯU TIÊN TUYỆT ĐỐI: Đọc cache JSON từ đĩa -> trả về NGAY LẬP TỨC (< 5ms)
+            if (!forceRefresh && cachedCategories == null && dataCacheFile.exists() && dataCacheFile.length() > 200L) {
+                try {
+                    val jsonStr = dataCacheFile.readText(Charsets.UTF_8)
+                    val root = JSONObject(jsonStr)
+                    val list = parseSportsCategoriesFromDataJson(root)
+                    if (list.isNotEmpty()) {
+                        cachedCategories = list
+                        lastFetchTimeMs = now
+                        // Kích hoạt cập nhật ngầm từ mạng CDN không chặn giao diện
+                        CoroutineScope(Dispatchers.IO).launch {
+                            refreshSportsDataFromNetwork(dataCacheFile, cacheFile, baseSportsUrl)
+                        }
+                        return@withContext list
                     }
-                    return@withContext initialList
-                }
+                } catch (e: Exception) {}
             }
 
             // 3. Nếu chưa có cache hoặc người dùng bấm Cập nhật (forceRefresh = true):
-            // Tải file m3u mới về và nạp dữ liệu
-            refreshSportsDataFromNetwork(cacheFile, baseSportsUrl)
+            // Tải dữ liệu JSON mới từ CDN mạng
+            val updatedList = refreshSportsDataFromNetwork(dataCacheFile, cacheFile, baseSportsUrl)
+            if (updatedList.isNotEmpty()) {
+                cachedCategories = updatedList
+                lastFetchTimeMs = System.currentTimeMillis()
+                return@withContext updatedList
+            }
 
+            // 4. Fallback cuối cùng nếu cả dữ liệu mạng và cache JSON đều thất bại: parse file M3U cũ
             if (cacheFile.exists() && cacheFile.length() > 0L) {
-                val updatedList = parseSportsCategoriesFromFile(cacheFile, baseSportsUrl)
-                if (updatedList.isNotEmpty()) {
-                    cachedCategories = updatedList
+                val fallbackList = parseSportsCategoriesFromFile(cacheFile, baseSportsUrl)
+                if (fallbackList.isNotEmpty()) {
+                    cachedCategories = fallbackList
                     lastFetchTimeMs = System.currentTimeMillis()
-                    return@withContext updatedList
+                    return@withContext fallbackList
                 }
             }
 
             cachedCategories ?: emptyList()
         }
 
-    private suspend fun refreshSportsDataFromNetwork(cacheFile: File, baseSportsUrl: String) = withContext(Dispatchers.IO) {
+    private suspend fun refreshSportsDataFromNetwork(
+        dataCacheFile: File,
+        m3uCacheFile: File,
+        baseSportsUrl: String
+    ): List<Category> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val sportsUrl = if (baseSportsUrl.contains("?")) "$baseSportsUrl&_ts=$now" else "$baseSportsUrl?_ts=$now"
-        val cdnFallbackUrl = "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u?_ts=$now"
-
-        val tempFile = File(context.cacheDir, "thethao_sports_cache.tmp")
-
-        // 1. Tải file thethao.m3u với cơ chế fallback nhanh jsDelivr CDN
-        var downloadSuccess = false
-        val urlsToTry = listOf(sportsUrl, cdnFallbackUrl)
         val fastClient = httpClient.newBuilder()
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(8, TimeUnit.SECONDS)
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
             .build()
 
-        for (u in urlsToTry) {
-            try {
-                val request = Request.Builder()
-                    .url(u)
-                    .header("User-Agent", CHROME_UA)
-                    .header("Cache-Control", "no-cache")
-                    .build()
-                val response = fastClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val bodyBytes = response.body?.bytes()
-                    if (bodyBytes != null && bodyBytes.size > 500) {
-                        FileOutputStream(tempFile).use { it.write(bodyBytes) }
-                        downloadSuccess = true
-                        break
-                    }
-                }
-            } catch (e: Exception) {
-                // Tiếp tục thử URL fallback
-            }
-        }
-
-        if (downloadSuccess && tempFile.exists() && tempFile.length() > 0) {
-            tempFile.renameTo(cacheFile)
-        }
-
-        // 2. Tải thethao-data.json (do Armbian tổng hợp sẵn lịch thi đấu & BXH)
-        val dataCacheFile = File(context.cacheDir, "thethao_data_cache.json")
-        val dataTempFile = File(context.cacheDir, "thethao_data_cache.tmp")
+        // 1. Tải thethao-data.json (chứa sẵn live_events, source_groups, fixtures, standings do Armbian tính toán)
+        // Ưu tiên CDN jsDelivr/Fastly lên hàng đầu để tránh bị bóp băng thông / timeout DNS tại Việt Nam
         val dataUrls = listOf(
-            "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now",
-            "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now"
+            "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now",
+            "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now",
+            "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now"
         )
+
+        val dataTempFile = File(context.cacheDir, "thethao_data_cache.tmp")
         for (u in dataUrls) {
             try {
                 val req = Request.Builder()
@@ -719,12 +878,51 @@ class SportsLiveManager(private val context: Context) {
                     if (bytes != null && bytes.size > 200) {
                         FileOutputStream(dataTempFile).use { it.write(bytes) }
                         dataTempFile.renameTo(dataCacheFile)
-                        parseSportsDataJson(String(bytes, Charsets.UTF_8))
-                        break
+                        val jsonStr = String(bytes, Charsets.UTF_8)
+                        val root = JSONObject(jsonStr)
+                        val parsed = parseSportsCategoriesFromDataJson(root)
+                        if (parsed.isNotEmpty()) {
+                            return@withContext parsed
+                        }
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                // Thử URL CDN tiếp theo
+            }
         }
+
+        // 2. Nếu không tải được thethao-data.json, mới fallback tải thethao.m3u
+        val m3uUrls = listOf(
+            "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u?_ts=$now",
+            "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u?_ts=$now",
+            if (baseSportsUrl.contains("?")) "$baseSportsUrl&_ts=$now" else "$baseSportsUrl?_ts=$now"
+        )
+        val m3uTempFile = File(context.cacheDir, "thethao_sports_cache.tmp")
+        for (u in m3uUrls) {
+            try {
+                val request = Request.Builder()
+                    .url(u)
+                    .header("User-Agent", CHROME_UA)
+                    .header("Cache-Control", "no-cache")
+                    .build()
+                val response = fastClient.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val bodyBytes = response.body?.bytes()
+                    if (bodyBytes != null && bodyBytes.size > 500) {
+                        FileOutputStream(m3uTempFile).use { it.write(bodyBytes) }
+                        m3uTempFile.renameTo(m3uCacheFile)
+                        val parsedM3u = parseSportsCategoriesFromFile(m3uCacheFile, baseSportsUrl)
+                        if (parsedM3u.isNotEmpty()) {
+                            return@withContext parsedM3u
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Thử tiếp URL
+            }
+        }
+
+        emptyList()
     }
 
     private fun parseSportsCategoriesFromFile(cacheFile: File, sportsUrl: String): List<Category> {

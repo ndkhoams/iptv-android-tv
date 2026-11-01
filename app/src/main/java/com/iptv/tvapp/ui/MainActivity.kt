@@ -847,18 +847,16 @@ class MainActivity : AppCompatActivity() {
     private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true) {
         sportsFetchJob?.cancel()
         sportsFetchJob = lifecycleScope.launch {
-            // Yêu cầu 1: Ưu tiên tải ngay từ cache file để hiển thị tức thì nếu chưa có danh sách
+            // Nếu danh sách trong RAM đang rỗng, nạp ngay từ cache đĩa (< 3ms)
             if (sportsCategoriesList.isEmpty()) {
                 val cached = withContext(Dispatchers.IO) {
-                    playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = false)
+                    playlistManager.sportsLiveManager.getCachedSportsCategories()
                 }
                 if (cached.isNotEmpty()) {
                     applyUpdatedSportsCategories(cached)
                 }
             }
 
-            // Cho kênh TV phát ổn định 1.5s trước khi quét luồng thể thao ngầm từ mạng
-            delay(1500)
             try {
                 val sportsCategories = withContext(Dispatchers.IO) {
                     playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
@@ -868,7 +866,7 @@ class MainActivity : AppCompatActivity() {
                     applyUpdatedSportsCategories(sportsCategories)
                     val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
                     if (showNotification) {
-                        showBottomNotification("✅ Đã cập nhật xong! Tìm thấy $count sự kiện thể thao hôm nay.")
+                        showBottomNotification("⚽ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
                     }
                 } else if (showNotification && forceRefresh) {
                     showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
@@ -893,10 +891,14 @@ class MainActivity : AppCompatActivity() {
             allCategories.addAll(tvCategories)
         } else {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
-            allCategories.addAll(sportsCategoriesList)
             if (sportsCategoriesList.isEmpty()) {
-                fetchSportsInBackground(forceRefresh = false, showNotification = false)
+                val cached = playlistManager.sportsLiveManager.getCachedSportsCategories()
+                if (cached.isNotEmpty()) {
+                    sportsCategoriesList.addAll(cached)
+                }
             }
+            allCategories.addAll(sportsCategoriesList)
+            fetchSportsInBackground(forceRefresh = false, showNotification = false)
         }
 
         categoryAdapter.submitList(allCategories.toList())
