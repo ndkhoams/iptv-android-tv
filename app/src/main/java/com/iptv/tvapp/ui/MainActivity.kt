@@ -805,7 +805,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 // Luôn cập nhật trực tiếp thể thao ngầm trong nền
-                fetchSportsInBackground(forceRefresh = forceRefresh, showNotification = !isStartup, delayMs = 2500L)
+                fetchSportsInBackground(forceRefresh = forceRefresh, showNotification = !isStartup)
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
@@ -816,12 +816,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true, delayMs: Long = 0L) {
+    private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true) {
         sportsFetchJob?.cancel()
         sportsFetchJob = lifecycleScope.launch {
-            if (delayMs > 0) {
-                delay(delayMs)
-            }
+            // Cho kênh TV phát ổn định 2.5s trước khi quét luồng thể thao ngầm
+            delay(2500)
             try {
                 val sportsCategories = withContext(Dispatchers.IO) {
                     playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
@@ -838,8 +837,6 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 // Giữ trải nghiệm phát kênh truyền hình liền mạch, không làm gián đoạn
-            } finally {
-                binding.layoutQuickBuffering.visibility = View.GONE
             }
         }
     }
@@ -858,20 +855,10 @@ class MainActivity : AppCompatActivity() {
             allCategories.addAll(tvCategories)
         } else {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
-            if (sportsCategoriesList.isEmpty()) {
-                val cached = playlistManager.sportsLiveManager.getCachedCategoriesSync()
-                if (cached.isNotEmpty()) {
-                    sportsCategoriesList.addAll(cached)
-                }
-            }
             allCategories.addAll(sportsCategoriesList)
             if (sportsCategoriesList.isEmpty()) {
-                binding.tvCategoryHeader.text = "🔴 LIVE EVENTS"
-                binding.tvChannelCount.text = "Đang tải dữ liệu..."
-                binding.tvQuickBufferingText.text = "Đang tải trận đấu trực tiếp..."
-                binding.layoutQuickBuffering.visibility = View.VISIBLE
+                fetchSportsInBackground(forceRefresh = true, showNotification = true)
             }
-            fetchSportsInBackground(forceRefresh = true, showNotification = false, delayMs = 0L)
         }
 
         categoryAdapter.submitList(allCategories.toList())
@@ -2124,15 +2111,6 @@ class MainActivity : AppCompatActivity() {
 
         // Khi đang ở chế độ sport, nhấn OK hoặc mở overlay luôn luôn mở LIVE EVENTS
         if (currentAppMode == AppMode.SPORTS) {
-            if (sportsCategoriesList.isEmpty()) {
-                val cached = playlistManager.sportsLiveManager.getCachedCategoriesSync()
-                if (cached.isNotEmpty()) {
-                    sportsCategoriesList.addAll(cached)
-                    allCategories.clear()
-                    allCategories.addAll(sportsCategoriesList)
-                    categoryAdapter.submitList(allCategories.toList())
-                }
-            }
             val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
@@ -2539,7 +2517,20 @@ class MainActivity : AppCompatActivity() {
         showBottomNotification("🔄 Đang làm mới danh sách trận đấu thể thao...")
         binding.tvQuickBufferingText.text = "Đang quét trận đấu..."
         binding.layoutQuickBuffering.visibility = View.VISIBLE
-        fetchSportsInBackground(forceRefresh = true, showNotification = true, delayMs = 0L)
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            val sportsCategories = withContext(Dispatchers.IO) {
+                playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
+            }
+            binding.layoutQuickBuffering.visibility = View.GONE
+            if (sportsCategories.isNotEmpty()) {
+                applyUpdatedSportsCategories(sportsCategories)
+                val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
+                showBottomNotification("✅ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
+            } else {
+                showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
+            }
+        }
     }
 
     private fun startPeriodicSportsRefresh() {
