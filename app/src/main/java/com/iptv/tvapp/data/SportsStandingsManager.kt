@@ -22,6 +22,10 @@ class SportsStandingsManager(private val context: Context) {
         val points: Int
     )
 
+    fun clearCache() {
+        Companion.clearCache()
+    }
+
     companion object {
         private const val CACHE_TTL_MS = 30 * 60 * 1000L
         private val cache = ConcurrentHashMap<String, List<StandingEntry>>()
