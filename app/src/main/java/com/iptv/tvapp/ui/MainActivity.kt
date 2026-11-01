@@ -972,18 +972,18 @@ class MainActivity : AppCompatActivity() {
         if (channel.streamUrl.startsWith("match://")) {
             val matchKey = channel.streamUrl.removePrefix("match://")
             val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
-            val firstLogo = matchGroup?.sources?.firstOrNull { !it.logoUrl.isNullOrBlank() }?.logoUrl
-            if (!firstLogo.isNullOrBlank()) {
+            val leagueLogo = channel.logoUrl
+            if (!leagueLogo.isNullOrBlank()) {
                 Glide.with(this)
-                    .load(firstLogo)
+                    .load(leagueLogo)
                     .override(160, 100)
                     .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.drawable.ic_tv_placeholder)
-                    .error(R.drawable.ic_tv_placeholder)
+                    .placeholder(R.drawable.ic_nav_sports)
+                    .error(R.drawable.ic_nav_sports)
                     .into(binding.ivSpotlightLogo)
             } else {
-                binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
+                binding.ivSpotlightLogo.setImageResource(R.drawable.ic_nav_sports)
             }
             binding.tvSpotlightStreamInfo.text = "Trận đấu: ${channel.name}\nBấm phím OK để xem danh sách nguồn phát"
             binding.rvSpotlightEpg.visibility = View.GONE

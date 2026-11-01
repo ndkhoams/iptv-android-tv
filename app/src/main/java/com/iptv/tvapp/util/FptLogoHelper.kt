@@ -54,7 +54,7 @@ object FptLogoHelper {
      * Tự động lấy Logo sắc nét từ CDN FPT Play nếu kênh chưa có logo hoặc logo lỗi
      */
     fun getResolvedLogoUrl(channelName: String, originalLogoUrl: String?): String {
-        if (!originalLogoUrl.isNullOrBlank() && originalLogoUrl.startsWith("http")) {
+        if (!originalLogoUrl.isNullOrBlank() && (originalLogoUrl.startsWith("http") || originalLogoUrl.startsWith("android.resource"))) {
             return originalLogoUrl
         }
 
