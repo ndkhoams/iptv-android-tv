@@ -51,6 +51,7 @@ import com.iptv.tvapp.ui.adapter.ChannelAdapter
 import com.iptv.tvapp.ui.adapter.EpgTimelineAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.QuickPlaylistDialog
+import com.iptv.tvapp.ui.dialog.MatchSourcesDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.update.AppUpdateManager
 import com.iptv.tvapp.util.FptLogoHelper
@@ -278,13 +279,21 @@ class MainActivity : AppCompatActivity() {
             onChannelClick = { channel ->
                 if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
                     refreshSportsMatchesManually()
+                } else if (channel.streamUrl.startsWith("match://")) {
+                    val matchKey = channel.streamUrl.removePrefix("match://")
+                    val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
+                    if (matchGroup != null && matchGroup.sources.isNotEmpty()) {
+                        showMatchSourcesDialog(matchGroup)
+                    } else {
+                        Toast.makeText(this, "Không tìm thấy nguồn phát cho trận đấu này", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     playChannel(channel)
                     hideHandler.postDelayed({ hideOverlay() }, 800)
                 }
             },
             onChannelLongClick = { channel ->
-                if (channel.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !channel.streamUrl.startsWith("action://")) {
+                if (channel.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !channel.streamUrl.startsWith("action://") && !channel.streamUrl.startsWith("match://")) {
                     showChannelActionDialog(channel)
                 }
             },
@@ -907,6 +916,19 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        if (channel.streamUrl.startsWith("match://")) {
+            currentFocusedChannel = channel
+            val matchKey = channel.streamUrl.removePrefix("match://")
+            val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
+            binding.tvSpotlightName.text = if (matchGroup != null && matchGroup.awayTeam.isNotBlank()) "${matchGroup.homeTeam} vs ${matchGroup.awayTeam}" else channel.name
+            binding.tvSpotlightResolution.text = if (matchGroup != null) "${matchGroup.sources.size} NGUỒN" else "TRẬN ĐẤU"
+            binding.tvSpotlightCategory.text = matchGroup?.leagueName ?: "Trực Tiếp Bóng Đá"
+            binding.tvSpotlightStatus.visibility = View.GONE
+            spotlightHandler.removeCallbacks(spotlightRunnable)
+            performHeavySpotlightUpdate(channel)
+            return
+        }
+
         currentFocusedChannel = channel
         binding.tvSpotlightName.text = channel.name
 
@@ -944,6 +966,30 @@ class MainActivity : AppCompatActivity() {
             binding.rvSpotlightEpg.visibility = View.GONE
             binding.tvEpgEmpty.visibility = View.VISIBLE
             binding.tvEpgEmpty.text = "Nhấn OK trên điều khiển để tải lại trận đấu"
+            return
+        }
+
+        if (channel.streamUrl.startsWith("match://")) {
+            val matchKey = channel.streamUrl.removePrefix("match://")
+            val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
+            val firstLogo = matchGroup?.sources?.firstOrNull { !it.logoUrl.isNullOrBlank() }?.logoUrl
+            if (!firstLogo.isNullOrBlank()) {
+                Glide.with(this)
+                    .load(firstLogo)
+                    .override(160, 100)
+                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.ic_tv_placeholder)
+                    .error(R.drawable.ic_tv_placeholder)
+                    .into(binding.ivSpotlightLogo)
+            } else {
+                binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
+            }
+            binding.tvSpotlightStreamInfo.text = "Trận đấu: ${channel.name}
+Bấm phím OK để xem danh sách nguồn phát"
+            binding.rvSpotlightEpg.visibility = View.GONE
+            binding.tvEpgEmpty.visibility = View.VISIBLE
+            binding.tvEpgEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát"
             return
         }
 
@@ -1826,6 +1872,15 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.rvChannels.requestFocus()
         }
+    }
+
+    private fun showMatchSourcesDialog(matchGroup: SportsLiveManager.MatchGroup) {
+        resetOverlayTimer()
+        val dialog = MatchSourcesDialog(this, matchGroup) { selectedChannel ->
+            playChannel(selectedChannel)
+            hideHandler.postDelayed({ hideOverlay() }, 800)
+        }
+        dialog.show()
     }
 
     private fun showQuickPlaylistDialog() {

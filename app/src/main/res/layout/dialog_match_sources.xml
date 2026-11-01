@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="520dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_fpt_glass_panel"
+    android:padding="18dp">
+
+    <!-- Header trận đấu -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="10dp">
+
+        <TextView
+            android:id="@+id/tvMatchTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Liverpool vs Arsenal"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tvMatchSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="23:30 Hôm nay • 🏴󠁧󠁢󠁥󠁮󠁧󠁿 Ngoại Hạng Anh • 7 nguồn phát trực tiếp"
+            android:textColor="@color/fpt_orange"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2E2C48"
+        android:layout_marginBottom="10dp" />
+
+    <!-- RecyclerView danh sách nguồn phát -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMatchSources"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="340dp"
+        android:clipToPadding="false"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2E2C48"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp" />
+
+    <!-- Footer hướng dẫn TV Remote -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Bấm OK để phát nguồn đã chọn • Bấm QUAY LẠI để đóng"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+</LinearLayout>
+

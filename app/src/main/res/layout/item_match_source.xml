@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="10dp"
+    android:paddingEnd="12dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:background="@drawable/selector_channel_item">
+
+    <TextView
+        android:id="@+id/tvSourceIndex"
+        android:layout_width="26dp"
+        android:layout_height="wrap_content"
+        android:textColor="@color/selector_fpt_channel_num"
+        android:duplicateParentState="true"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:text="01" />
+
+    <ImageView
+        android:id="@+id/ivSourceLogo"
+        android:layout_width="32dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="6dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_tv_placeholder" />
+
+    <TextView
+        android:id="@+id/tvSourceName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="6dp"
+        android:textColor="@color/selector_fpt_channel_text"
+        android:duplicateParentState="true"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:text="🍌 Chuối Chiên TV (BLV Chuối Nhỏ)" />
+
+    <TextView
+        android:id="@+id/tvSourceBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_fpt_badge"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:textColor="@color/fpt_orange"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:text="FHD" />
+</LinearLayout>
+
