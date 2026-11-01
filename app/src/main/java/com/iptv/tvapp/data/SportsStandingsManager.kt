@@ -42,12 +42,22 @@ class SportsStandingsManager(private val context: Context) {
         )
     }
 
-    suspend fun getStandings(league: String): List<StandingEntry> = withContext(Dispatchers.IO) {
+    fun clearCache() {
+        cache.clear()
+        lastFetchTime.clear()
+    }
+
+    suspend fun getStandings(league: String, forceRefresh: Boolean = false): List<StandingEntry> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val cached = cache[league]
-        val lastTime = lastFetchTime[league] ?: 0L
-        if (cached != null && (now - lastTime) < CACHE_TTL_MS) {
-            return@withContext cached
+        if (forceRefresh) {
+            cache.remove(league)
+            lastFetchTime.remove(league)
+        } else {
+            val cached = cache[league]
+            val lastTime = lastFetchTime[league] ?: 0L
+            if (cached != null && (now - lastTime) < CACHE_TTL_MS) {
+                return@withContext cached
+            }
         }
 
         // 1. Nếu là V-League 1: Lấy trực tiếp từ FotMob API (Mùa giải hiện tại)

@@ -459,6 +459,12 @@ class MainActivity : AppCompatActivity() {
             channelProvider = { allChannels },
             currentPlayingProvider = { currentPlayingChannel },
             onPlayChannel = { ch ->
+                val isSportsChannel = sportsCategoriesList.any { cat -> cat.channels.any { s -> s.streamUrl == ch.streamUrl } } || ch.streamUrl.startsWith("match://")
+                if (isSportsChannel && currentAppMode != AppMode.SPORTS) {
+                    switchAppMode(AppMode.SPORTS, focusCategories = false)
+                } else if (!isSportsChannel && currentAppMode != AppMode.TV) {
+                    switchAppMode(AppMode.TV, focusCategories = false)
+                }
                 playChannel(ch)
                 hideHandler.postDelayed({ hideOverlay() }, 800)
             },
@@ -480,6 +486,19 @@ class MainActivity : AppCompatActivity() {
                 }
                 applyPlayerVisibility()
                 currentPlayingChannel?.let { playChannel(it) }
+            },
+            tvCategoriesProvider = {
+                if (tvCategories.isNotEmpty()) tvCategories
+                else allCategories.filter { !it.name.contains("LIVE EVENTS", ignoreCase = true) }
+            },
+            sportsCategoriesProvider = {
+                sportsCategoriesList
+            },
+            getMatchGroup = { matchKey ->
+                playlistManager.sportsLiveManager.getMatch(matchKey)
+            },
+            onRefreshSports = {
+                refreshSportsMatchesManually()
             }
         )
         webServer?.start()
@@ -1011,21 +1030,46 @@ class MainActivity : AppCompatActivity() {
             currentFocusedChannel = channel
             val matchKey = channel.streamUrl.removePrefix("match://")
             val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
+            // Yêu cầu 5: Title trận đấu phía trên bảng xếp hạng không ghi giờ thi đấu, chỉ cần ghi tên 2 đội
             val titleText = if (matchGroup != null && matchGroup.awayTeam.isNotBlank()) {
-                if (matchGroup.time.isNotBlank()) "[${matchGroup.time}] ${matchGroup.homeTeam} vs ${matchGroup.awayTeam}"
-                else "${matchGroup.homeTeam} vs ${matchGroup.awayTeam}"
-            } else channel.name
+                "${matchGroup.homeTeam} vs ${matchGroup.awayTeam}"
+            } else if (matchGroup != null) {
+                matchGroup.homeTeam
+            } else {
+                channel.name.replace(Regex("""^(\[[^\]]+\]|⚽|\s)+"""), "")
+                    .replace(Regex("""\s*•.*$"""), "")
+                    .trim()
+            }
             binding.tvSpotlightName.text = titleText
             binding.tvSpotlightResolution.text = if (matchGroup != null) "${matchGroup.sources.size} NGUỒN" else "TRẬN ĐẤU"
             binding.tvSpotlightCategory.text = matchGroup?.leagueName ?: "Trực Tiếp Bóng Đá"
             binding.tvSpotlightStatus.visibility = View.GONE
+
+            // Yêu cầu 6: Chỉ hiện nhãn TRỰC TIẾP phía trên logo khi trận đấu đang diễn ra
+            val isOngoing = matchGroup?.isOngoing ?: playlistManager.sportsLiveManager.isMatchOngoing(channel)
+            binding.tvSpotlightLiveTag.visibility = if (isOngoing) View.VISIBLE else View.GONE
+
             spotlightHandler.removeCallbacks(spotlightRunnable)
             performHeavySpotlightUpdate(channel)
             return
         }
 
         currentFocusedChannel = channel
-        binding.tvSpotlightName.text = channel.name
+        if (isSportsLiveMatch(channel)) {
+            val (home, away, _) = playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name)
+            if (home.isNotBlank() && away.isNotBlank()) {
+                binding.tvSpotlightName.text = "$home vs $away"
+            } else {
+                binding.tvSpotlightName.text = channel.name.replace(Regex("""^(\[[^\]]+\]|⚽|\s)+"""), "")
+                    .replace(Regex("""\s*•.*$"""), "")
+                    .trim()
+            }
+            val isOngoing = playlistManager.sportsLiveManager.isMatchOngoing(channel)
+            binding.tvSpotlightLiveTag.visibility = if (isOngoing) View.VISIBLE else View.GONE
+        } else {
+            binding.tvSpotlightName.text = channel.name
+            binding.tvSpotlightLiveTag.visibility = View.GONE
+        }
 
         // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), các kênh HD tại Việt Nam là 1080i/1080p
         val upperName = channel.name.uppercase()
@@ -1701,7 +1745,8 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickName.text = channel.name
 
         // Lấy tên chương trình EPG đang phát thời gian thực (hiển thị xong rồi tự tắt đi)
-        val currentProg = if (isSportsLiveMatch(channel)) {
+        val isSports = isSportsLiveMatch(channel) || (currentAppMode == AppMode.SPORTS) || channel.streamUrl.startsWith("match://") || (currentPlayingMatchGroup != null)
+        val currentProg = if (isSports) {
             val sportsTimeline = buildSportsTimeline(channel)
             val now = System.currentTimeMillis()
             sportsTimeline.firstOrNull { it.isCurrent(now) } ?: sportsTimeline.getOrNull(1)
@@ -1709,7 +1754,7 @@ class MainActivity : AppCompatActivity() {
             epgManager.getCurrentProgram(channel.id, channel.name)
         }
         if (currentProg != null) {
-            if (isSportsLiveMatch(channel)) {
+            if (isSports) {
                 binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title}"
             } else {
                 val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -1869,7 +1914,7 @@ class MainActivity : AppCompatActivity() {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
                     return handleBackInOverlay()
                 } else {
-                    handleRemoteBackOrLeftFullscreen()
+                    handleRemoteBackFullscreen()
                     return true
                 }
             } else if (event.action == KeyEvent.ACTION_UP) {
@@ -1927,7 +1972,8 @@ class MainActivity : AppCompatActivity() {
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        handleRemoteBackOrLeftFullscreen()
+                        // Nhấn Dpad Trái khi đang xem toàn màn hình: Mở lại thanh tiêu đề OSD góc trái bên dưới
+                        currentPlayingChannel?.let { showQuickChannelInfo(it) }
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -1983,7 +2029,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    handleRemoteBackOrLeftFullscreen()
+                    currentPlayingChannel?.let { showQuickChannelInfo(it) }
                     return true
                 }
             }
@@ -2014,7 +2060,7 @@ class MainActivity : AppCompatActivity() {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
                     return handleBackInOverlay()
                 } else {
-                    handleRemoteBackOrLeftFullscreen()
+                    handleRemoteBackFullscreen()
                     return true
                 }
             }
@@ -2066,7 +2112,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleRemoteBackOrLeftFullscreen() {
+    private fun handleRemoteBackFullscreen() {
         val playing = currentPlayingChannel
         val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
         if (isSports) {
@@ -2180,7 +2226,7 @@ class MainActivity : AppCompatActivity() {
             handleBackInOverlay()
             return
         }
-        handleRemoteBackOrLeftFullscreen()
+        handleRemoteBackFullscreen()
     }
 
     private fun showOverlay() {
@@ -2746,6 +2792,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutQuickBuffering.visibility = View.VISIBLE
 
         lifecycleScope.launch(Dispatchers.Main) {
+            standingsManager.clearCache()
             val sportsCategories = withContext(Dispatchers.IO) {
                 playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
             }
@@ -2753,7 +2800,11 @@ class MainActivity : AppCompatActivity() {
             if (sportsCategories.isNotEmpty()) {
                 applyUpdatedSportsCategories(sportsCategories)
                 val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
-                showBottomNotification("✅ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
+                showBottomNotification("⚽ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
+                val focused = currentFocusedChannel ?: currentPlayingChannel
+                if (focused != null) {
+                    updateSpotlight(focused, immediate = true)
+                }
             } else {
                 showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
             }
@@ -2765,11 +2816,18 @@ class MainActivity : AppCompatActivity() {
             while (isActive) {
                 delay(30 * 60 * 1000L) // Chu kỳ quét tự động 30 phút 1 lần
                 try {
+                    standingsManager.clearCache()
                     val sportsCategories = withContext(Dispatchers.IO) {
                         playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = true)
                     }
                     if (sportsCategories.isNotEmpty()) {
                         applyUpdatedSportsCategories(sportsCategories)
+                        if (binding.channelGuideOverlay.visibility == View.VISIBLE && currentAppMode == AppMode.SPORTS) {
+                            val focused = currentFocusedChannel ?: currentPlayingChannel
+                            if (focused != null) {
+                                updateSpotlight(focused, immediate = true)
+                            }
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()

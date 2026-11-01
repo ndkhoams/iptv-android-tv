@@ -23,18 +23,18 @@ object WebPageTemplate {
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding-bottom: 70px; }
         header { background: #121024; padding: 14px 16px; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { font-size: 17px; color: var(--accent); font-weight: 700; }
+        header h1 { font-size: 16px; color: var(--accent); font-weight: 700; }
         .now-playing-banner { background: linear-gradient(135deg, #FF650033, #0E0C1B); border-bottom: 1px solid #FF650066; padding: 10px 16px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         .now-playing-banner span.ch-name { font-weight: bold; color: #fff; }
         .now-playing-banner span.ch-badge { background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
 
-        .tab-content { display: none; padding: 16px; max-width: 500px; margin: 0 auto; }
+        .tab-content { display: none; padding: 16px; max-width: 520px; margin: 0 auto; }
         .tab-content.active { display: block; }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #131d2e; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-        .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; flex: 1; padding: 6px 0; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: #131d2e; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+        .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex: 1; padding: 5px 0; }
         .nav-btn.active { color: var(--accent); font-weight: bold; }
-        .nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
+        .nav-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
         .remote-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); margin-bottom: 16px; }
         .dpad-container { width: 220px; height: 220px; margin: 10px auto; position: relative; background: #0b1120; border-radius: 50%; border: 2px solid var(--card-border); box-shadow: inset 0 4px 12px rgba(0,0,0,0.6); }
@@ -53,13 +53,36 @@ object WebPageTemplate {
         .search-box { width: 100%; padding: 12px 14px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
         .search-box:focus { border-color: var(--accent); }
         .channel-item { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.15s; }
-        .channel-item:active { background: #2563eb; }
+        .channel-item:active { background: #FF650033; }
         .channel-left { display: flex; align-items: center; gap: 10px; flex: 1; overflow: hidden; }
         .channel-num { color: var(--accent); font-weight: bold; font-size: 14px; min-width: 28px; }
         .channel-logo { width: 36px; height: 28px; object-fit: contain; background: #000; border-radius: 4px; }
-        .channel-title { font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+        .channel-title { font-size: 14px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+        .channel-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
         .btn-fav { background: none; border: none; font-size: 20px; color: #64748b; padding: 4px 8px; cursor: pointer; }
         .btn-fav.active { color: #fbbf24; }
+
+        /* CATEGORY PILLS */
+        .cat-pill-container { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px 2px; margin-bottom: 10px; scrollbar-width: none; -ms-overflow-style: none; }
+        .cat-pill-container::-webkit-scrollbar { display: none; }
+        .cat-pill { background: #1e293b; border: 1px solid var(--card-border); color: var(--text-sub); padding: 7px 14px; border-radius: 18px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: all 0.15s; }
+        .cat-pill.active { background: var(--accent); color: #fff; border-color: #FF8533; box-shadow: 0 2px 8px rgba(255,101,0,0.4); }
+
+        /* SPORTS MATCH CARD */
+        .match-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; margin-bottom: 10px; transition: all 0.15s; }
+        .match-card.expanded { border-color: var(--accent); background: #1a1e2e; }
+        .match-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
+        .match-title { font-size: 14px; font-weight: bold; color: var(--text-main); line-height: 1.35; flex: 1; }
+        .match-badges { display: flex; align-items: center; gap: 6px; }
+        .badge-live { background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; white-space: nowrap; animation: pulseLive 1.5s infinite; }
+        @keyframes pulseLive { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .badge-sources { background: #334155; color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 10px; white-space: nowrap; font-weight: bold; }
+        .match-sources-box { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border); }
+        .match-sources-box.show { display: block; }
+        .source-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid var(--card-border); border-radius: 8px; color: #e2e8f0; font-size: 13px; margin-bottom: 6px; cursor: pointer; text-align: left; transition: all 0.12s; }
+        .source-btn:hover, .source-btn:active { background: #FF6500; color: #fff; border-color: #FF8533; }
+        .btn-refresh-sports { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; background: #1e293b; border: 1px solid var(--accent); border-radius: 10px; color: var(--accent); font-size: 13px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+        .btn-refresh-sports:active { background: var(--accent); color: #fff; }
 
         .form-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
         .form-card h3 { font-size: 15px; color: var(--accent); margin-bottom: 12px; }
@@ -122,19 +145,28 @@ object WebPageTemplate {
         </div>
     </div>
 
-    <!-- TAB 2: CHANNEL LIST -->
+    <!-- TAB 2: CHANNEL LIST (KÊNH TV) -->
     <div id="tab-channels" class="tab-content">
+        <div id="tvCatPills" class="cat-pill-container"></div>
         <input type="text" id="channelSearch" class="search-box" placeholder="🔍 Tìm kiếm kênh truyền hình..." oninput="filterChannels()">
         <div id="channelsContainer">Đang tải danh sách kênh...</div>
     </div>
 
-    <!-- TAB 2.5: FAVORITE CHANNELS -->
+    <!-- TAB 3: SPORTS LIVE (TRỰC TIẾP THỂ THAO) -->
+    <div id="tab-sports" class="tab-content">
+        <div id="sportsCatPills" class="cat-pill-container"></div>
+        <button class="btn-refresh-sports" onclick="refreshSportsFromWeb()">🔄 Cập Nhật Trận Đấu (Live Update)</button>
+        <input type="text" id="sportsSearch" class="search-box" placeholder="🔍 Tìm kiếm trận đấu / kênh thể thao..." oninput="filterSports()">
+        <div id="sportsContainer">Đang tải trận đấu thể thao...</div>
+    </div>
+
+    <!-- TAB 4: FAVORITE CHANNELS -->
     <div id="tab-favorites" class="tab-content">
         <input type="text" id="favSearch" class="search-box" placeholder="🔍 Tìm kiếm trong kênh yêu thích..." oninput="filterFavorites()">
         <div id="favoritesContainer">Đang tải danh sách yêu thích...</div>
     </div>
 
-    <!-- TAB 3: PLAYLIST MANAGER -->
+    <!-- TAB 5: PLAYLIST MANAGER -->
     <div id="tab-playlists" class="tab-content">
         <div class="form-card">
             <h3>+ Dán Link M3U Mới Từ Điện Thoại</h3>
@@ -175,9 +207,8 @@ object WebPageTemplate {
         <div id="playlistsContainer">Đang tải...</div>
     </div>
 
-    <!-- TAB 4: SETTINGS -->
+    <!-- TAB 6: SETTINGS -->
     <div id="tab-settings" class="tab-content">
-        <!-- 1. BỘ GIẢI MÃ VIDEO -->
         <div class="form-card">
             <h3>🎬 1. Bộ Giải Mã Video (Player Engine)</h3>
             <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lựa chọn trình phát giải mã phần cứng cho Android TV.</p>
@@ -193,7 +224,6 @@ object WebPageTemplate {
             </div>
         </div>
 
-        <!-- 2. THUẬT TOÁN DEINTERLACE -->
         <div class="form-card">
             <h3>⚡ 2. Khử Xé Hình 1080i (VLC Deinterlace)</h3>
             <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Khử hiện tượng răng cưa ngang khi các kênh đài truyền hình phát chuẩn 1080i50.</p>
@@ -217,10 +247,9 @@ object WebPageTemplate {
             </div>
         </div>
 
-        <!-- 3. HTTP USER AGENT -->
         <div class="form-card">
             <h3>🌐 3. HTTP User Agent Tùy Chỉnh</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Danh tính nhận diện gửi tới máy chủ phát IPTV. Mặc định dùng danh tính FPT Play Box để vượt rào chặn kênh.</p>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Danh tính nhận diện gửi tới máy chủ phát IPTV.</p>
             <div class="form-group">
                 <label>User Agent Chuỗi:</label>
                 <textarea id="txtHttpUserAgent" class="form-input" style="height:60px; font-size:11px; resize:none;"></textarea>
@@ -231,18 +260,16 @@ object WebPageTemplate {
             </div>
         </div>
 
-        <!-- 4. MÁY CHỦ UDPXY -->
         <div class="form-card">
             <h3>📡 4. Cấu Hình Máy Chủ udpxy</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tự động chuyển đổi luồng multicast (UDP/RTP) sang HTTP proxy mà không cần sửa link.</p>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tự động chuyển đổi luồng multicast (UDP/RTP) sang HTTP proxy.</p>
             <div class="form-group">
                 <label>Máy chủ udpxy (IP:Port):</label>
-                <input type="text" id="txtUdpxyServer" class="form-input" placeholder="Ví dụ: 192.168.1.1:4022 hoặc 10.0.0.222:4022">
+                <input type="text" id="txtUdpxyServer" class="form-input" placeholder="Ví dụ: 192.168.1.1:4022">
             </div>
             <button class="submit-btn" onclick="updateUdpxySettings()">Lưu Cấu Hình udpxy</button>
         </div>
 
-        <!-- 5. CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
         <div class="form-card">
             <h3>🚀 5. Cài Đặt Khởi Động &amp; Mở Kênh</h3>
             <div style="margin-bottom:12px;">
@@ -268,10 +295,9 @@ object WebPageTemplate {
             </div>
         </div>
 
-        <!-- 6. SAO LƯU & KHÔI PHỤC -->
         <div class="form-card">
             <h3>💾 6. Sao Lưu &amp; Khôi Phục Toàn Bộ Cấu Hình</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, bộ giải mã, khử răng cưa, User Agent, kênh yêu thích, udpxy và thiết lập về điện thoại/máy tính hoặc khôi phục lại.</p>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, bộ giải mã, khử răng cưa, User Agent, udpxy về máy.</p>
             <div style="display:flex; gap:10px; margin-bottom:10px;">
                 <button class="submit-btn" style="flex:1; background:#38BDF8;" onclick="downloadBackup()">📥 Tải File Sao Lưu (.json)</button>
             </div>
@@ -283,7 +309,7 @@ object WebPageTemplate {
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
+    <!-- BOTTOM NAVIGATION (6 TABS) -->
     <div class="bottom-nav">
         <button class="nav-btn active" onclick="switchTab('remote', this)">
             <svg viewBox="0 0 24 24"><path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm-5 18c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-8H9V9h6v2z"/></svg>
@@ -292,6 +318,10 @@ object WebPageTemplate {
         <button class="nav-btn" onclick="switchTab('channels', this)">
             <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
             Kênh TV
+        </button>
+        <button class="nav-btn" onclick="switchTab('sports', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 2.07c3.61.45 6.48 3.33 6.93 6.93H13V4.07zM4 12c0-4.07 3.06-7.44 7-7.93v7.93H4zm1 2h6.93c-.45 3.61-3.32 6.48-6.93 6.93V14zm8 5.93c3.94-.49 7-3.86 7-7.93h-7v7.93z"/></svg>
+            Thể Thao
         </button>
         <button class="nav-btn" onclick="switchTab('favorites', this)">
             <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
@@ -310,6 +340,10 @@ object WebPageTemplate {
     <div id="toast">Thông báo</div>
 
     <script>
+        var tvCategories = [];
+        var currentTvCat = "Tất cả";
+        var sportsCategories = [];
+        var currentSportsCat = "🔴 LIVE EVENTS";
         var allChannels = [];
 
         function showToast(msg) {
@@ -328,7 +362,8 @@ object WebPageTemplate {
             document.getElementById('tab-' + tabId).classList.add('active');
             btn.classList.add('active');
 
-            if (tabId === 'channels') loadChannels();
+            if (tabId === 'channels') loadTvCategories();
+            if (tabId === 'sports') loadSportsCategories();
             if (tabId === 'favorites') loadFavorites();
             if (tabId === 'playlists') loadPlaylists();
             if (tabId === 'settings') loadSettings();
@@ -357,35 +392,84 @@ object WebPageTemplate {
             }).catch(function() {});
         }
 
-        function loadChannels() {
+        /* ========== TAB KÊNH TV ========== */
+        function loadTvCategories() {
             var container = document.getElementById('channelsContainer');
-            fetch('/api/channels?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
+            var pillsContainer = document.getElementById('tvCatPills');
+            fetch('/api/tv/categories?t=' + Date.now(), { cache: 'no-store' })
+            .then(function(res) { return res.json(); })
             .then(function(data) {
-                allChannels = data;
-                renderChannels(allChannels);
+                tvCategories = data || [];
+                renderTvPills();
+                renderTvChannels();
             }).catch(function() {
-                container.innerHTML = 'Lỗi tải danh sách kênh.';
+                // Fallback /api/channels
+                fetch('/api/channels?t=' + Date.now(), { cache: 'no-store' })
+                .then(function(res) { return res.json(); })
+                .then(function(channels) {
+                    allChannels = channels;
+                    tvCategories = [{ name: "Tất cả", channels: channels }];
+                    renderTvPills();
+                    renderTvChannels();
+                }).catch(function() {
+                    container.innerHTML = 'Lỗi tải danh sách kênh.';
+                });
             });
         }
 
-        function renderChannels(list) {
+        function renderTvPills() {
+            var container = document.getElementById('tvCatPills');
+            var html = '';
+            var hasCurrent = false;
+            for (var i = 0; i < tvCategories.length; i++) {
+                var cName = tvCategories[i].name;
+                var isActive = (cName === currentTvCat);
+                if (isActive) hasCurrent = true;
+                html += '<button class="cat-pill' + (isActive ? ' active' : '') + '" onclick="selectTvCat(\'' + encodeURIComponent(cName) + '\')">' + cName + '</button>';
+            }
+            if (!hasCurrent && tvCategories.length > 0) {
+                currentTvCat = tvCategories[0].name;
+            }
+            container.innerHTML = html;
+        }
+
+        function selectTvCat(encodedName) {
+            currentTvCat = decodeURIComponent(encodedName);
+            renderTvPills();
+            renderTvChannels();
+        }
+
+        function renderTvChannels() {
             var container = document.getElementById('channelsContainer');
-            if (list.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px;">Không có kênh nào.</div>';
+            var selected = tvCategories.find(function(c) { return c.name === currentTvCat; });
+            var list = selected ? selected.channels : [];
+            var keyword = (document.getElementById('channelSearch').value || '').toLowerCase().trim();
+            if (keyword) {
+                list = list.filter(function(ch) { return ch.name.toLowerCase().indexOf(keyword) !== -1; });
+            }
+
+            if (!list || list.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px;">Không tìm thấy kênh nào.</div>';
                 return;
             }
+
             var html = '';
             for (var i = 0; i < list.length; i++) {
                 var ch = list[i];
                 var numStr = ch.number < 10 ? '0' + ch.number : '' + ch.number;
                 var encUrl = encodeURIComponent(ch.streamUrl);
+                var encName = encodeURIComponent(ch.name);
+                var encGrp = encodeURIComponent(ch.groupTitle || '');
                 var logoHtml = ch.logoUrl ? '<img class="channel-logo" src="' + ch.logoUrl + '" onerror="this.style.display=\'none\'">' : '';
                 var favClass = ch.isFavorite ? 'btn-fav active' : 'btn-fav';
-                html += '<div class="channel-item" onclick="playChannel(\'' + encUrl + '\')">' +
+                html += '<div class="channel-item" onclick="playChannel(\'' + encUrl + '\', \'' + encName + '\', \'' + encGrp + '\')">' +
                     '<div class="channel-left">' +
                         '<span class="channel-num">' + numStr + '</span>' +
                         logoHtml +
-                        '<div class="channel-title">' + ch.name + '</div>' +
+                        '<div style="overflow:hidden;">' +
+                            '<div class="channel-title">' + ch.name + '</div>' +
+                            (ch.groupTitle ? '<div class="channel-sub">' + ch.groupTitle + '</div>' : '') +
+                        '</div>' +
                     '</div>' +
                     '<button class="' + favClass + '" onclick="event.stopPropagation(); toggleFav(\'' + encUrl + '\')">★</button>' +
                 '</div>';
@@ -394,16 +478,189 @@ object WebPageTemplate {
         }
 
         function filterChannels() {
-            var keyword = document.getElementById('channelSearch').value.toLowerCase();
-            var filtered = [];
-            for (var i = 0; i < allChannels.length; i++) {
-                if (allChannels[i].name.toLowerCase().indexOf(keyword) !== -1) {
-                    filtered.push(allChannels[i]);
-                }
-            }
-            renderChannels(filtered);
+            renderTvChannels();
         }
 
+        /* ========== TAB TRỰC TIẾP THỂ THAO ========== */
+        function loadSportsCategories() {
+            var container = document.getElementById('sportsContainer');
+            fetch('/api/sports/categories?t=' + Date.now(), { cache: 'no-store' })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                sportsCategories = data || [];
+                renderSportsPills();
+                renderSportsContent();
+            }).catch(function() {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px;">Lỗi tải dữ liệu thể thao.</div>';
+            });
+        }
+
+        function renderSportsPills() {
+            var container = document.getElementById('sportsCatPills');
+            var html = '';
+            var hasCurrent = false;
+            for (var i = 0; i < sportsCategories.length; i++) {
+                var cName = sportsCategories[i].name;
+                var isActive = (cName === currentSportsCat);
+                if (isActive) hasCurrent = true;
+                html += '<button class="cat-pill' + (isActive ? ' active' : '') + '" onclick="selectSportsCat(\'' + encodeURIComponent(cName) + '\')">' + cName + '</button>';
+            }
+            if (!hasCurrent && sportsCategories.length > 0) {
+                currentSportsCat = sportsCategories[0].name;
+            }
+            container.innerHTML = html;
+        }
+
+        function selectSportsCat(encodedName) {
+            currentSportsCat = decodeURIComponent(encodedName);
+            renderSportsPills();
+            renderSportsContent();
+        }
+
+        function renderSportsContent() {
+            var container = document.getElementById('sportsContainer');
+            var selected = sportsCategories.find(function(c) { return c.name === currentSportsCat; });
+            var list = selected ? selected.channels : [];
+            var keyword = (document.getElementById('sportsSearch').value || '').toLowerCase().trim();
+            if (keyword) {
+                list = list.filter(function(ch) { return ch.name.toLowerCase().indexOf(keyword) !== -1; });
+            }
+
+            if (!list || list.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:var(--text-sub); padding:30px;">Không có trận đấu hoặc kênh nào trong mục này.</div>';
+                return;
+            }
+
+            var isLiveEvents = selected && selected.isLiveEvents;
+            var html = '';
+
+            if (isLiveEvents) {
+                // Render thẻ trận đấu Live Events
+                for (var i = 0; i < list.length; i++) {
+                    var match = list[i];
+                    var sources = match.sources || [];
+                    var sourcesCount = sources.length;
+                    var cardId = 'match_sources_' + i;
+                    var matchCardId = 'match_card_' + i;
+                    var encUrl = encodeURIComponent(match.streamUrl);
+                    var encName = encodeURIComponent(match.name);
+
+                    html += '<div id="' + matchCardId + '" class="match-card">' +
+                        '<div class="match-header" onclick="handleMatchCardClick(' + i + ', \'' + encUrl + '\', \'' + encName + '\', ' + sourcesCount + ')">' +
+                            '<div class="match-title">' + match.name + '</div>' +
+                            '<div class="match-badges">' +
+                                (match.isOngoing ? '<span class="badge-live">TRỰC TIẾP</span>' : '') +
+                                '<span class="badge-sources">' + sourcesCount + ' nguồn ▾</span>' +
+                            '</div>' +
+                        '</div>';
+
+                    // Khung danh sách nguồn phát của trận đấu đó
+                    if (sourcesCount > 0) {
+                        html += '<div id="' + cardId + '" class="match-sources-box">';
+                        for (var s = 0; s < sources.length; s++) {
+                            var src = sources[s];
+                            var sUrl = encodeURIComponent(src.streamUrl);
+                            var sName = encodeURIComponent(src.name);
+                            var sGrp = encodeURIComponent(src.groupTitle || 'Thể Thao');
+                            html += '<button class="source-btn" onclick="event.stopPropagation(); playChannel(\'' + sUrl + '\', \'' + sName + '\', \'' + sGrp + '\')">' +
+                                '<span>▶ ' + src.name + '</span>' +
+                                '<span style="color:#FF6500; font-size:11px; font-weight:bold;">Phát TV 📺</span>' +
+                            '</button>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+            } else {
+                // Render danh mục nguồn web (Chuối Chiên, Gà Vàng, Vua Sân Cỏ...)
+                for (var j = 0; j < list.length; j++) {
+                    var ch = list[j];
+                    var numStr = ch.number < 10 ? '0' + ch.number : '' + ch.number;
+                    var cUrl = encodeURIComponent(ch.streamUrl);
+                    var cName = encodeURIComponent(ch.name);
+                    var cGrp = encodeURIComponent(ch.groupTitle || currentSportsCat);
+                    var logoHtml = ch.logoUrl ? '<img class="channel-logo" src="' + ch.logoUrl + '" onerror="this.style.display=\'none\'">' : '';
+
+                    html += '<div class="channel-item" onclick="playChannel(\'' + cUrl + '\', \'' + cName + '\', \'' + cGrp + '\')">' +
+                        '<div class="channel-left">' +
+                            '<span class="channel-num">' + numStr + '</span>' +
+                            logoHtml +
+                            '<div style="overflow:hidden;">' +
+                                '<div class="channel-title">' + ch.name + '</div>' +
+                                '<div class="channel-sub">' + (ch.groupTitle || currentSportsCat) + '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<span style="color:#FF6500; font-size:12px; font-weight:bold;">Phát 📺</span>' +
+                    '</div>';
+                }
+            }
+
+            container.innerHTML = html;
+        }
+
+        function handleMatchCardClick(idx, encUrl, encName, sourcesCount) {
+            var box = document.getElementById('match_sources_' + idx);
+            var card = document.getElementById('match_card_' + idx);
+            if (sourcesCount > 1 && box) {
+                var isShown = box.classList.contains('show');
+                if (isShown) {
+                    box.classList.remove('show');
+                    if (card) card.classList.remove('expanded');
+                } else {
+                    box.classList.add('show');
+                    if (card) card.classList.add('expanded');
+                }
+            } else {
+                playChannel(encUrl, encName, 'LIVE EVENTS');
+            }
+        }
+
+        function filterSports() {
+            renderSportsContent();
+        }
+
+        function refreshSportsFromWeb() {
+            showToast("🔄 Đang cập nhật trận đấu thể thao...");
+            fetch('/api/sports/refresh', { method: 'POST' })
+            .then(function() {
+                setTimeout(function() {
+                    loadSportsCategories();
+                    showToast("⚽ Đã cập nhật xong trận đấu mới nhất!");
+                }, 1200);
+            }).catch(function() {
+                showToast("Lỗi gửi yêu cầu cập nhật!");
+            });
+        }
+
+        /* ========== PHÁT KÊNH LÊN TV ========== */
+        function playChannel(encodedUrl, encodedName, encodedGroup) {
+            var streamUrl = decodeURIComponent(encodedUrl);
+            var name = encodedName ? decodeURIComponent(encodedName) : '';
+            var group = encodedGroup ? decodeURIComponent(encodedGroup) : '';
+
+            fetch('/api/play', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    streamUrl: streamUrl,
+                    name: name,
+                    groupTitle: group
+                })
+            }).then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var display = data.channelName || name || streamUrl;
+                    showToast('📺 Đang phát trên TV: ' + display);
+                    document.getElementById('bannerChName').innerText = display;
+                } else {
+                    showToast('Lỗi: ' + (data.error || 'Không thể phát'));
+                }
+            }).catch(function() {
+                showToast('Lỗi kết nối tới TV');
+            });
+        }
+
+        /* ========== TAB YÊU THÍCH ========== */
         function loadFavorites() {
             var container = document.getElementById('favoritesContainer');
             fetch('/api/channels?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
@@ -441,8 +698,10 @@ object WebPageTemplate {
                 var ch = list[i];
                 var numStr = ch.number < 10 ? '0' + ch.number : '' + ch.number;
                 var encUrl = encodeURIComponent(ch.streamUrl);
+                var encName = encodeURIComponent(ch.name);
+                var encGrp = encodeURIComponent(ch.groupTitle || '');
                 var logoHtml = ch.logoUrl ? '<img class="channel-logo" src="' + ch.logoUrl + '" onerror="this.style.display=\'none\'">' : '';
-                html += '<div class="channel-item" onclick="playChannel(\'' + encUrl + '\')">' +
+                html += '<div class="channel-item" onclick="playChannel(\'' + encUrl + '\', \'' + encName + '\', \'' + encGrp + '\')">' +
                     '<div class="channel-left">' +
                         '<span class="channel-num">' + numStr + '</span>' +
                         logoHtml +
@@ -452,20 +711,6 @@ object WebPageTemplate {
                 '</div>';
             }
             container.innerHTML = html;
-        }
-
-        function playChannel(encodedUrl) {
-            fetch('/api/play', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ streamUrl: decodeURIComponent(encodedUrl) })
-            }).then(function(res) { return res.json(); })
-            .then(function(data) {
-                showToast('Đang phát: ' + data.channelName);
-                document.getElementById('bannerChName').innerText = data.channelName;
-            }).catch(function() {
-                showToast('Lỗi gửi lệnh phát!');
-            });
         }
 
         function toggleFav(encodedUrl) {
@@ -483,11 +728,12 @@ object WebPageTemplate {
                         break;
                     }
                 }
-                filterChannels();
+                renderTvChannels();
                 filterFavorites();
             }).catch(function() {});
         }
 
+        /* ========== TAB PLAYLISTS ========== */
         function loadPlaylists() {
             var container = document.getElementById('playlistsContainer');
             fetch('/api/playlists?t=' + Date.now(), { cache: 'no-store' })
@@ -541,7 +787,7 @@ object WebPageTemplate {
                     document.getElementById('newPlUrl').value = '';
                     loadPlaylists();
                     if (selectNow) {
-                        setTimeout(loadChannels, 600);
+                        setTimeout(loadTvCategories, 600);
                         setTimeout(fetchStatus, 600);
                     }
                 } else {
@@ -582,7 +828,7 @@ object WebPageTemplate {
                         document.getElementById('uploadPlName').value = '';
                         loadPlaylists();
                         if (selectNow) {
-                            setTimeout(loadChannels, 600);
+                            setTimeout(loadTvCategories, 600);
                             setTimeout(fetchStatus, 600);
                         }
                     } else {
@@ -604,7 +850,7 @@ object WebPageTemplate {
             }).then(function() {
                 showToast('Đã chuyển playlist trên TV!');
                 loadPlaylists();
-                setTimeout(loadChannels, 600);
+                setTimeout(loadTvCategories, 600);
                 setTimeout(fetchStatus, 600);
             }).catch(function() {});
         }
@@ -623,24 +869,23 @@ object WebPageTemplate {
                     showToast(data.error || 'Không thể xóa danh sách!');
                 }
                 loadPlaylists();
-                setTimeout(loadChannels, 600);
+                setTimeout(loadTvCategories, 600);
                 setTimeout(fetchStatus, 600);
             }).catch(function() {});
         }
 
+        /* ========== TAB CÀI ĐẶT ========== */
         var DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
         function loadSettings() {
             fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
             .then(function(data) {
-                // 1. Player Engine
                 if (data.playerEngine === 'EXOPLAYER') {
                     document.getElementById('engineExo').checked = true;
                 } else {
                     document.getElementById('engineVlc').checked = true;
                 }
 
-                // 2. Deinterlace Mode
                 if (data.deinterlaceMode === 'linear') {
                     document.getElementById('deintLinear').checked = true;
                 } else if (data.deinterlaceMode === 'blend') {
@@ -651,10 +896,7 @@ object WebPageTemplate {
                     document.getElementById('deintYadif').checked = true;
                 }
 
-                // 3. User Agent
                 document.getElementById('txtHttpUserAgent').value = data.httpUserAgent || DEFAULT_USER_AGENT;
-
-                // 4. Boot Settings
                 document.getElementById('chkAutoStartBoot').checked = !!data.autoStartOnBoot;
                 if (data.startupMode === 'FIXED_CHANNEL') {
                     document.getElementById('optFixedChannel').checked = true;
@@ -664,8 +906,6 @@ object WebPageTemplate {
                     document.getElementById('optFirstChannel').checked = true;
                 }
                 document.getElementById('lblFixedName').innerText = data.defaultStartupChannelName || 'Chưa chọn';
-
-                // 5. UDPXY Server
                 document.getElementById('txtUdpxyServer').value = data.udpxyServer || '';
             }).catch(function() {});
         }

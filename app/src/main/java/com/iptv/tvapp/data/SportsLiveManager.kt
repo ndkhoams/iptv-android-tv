@@ -37,10 +37,19 @@ class SportsLiveManager(private val context: Context) {
         val timestamp: Long = 0L,
         val league: String,
         val leagueName: String,
-        val sources: MutableList<Channel>
+        val sources: MutableList<Channel>,
+        val isCompleted: Boolean = false,
+        val isOngoing: Boolean = false
     )
 
-    data class EspnFixture(val team1: String, val team2: String, val league: String)
+    data class EspnFixture(
+        val team1: String,
+        val team2: String,
+        val league: String,
+        val isCompleted: Boolean = false,
+        val state: String = "pre",
+        val detail: String = ""
+    )
 
     fun getMatch(key: String): MatchGroup? {
         matchGroupsMap[key]?.let { return it }
@@ -99,6 +108,22 @@ class SportsLiveManager(private val context: Context) {
         return matchGroupsMap.values.firstOrNull { mg ->
             mg.sources.any { s -> s.streamUrl == channel.streamUrl || s.id == channel.id }
         }
+    }
+
+    fun isMatchOngoing(channel: Channel?): Boolean {
+        if (channel == null) return false
+        if (channel.id == ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return false
+        val mg = findMatchForChannel(channel)
+        if (mg != null) {
+            return mg.isOngoing && !mg.isCompleted
+        }
+        val name = channel.name
+        val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(name)
+        val timeStr = timeMatch?.groupValues?.get(1) ?: return false
+        val matchCal = parseMatchDateTime(name) ?: return false
+        val matchTimestamp = matchCal.timeInMillis
+        val now = System.currentTimeMillis()
+        return (now >= matchTimestamp - 15 * 60 * 1000L) && (now - matchTimestamp <= 135 * 60 * 1000L)
     }
 
     companion object {
@@ -340,8 +365,20 @@ class SportsLiveManager(private val context: Context) {
                                     if (competitors != null && competitors.length() >= 2) {
                                         val t1 = competitors.getJSONObject(0).optJSONObject("team")?.optString("name", "") ?: ""
                                         val t2 = competitors.getJSONObject(1).optJSONObject("team")?.optString("name", "") ?: ""
+                                        val statusObj = ev.optJSONObject("status")
+                                        val typeObj = statusObj?.optJSONObject("type")
+                                        val state = typeObj?.optString("state", "pre") ?: "pre"
+                                        val nameType = typeObj?.optString("name", "") ?: ""
+                                        val detail = typeObj?.optString("detail", "") ?: ""
+                                        val isCompleted = (typeObj?.optBoolean("completed", false) == true) ||
+                                                state == "post" ||
+                                                nameType.contains("FULL_TIME") ||
+                                                nameType.contains("FINAL") ||
+                                                detail.equals("FT", ignoreCase = true) ||
+                                                detail.contains("Final", ignoreCase = true)
+
                                         if (t1.isNotBlank() && t2.isNotBlank()) {
-                                            fixtures.add(EspnFixture(t1, t2, leagueKey))
+                                            fixtures.add(EspnFixture(t1, t2, leagueKey, isCompleted, state, detail))
                                         }
                                     }
                                 }
@@ -357,20 +394,31 @@ class SportsLiveManager(private val context: Context) {
         lastEspnFetchTimeMs = now
     }
 
-    private fun matchEspnFixture(home: String, away: String): String? {
+    private fun findEspnFixture(home: String, away: String): EspnFixture? {
         if (isYouthMatch(home, away) || isWomenMatch(home, away)) return null
         val h = home.lowercase()
         val a = away.lowercase()
-        for ((league, fixtures) in espnFixturesCache) {
+        val cHome = canonicalizeTeam(home)
+        val cAway = canonicalizeTeam(away)
+        for ((_, fixtures) in espnFixturesCache) {
             for (f in fixtures) {
                 val t1 = f.team1.lowercase()
                 val t2 = f.team2.lowercase()
-                val match1 = (h.contains(t1) || t1.contains(h)) && (a.contains(t2) || t2.contains(a))
-                val match2 = (h.contains(t2) || t2.contains(h)) && (a.contains(t1) || t1.contains(a))
-                if (match1 || match2) return league
+                val ct1 = canonicalizeTeam(f.team1)
+                val ct2 = canonicalizeTeam(f.team2)
+
+                val match1 = ((h.contains(t1) || t1.contains(h)) || (cHome.isNotBlank() && (cHome.contains(ct1) || ct1.contains(cHome)))) &&
+                             ((a.contains(t2) || t2.contains(a)) || (cAway.isNotBlank() && (cAway.contains(ct2) || ct2.contains(cAway))))
+                val match2 = ((h.contains(t2) || t2.contains(h)) || (cHome.isNotBlank() && (cHome.contains(ct2) || ct2.contains(cHome)))) &&
+                             ((a.contains(t1) || t1.contains(a)) || (cAway.isNotBlank() && (cAway.contains(ct1) || ct1.contains(cAway))))
+                if (match1 || match2) return f
             }
         }
         return null
+    }
+
+    private fun matchEspnFixture(home: String, away: String): String? {
+        return findEspnFixture(home, away)?.league
     }
 
     private fun matchClub(teamName: String, club: String): Boolean {
@@ -420,7 +468,7 @@ class SportsLiveManager(private val context: Context) {
             return "UCL"
         }
         if (t.contains("premier league") || t.contains("ngoại hạng anh")) return "EPL"
-        if (t.contains("la liga") || t.contains("laliga") || t.contains("primera division")) return "LALIGA"
+        if ((t.contains("la liga") || t.contains("laliga")) && !t.contains("la liga 2") && !t.contains("laliga 2")) return "LALIGA"
         if ((t.contains("serie a") || t.contains("serie-a")) && !t.contains("serie b")) return "SERIE_A"
         if (t.contains("bundesliga") && !t.contains("bundesliga 2")) return "BUNDESLIGA"
         if ((t.contains("ligue 1") || t.contains("ligue1")) && !t.contains("ligue 2")) return "LIGUE1"
@@ -495,7 +543,7 @@ class SportsLiveManager(private val context: Context) {
      * Loại bỏ bóng đá nữ, bóng chuyền 🏐, bóng bàn 🏓, cầu lông 🏸, bida 🎱
      */
     private fun isEligibleSportsMatch(name: String, groupTitle: String): Boolean {
-        if (isWomenMatch(name, groupTitle)) {
+        if (isWomenMatch(name, groupTitle) || isYouthMatch(name, groupTitle)) {
             return false
         }
         val nonSports = listOf("🏐", "🏸", "🏓", "🎱", "🥊", "🥋", "🏒", "bóng chuyền", "bóng bàn", "cầu lông")
@@ -701,9 +749,21 @@ class SportsLiveManager(private val context: Context) {
                             cleaned.trim() to ""
                         }
 
-                        if (isWomenMatch(rawName, homeTeam, awayTeam)) {
+                        if (isWomenMatch(rawName, homeTeam, awayTeam) || isYouthMatch(rawName, homeTeam, awayTeam)) {
                             continue
                         }
+
+                        val espnFix = findEspnFixture(homeTeam, awayTeam)
+                        val isEspnCompleted = espnFix?.isCompleted == true
+                        val isEspnOngoing = espnFix?.state == "in" || espnFix?.detail?.contains("'") == true
+                        val nowTimestamp = System.currentTimeMillis()
+
+                        val isCompleted = isEspnCompleted || (matchTimestamp > 0 && (nowTimestamp - matchTimestamp > 210 * 60 * 1000L))
+                        val isOngoing = !isCompleted && (
+                            isEspnOngoing ||
+                            timeStr == "LIVE" ||
+                            (matchTimestamp > 0 && (nowTimestamp >= matchTimestamp - 15 * 60 * 1000L) && (nowTimestamp - matchTimestamp <= 140 * 60 * 1000L))
+                        )
 
                         val cHome = canonicalizeTeam(homeTeam)
                         val cAway = canonicalizeTeam(awayTeam)
@@ -716,16 +776,19 @@ class SportsLiveManager(private val context: Context) {
                         val existing = grouped[normKey]
                         if (existing != null) {
                             existing.sources.add(ch)
+                            val newOngoing = existing.isOngoing || isOngoing
+                            val newCompleted = existing.isCompleted || isCompleted
+                            var updated = existing.copy(isOngoing = newOngoing, isCompleted = newCompleted)
                             if (existing.league == "OTHER") {
                                 val lg = detectLeague(rawName, existing.homeTeam, existing.awayTeam)
                                 if (lg != "OTHER") {
-                                    val updated = existing.copy(
+                                    updated = updated.copy(
                                         league = lg,
                                         leagueName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
                                     )
-                                    grouped[normKey] = updated
                                 }
                             }
+                            grouped[normKey] = updated
                         } else {
                             val lg = detectLeague(rawName, homeTeam, awayTeam)
                             val lgName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
@@ -738,29 +801,26 @@ class SportsLiveManager(private val context: Context) {
                                 timestamp = matchTimestamp,
                                 league = lg,
                                 leagueName = lgName,
-                                sources = mutableListOf(ch)
+                                sources = mutableListOf(ch),
+                                isCompleted = isCompleted,
+                                isOngoing = isOngoing
                             )
                             grouped[normKey] = group
                         }
                     }
 
-                    val nowTimestamp = System.currentTimeMillis()
-                    fun isMatchOngoing(mg: MatchGroup): Boolean {
-                        if (mg.time == "LIVE") return true
-                        val diff = nowTimestamp - mg.timestamp
-                        // Đang diễn ra: trận đã bắt đầu và chưa quá 2.5 tiếng (150 phút)
-                        return diff in 0..(150 * 60 * 1000L)
-                    }
+                    // Yêu cầu 3: Lọc bỏ toàn bộ các trận đã kết thúc (FULL-TIME) ra khỏi danh sách
+                    val validMatches = grouped.values.filter { !it.isCompleted }
 
                     // Tách thành:
                     // 1. Giải bóng đá ưu tiên (chỉ đội chính, không lấy đội U hay đội nữ)
-                    val priorityMatches = grouped.values.filter {
+                    val priorityMatches = validMatches.filter {
                         it.league in PRIORITY_LEAGUES && !isYouthMatch(it.homeTeam, it.awayTeam) && !isWomenMatch(it.homeTeam, it.awayTeam)
                     }
                     // 2. Các trận thể thao lớn nổi bật (F1, Tennis Grand Slam/ATP, NBA)
-                    val featuredSportsMatches = grouped.values.filter { it.league in FEATURED_SPORTS }
+                    val featuredSportsMatches = validMatches.filter { it.league in FEATURED_SPORTS }
                     // 3. Các trận bóng đá khác (chỉ đội chính)
-                    val otherMatches = grouped.values.filter {
+                    val otherMatches = validMatches.filter {
                         it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS &&
                         !isYouthMatch(it.homeTeam, it.awayTeam) && !isWomenMatch(it.homeTeam, it.awayTeam)
                     }
@@ -768,21 +828,21 @@ class SportsLiveManager(private val context: Context) {
                     // Sắp xếp:
                     // - TRẬN ĐANG DIỄN RA (LIVE NOW): Đưa lên đầu danh sách để bấm vào xem ngay
                     // - TRẬN SẮP DIỄN RA: Sắp xếp theo mốc thời gian sớm nhất
-                    val livePriority = priorityMatches.filter { isMatchOngoing(it) }.sortedWith(
+                    val livePriority = priorityMatches.filter { it.isOngoing }.sortedWith(
                         compareBy(
                             { PRIORITY_LEAGUES.indexOf(it.league).let { idx -> if (idx < 0) 999 else idx } },
                             { it.timestamp }
                         )
                     )
-                    val upcomingPriority = priorityMatches.filter { !isMatchOngoing(it) }.sortedWith(
+                    val upcomingPriority = priorityMatches.filter { !it.isOngoing }.sortedWith(
                         compareBy(
                             { it.timestamp },
                             { PRIORITY_LEAGUES.indexOf(it.league).let { idx -> if (idx < 0) 999 else idx } }
                         )
                     )
 
-                    val liveOther = otherMatches.filter { isMatchOngoing(it) }.sortedBy { it.timestamp }
-                    val upcomingOther = otherMatches.filter { !isMatchOngoing(it) }.sortedBy { it.timestamp }
+                    val liveOther = otherMatches.filter { it.isOngoing }.sortedBy { it.timestamp }
+                    val upcomingOther = otherMatches.filter { !it.isOngoing }.sortedBy { it.timestamp }
 
                     val targetMatches = mutableListOf<MatchGroup>()
                     if (livePriority.isNotEmpty() || upcomingPriority.isNotEmpty()) {
@@ -794,7 +854,7 @@ class SportsLiveManager(private val context: Context) {
                     }
                     targetMatches.addAll(featuredSportsMatches.sortedBy { it.timestamp })
 
-                    // Lưu vào cache Map để MatchSourcesDialog truy xuất khi click
+                    // Lưu vào cache Map để MatchSourcesDialog và Web Remote truy xuất khi click
                     for (m in grouped.values) {
                         matchGroupsMap[m.key] = m
                     }
@@ -810,8 +870,9 @@ class SportsLiveManager(private val context: Context) {
                     )
                     matchesWithRefresh.add(refreshItem)
 
+                    // Yêu cầu 6: Không ghi cờ quốc gia và tên giải ở đằng sau tên 2 đội ở LIVE EVENTS, chỉ cần ghi thời gian và 2 đội tham gia
                     targetMatches.forEachIndexed { idx, mg ->
-                        val ongoing = isMatchOngoing(mg)
+                        val ongoing = mg.isOngoing
                         val sportIcon = when (mg.league) {
                             "F1" -> "🏎️"
                             "TENNIS" -> "🎾"
@@ -819,11 +880,10 @@ class SportsLiveManager(private val context: Context) {
                             else -> if (ongoing) "🔴" else "⚽"
                         }
                         val timePart = if (mg.date.isNotBlank()) "[${mg.time} ${mg.date}]" else "[${mg.time}]"
-                        val ongoingSuffix = if (ongoing) " • [Đang diễn ra]" else ""
                         val matchName = if (mg.awayTeam.isNotBlank()) {
-                            "$sportIcon $timePart ${mg.homeTeam} vs ${mg.awayTeam}$ongoingSuffix • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                            "$sportIcon $timePart ${mg.homeTeam} vs ${mg.awayTeam}"
                         } else {
-                            "$sportIcon $timePart ${mg.homeTeam}$ongoingSuffix • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                            "$sportIcon $timePart ${mg.homeTeam}"
                         }
                         val leagueLogoUri = getLeagueLogoUri(mg.league)
                         val matchChannel = Channel(
@@ -840,16 +900,7 @@ class SportsLiveManager(private val context: Context) {
                     categories.add(Category(CATEGORY_LIVE_EVENTS, matchesWithRefresh))
                 }
 
-                // Nhóm 2: "📺 SPORT 24/7 TV"
-                val intlChannels = channels.filter {
-                    it.groupTitle.contains("SPORT 24/7", ignoreCase = true) ||
-                    it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) ||
-                    it.name.contains("[24/7]", ignoreCase = true)
-                }
-                if (intlChannels.isNotEmpty()) {
-                    intlChannels.forEachIndexed { idx, ch -> ch.number = idx + 1 }
-                    categories.add(Category(CATEGORY_SPORT_TV, intlChannels.toMutableList()))
-                }
+                // Yêu cầu 4: Đã loại bỏ mục SPORT 24/7 TV ra khỏi mục trực tiếp thể thao
 
                 // Các nhóm theo nguồn: "🍌 Chuối Chiên TV", "🐔 Gà Vàng / Tiếu Lâm", "🌶️ Cà Khịa TV", ...
                 val groupedBySource = channels.groupBy { it.groupTitle }

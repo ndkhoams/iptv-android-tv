@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import com.iptv.tvapp.data.PreferencesHelper
 import com.iptv.tvapp.model.Channel
+import com.iptv.tvapp.model.Category
+import com.iptv.tvapp.data.SportsLiveManager
 import com.iptv.tvapp.model.PlaylistSource
 import com.iptv.tvapp.util.NetworkUtils
 import org.json.JSONArray
@@ -28,7 +30,11 @@ class TvWebServer(
     private val onSendKey: (String) -> Unit,
     private val onPlaylistChanged: () -> Unit,
     private val onChannelsUpdated: () -> Unit,
-    private val onEngineChanged: (() -> Unit)? = null
+    private val onEngineChanged: (() -> Unit)? = null,
+    private val tvCategoriesProvider: (() -> List<com.iptv.tvapp.model.Category>)? = null,
+    private val sportsCategoriesProvider: (() -> List<com.iptv.tvapp.model.Category>)? = null,
+    private val getMatchGroup: ((String) -> com.iptv.tvapp.data.SportsLiveManager.MatchGroup?)? = null,
+    private val onRefreshSports: (() -> Unit)? = null
 ) {
 
     private var serverSocket: ServerSocket? = null
@@ -123,6 +129,78 @@ class TvWebServer(
                 }
                 sendResponse(output, "application/json; charset=utf-8", json.toString())
             }
+            method == "GET" && path == "/api/tv/categories" -> {
+                val cats = tvCategoriesProvider?.invoke() ?: emptyList()
+                val jsonArray = JSONArray()
+                cats.forEach { cat ->
+                    val catObj = JSONObject().apply {
+                        put("name", cat.name)
+                        val chArray = JSONArray()
+                        cat.channels.forEach { ch ->
+                            val chObj = JSONObject().apply {
+                                put("number", ch.number)
+                                put("name", ch.name)
+                                put("logoUrl", ch.logoUrl ?: "")
+                                put("streamUrl", ch.streamUrl)
+                                put("groupTitle", ch.groupTitle)
+                                put("isFavorite", ch.isFavorite)
+                            }
+                            chArray.put(chObj)
+                        }
+                        put("channels", chArray)
+                    }
+                    jsonArray.put(catObj)
+                }
+                sendResponse(output, "application/json; charset=utf-8", jsonArray.toString())
+            }
+            method == "GET" && path == "/api/sports/categories" -> {
+                val cats = sportsCategoriesProvider?.invoke() ?: emptyList()
+                val jsonArray = JSONArray()
+                cats.forEach { cat ->
+                    val isLiveEvents = cat.name.contains("LIVE EVENTS", ignoreCase = true)
+                    val catObj = JSONObject().apply {
+                        put("name", cat.name)
+                        put("isLiveEvents", isLiveEvents)
+                        val chArray = JSONArray()
+                        cat.channels.forEach { ch ->
+                            if (ch.id != "action_refresh_sports" && !ch.streamUrl.startsWith("action://")) {
+                                val chObj = JSONObject().apply {
+                                    put("number", ch.number)
+                                    put("name", ch.name)
+                                    put("logoUrl", ch.logoUrl ?: "")
+                                    put("streamUrl", ch.streamUrl)
+                                    put("groupTitle", ch.groupTitle)
+                                    if (ch.streamUrl.startsWith("match://")) {
+                                        val matchKey = ch.streamUrl.removePrefix("match://")
+                                        val mg = getMatchGroup?.invoke(matchKey)
+                                        put("isOngoing", mg?.isOngoing ?: false)
+                                        put("leagueName", mg?.leagueName ?: "")
+                                        val sourcesArray = JSONArray()
+                                        mg?.sources?.forEachIndexed { sIdx, s ->
+                                            val sObj = JSONObject().apply {
+                                                put("number", sIdx + 1)
+                                                put("name", s.name)
+                                                put("streamUrl", s.streamUrl)
+                                                put("groupTitle", s.groupTitle)
+                                            }
+                                            sourcesArray.put(sObj)
+                                        }
+                                        put("sources", sourcesArray)
+                                    }
+                                }
+                                chArray.put(chObj)
+                            }
+                        }
+                        put("channels", chArray)
+                    }
+                    jsonArray.put(catObj)
+                }
+                sendResponse(output, "application/json; charset=utf-8", jsonArray.toString())
+            }
+            method == "POST" && path == "/api/sports/refresh" -> {
+                mainHandler.post { onRefreshSports?.invoke() }
+                sendResponse(output, "application/json; charset=utf-8", """{"success":true}""")
+            }
             method == "GET" && path == "/api/channels" -> {
                 val channels = channelProvider()
                 val jsonArray = JSONArray()
@@ -179,17 +257,52 @@ class TvWebServer(
             method == "POST" && path == "/api/play" -> {
                 val json = JSONObject(body)
                 val streamUrl = json.getString("streamUrl")
-                val channel = channelProvider().firstOrNull { it.streamUrl == streamUrl }
-                if (channel != null) {
-                    mainHandler.post { onPlayChannel(channel) }
-                    val resp = JSONObject().apply {
-                        put("success", true)
-                        put("channelName", channel.name)
+                val name = json.optString("name", "Channel")
+                val groupTitle = json.optString("groupTitle", "")
+                val logoUrl = json.optString("logoUrl", "")
+
+                var channel: Channel? = channelProvider().firstOrNull { it.streamUrl == streamUrl }
+                if (channel == null) {
+                    val tvCats = tvCategoriesProvider?.invoke() ?: emptyList()
+                    for (cat in tvCats) {
+                        channel = cat.channels.firstOrNull { it.streamUrl == streamUrl }
+                        if (channel != null) break
                     }
-                    sendResponse(output, "application/json; charset=utf-8", resp.toString())
-                } else {
-                    sendResponse(output, "application/json; charset=utf-8", """{"success":false,"error":"Channel not found"}""")
                 }
+                if (channel == null) {
+                    val sportsCats = sportsCategoriesProvider?.invoke() ?: emptyList()
+                    for (cat in sportsCats) {
+                        channel = cat.channels.firstOrNull { it.streamUrl == streamUrl }
+                        if (channel != null) break
+                        for (ch in cat.channels) {
+                            if (ch.streamUrl.startsWith("match://")) {
+                                val matchKey = ch.streamUrl.removePrefix("match://")
+                                val mg = getMatchGroup?.invoke(matchKey)
+                                val src = mg?.sources?.firstOrNull { it.streamUrl == streamUrl }
+                                if (src != null) {
+                                    channel = src
+                                    break
+                                }
+                            }
+                        }
+                        if (channel != null) break
+                    }
+                }
+                val targetChannel = channel ?: Channel(
+                    id = "play_${System.currentTimeMillis()}",
+                    name = name,
+                    streamUrl = streamUrl,
+                    logoUrl = logoUrl.ifBlank { null },
+                    groupTitle = groupTitle,
+                    number = 0
+                )
+
+                mainHandler.post { onPlayChannel(targetChannel) }
+                val resp = JSONObject().apply {
+                    put("success", true)
+                    put("channelName", targetChannel.name)
+                }
+                sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
             method == "POST" && path == "/api/favorite/toggle" -> {
                 val json = JSONObject(body)
