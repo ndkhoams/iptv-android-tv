@@ -355,7 +355,7 @@
                     android:nextFocusDown="@+id/navModeSports"
                     android:contentDescription="Xem TV" />
 
-                                <!-- 3. Trực tiếp Thể Thao (Nguồn từ thethao.m3u) -->
+                <!-- 3. Trực tiếp Thể Thao (Nguồn từ thethao.m3u) -->
                 <ImageButton
                     android:id="@+id/navModeSports"
                     android:layout_width="36dp"
@@ -368,26 +368,10 @@
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/navModeTv"
                     android:nextFocusRight="@+id/rvCategories"
-                    android:nextFocusDown="@+id/navRefreshPlaylists"
+                    android:nextFocusDown="@+id/navPlaylists"
                     android:contentDescription="Trực tiếp thể thao" />
 
-                <!-- 4. Làm mới toàn bộ danh sách kênh &amp; trực tiếp thể thao -->
-                <ImageButton
-                    android:id="@+id/navRefreshPlaylists"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/selector_fpt_sidebar"
-                    android:src="@drawable/ic_refresh"
-                    android:scaleType="centerInside"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navModeSports"
-                    android:nextFocusDown="@+id/navPlaylists"
-                    android:nextFocusRight="@+id/rvCategories"
-                    android:contentDescription="Làm mới danh sách kênh" />
-
-                <!-- 5. Chọn Danh Sách Phát Nhanh -->
+                <!-- 4. Chọn Danh Sách Phát Nhanh -->
                 <ImageButton
                     android:id="@+id/navPlaylists"
                     android:layout_width="36dp"
@@ -398,12 +382,12 @@
                     android:scaleType="centerInside"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navRefreshPlaylists"
+                    android:nextFocusUp="@+id/navModeSports"
                     android:nextFocusRight="@+id/rvCategories"
                     android:nextFocusDown="@+id/navSidebarSettings"
                     android:contentDescription="Chọn danh sách phát nhanh" />
 
-                <!-- 6. Cài đặt hệ thống -->
+                <!-- 3. Cài đặt hệ thống -->
                 <ImageButton
                     android:id="@+id/navSidebarSettings"
                     android:layout_width="36dp"
@@ -415,11 +399,27 @@
                     android:focusable="true"
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/navPlaylists"
-                    android:nextFocusDown="@+id/navCheckUpdate"
+                    android:nextFocusDown="@+id/navRefreshPlaylists"
                     android:nextFocusRight="@+id/rvCategories"
                     android:contentDescription="Cài đặt" />
 
-                <!-- 7. Kiểm tra cập nhật ứng dụng (Check for update) -->
+                <!-- 4. Làm mới toàn bộ danh sách kênh & trực tiếp thể thao -->
+                <ImageButton
+                    android:id="@+id/navRefreshPlaylists"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/selector_fpt_sidebar"
+                    android:src="@drawable/ic_refresh"
+                    android:scaleType="centerInside"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusUp="@+id/navSidebarSettings"
+                    android:nextFocusDown="@+id/navCheckUpdate"
+                    android:nextFocusRight="@+id/rvCategories"
+                    android:contentDescription="Làm mới danh sách kênh" />
+
+                <!-- 5. Kiểm tra cập nhật ứng dụng (Check for update) -->
                 <ImageButton
                     android:id="@+id/navCheckUpdate"
                     android:layout_width="36dp"
@@ -430,7 +430,7 @@
                     android:scaleType="centerInside"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navSidebarSettings"
+                    android:nextFocusUp="@+id/navRefreshPlaylists"
                     android:nextFocusDown="@+id/navCheckUpdate"
                     android:nextFocusRight="@+id/rvCategories"
                     android:contentDescription="Kiểm tra bản cập nhật" />
@@ -438,7 +438,7 @@
 
             <!-- CỘT 1: DANH MỤC NHÓM KÊNH (Thu gọn 150dp) -->
             <LinearLayout
-                android:layout_width="225dp"
+                android:layout_width="150dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="6dp"
                 android:orientation="vertical"
@@ -533,7 +533,8 @@
                 <!-- Logo Kênh nổi bật -->
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="80dp">
+                    android:layout_height="80dp"
+                    android:background="#181818">
 
                     <ImageView
                         android:id="@+id/ivSpotlightLogo"

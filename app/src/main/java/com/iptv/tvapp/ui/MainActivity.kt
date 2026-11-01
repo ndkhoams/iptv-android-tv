@@ -273,9 +273,7 @@ class MainActivity : AppCompatActivity() {
             displayCategoryChannels(category)
         }
         binding.rvCategories.apply {
-            layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvCategories }) { focused, direction ->
-                if (direction == View.FOCUS_RIGHT) findHorizontallyAlignedChannelView(focused) else null
-            }
+            layoutManager = TvLinearLayoutManager(this@MainActivity) { binding.rvCategories }
             adapter = categoryAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(10)
@@ -312,9 +310,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
         binding.rvChannels.apply {
-            layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvChannels }) { focused, direction ->
-                if (direction == View.FOCUS_LEFT) findHorizontallyAlignedCategoryView(focused) else null
-            }
+            layoutManager = TvLinearLayoutManager(this@MainActivity) { binding.rvChannels }
             adapter = channelAdapter
             setHasFixedSize(true)
             setItemViewCacheSize(20)
@@ -901,62 +897,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun findHorizontallyAlignedCategoryView(focusedChannelView: View): View? {
-        if (binding.rvCategories.childCount == 0) return null
-
-        val focusedLoc = IntArray(2)
-        focusedChannelView.getLocationOnScreen(focusedLoc)
-        val focusedCenterY = focusedLoc[1] + (focusedChannelView.height / 2)
-
-        var closestChild: View? = null
-        var minDiff = Int.MAX_VALUE
-
-        for (i in 0 until binding.rvCategories.childCount) {
-            val child = binding.rvCategories.getChildAt(i) ?: continue
-            if (!child.isShown || !child.isFocusable) continue
-
-            val childLoc = IntArray(2)
-            child.getLocationOnScreen(childLoc)
-            val childCenterY = childLoc[1] + (child.height / 2)
-
-            val diff = Math.abs(childCenterY - focusedCenterY)
-            if (diff < minDiff) {
-                minDiff = diff
-                closestChild = child
-            }
-        }
-
-        return closestChild
-    }
-
-    private fun findHorizontallyAlignedChannelView(focusedCategoryView: View): View? {
-        if (binding.rvChannels.childCount == 0) return null
-
-        val focusedLoc = IntArray(2)
-        focusedCategoryView.getLocationOnScreen(focusedLoc)
-        val focusedCenterY = focusedLoc[1] + (focusedCategoryView.height / 2)
-
-        var closestChild: View? = null
-        var minDiff = Int.MAX_VALUE
-
-        for (i in 0 until binding.rvChannels.childCount) {
-            val child = binding.rvChannels.getChildAt(i) ?: continue
-            if (!child.isShown || !child.isFocusable) continue
-
-            val childLoc = IntArray(2)
-            child.getLocationOnScreen(childLoc)
-            val childCenterY = childLoc[1] + (child.height / 2)
-
-            val diff = Math.abs(childCenterY - focusedCenterY)
-            if (diff < minDiff) {
-                minDiff = diff
-                closestChild = child
-            }
-        }
-
-        return closestChild
-    }
-
     private fun displayCategoryChannels(category: Category, focusChannel: Channel? = null) {
         currentCategoryChannels.clear()
         currentCategoryChannels.addAll(category.channels)
@@ -1097,8 +1037,8 @@ class MainActivity : AppCompatActivity() {
             if (targetLeague in SportsLiveManager.PRIORITY_LEAGUES) {
                 binding.layoutEpgTimeline.visibility = View.GONE
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
-                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
-                binding.tvEpgSourceTag.visibility = View.GONE
+                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
+                binding.tvEpgSourceTag.text = "FotMob / ESPN"
                 binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
 
                 binding.rvSpotlightStandings.visibility = View.GONE
@@ -1127,8 +1067,8 @@ class MainActivity : AppCompatActivity() {
             } else if (channel.streamUrl.startsWith("match://")) {
                 binding.layoutEpgTimeline.visibility = View.GONE
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
-                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
-                binding.tvEpgSourceTag.visibility = View.GONE
+                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
+                binding.tvEpgSourceTag.text = "FotMob / ESPN"
                 binding.rvSpotlightStandings.visibility = View.GONE
                 binding.tvStandingsEmpty.visibility = View.VISIBLE
                 binding.tvStandingsEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát trực tiếp"
@@ -1142,8 +1082,7 @@ class MainActivity : AppCompatActivity() {
         binding.layoutLeagueStandings.visibility = View.GONE
         binding.layoutEpgTimeline.visibility = View.VISIBLE
         binding.tvRightPanelTitle.text = "LỊCH PHÁT SÓNG (EPG)"
-        binding.tvEpgSourceTag.text = "lichphatsong.io.vn"
-        binding.tvEpgSourceTag.visibility = View.VISIBLE 
+        binding.tvEpgSourceTag.text = "lichphatsong.io.vn" 
 
         // Logo chính hãng FPT CDN hoặc M3U (Khống chế kích thước và RGB_565 tiết kiệm RAM)
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
@@ -1326,7 +1265,8 @@ class MainActivity : AppCompatActivity() {
             player?.pause()
             binding.playerView.visibility = View.GONE
 
-            binding.vlcVideoLayout.visibility = View.VISIBLE
+            // Che ngay lập tức khung hình tĩnh của kênh cũ để triệt tiêu hiện tượng đơ hình kênh cũ
+            binding.vlcVideoLayout.visibility = View.INVISIBLE
             binding.layoutQuickBuffering.visibility = View.VISIBLE
 
             val vlc = libVLC ?: return
@@ -1852,99 +1792,28 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
-            val isOverlayVisible = (binding.channelGuideOverlay.visibility == View.VISIBLE)
-            val isSettingsShowing = (activeSettingsDialog?.isShowing == true)
-
-            // Phím cài đặt / menu luôn hoạt động
             when (event.keyCode) {
+                // Phím Channel + (Ch+) trên điều khiển TV -> Kênh có số thứ tự lớn hơn
+                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+                    if (activeSettingsDialog?.isShowing != true) {
+                        switchChannel(next = true)
+                        resetOverlayTimer()
+                        return true
+                    }
+                }
+                // Phím Channel - (Ch-) trên điều khiển TV -> Kênh có số thứ tự nhỏ hơn
+                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    if (activeSettingsDialog?.isShowing != true) {
+                        switchChannel(next = false)
+                        resetOverlayTimer()
+                        return true
+                    }
+                }
                 KeyEvent.KEYCODE_MENU,
                 KeyEvent.KEYCODE_SETTINGS,
                 KeyEvent.KEYCODE_HELP -> {
                     showSettingsDialog()
                     return true
-                }
-                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
-                    if (!isSettingsShowing) {
-                        switchChannel(next = true)
-                        resetOverlayTimer()
-                        return true
-                    }
-                }
-                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
-                    if (!isSettingsShowing) {
-                        switchChannel(next = false)
-                        resetOverlayTimer()
-                        return true
-                    }
-                }
-            }
-
-            // Khi đang xem toàn màn hình (Overlay KHÔNG hiển thị):
-            // Bắt trực tiếp mọi phím D-pad trên điều khiển để tránh bị Android ViewGroup nuốt phím khi không có view focus
-            if (!isOverlayVisible && !isSettingsShowing) {
-                when (event.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_CENTER,
-                    KeyEvent.KEYCODE_ENTER,
-                    KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                        showOverlay()
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_UP -> {
-                        switchChannel(next = false)
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        switchChannel(next = true)
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        val playing = currentPlayingChannel
-                        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
-                        if (isSports) {
-                            if (currentAppMode != AppMode.SPORTS) {
-                                switchAppMode(AppMode.SPORTS, focusCategories = false)
-                            }
-                            val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
-                            if (liveCat != null) {
-                                currentSelectedCategory = liveCat
-                                categoryAdapter.setSelectedCategory(liveCat)
-                                val matchChannel = if (currentPlayingMatchGroup != null) {
-                                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
-                                } else null
-                                displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS })
-                            }
-                            showOverlay()
-                        } else {
-                            if (currentAppMode != AppMode.TV) {
-                                switchAppMode(AppMode.TV, focusCategories = false)
-                            }
-                            val favCat = allCategories.firstOrNull { it.name.contains("Yêu thích", ignoreCase = true) }
-                            if (favCat != null) {
-                                currentSelectedCategory = favCat
-                                categoryAdapter.setSelectedCategory(favCat)
-                                displayCategoryChannels(favCat)
-                            }
-                            showOverlay()
-                        }
-                        return true
-                    }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        showQuickPlaylistDialog()
-                        return true
-                    }
-                    KeyEvent.KEYCODE_BACK -> {
-                        if (System.currentTimeMillis() - backPressedTime < 2000) {
-                            finish()
-                            return true
-                        }
-                        if (currentAppMode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
-                            showMatchSourcesDialog(currentPlayingMatchGroup!!)
-                            return true
-                        } else {
-                            showOverlay()
-                            return true
-                        }
-                    }
                 }
             }
         }
@@ -1982,18 +1851,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    if (binding.rvChannels.hasFocus()) {
-                        val focused = currentFocus ?: binding.rvChannels.findFocus()
-                        if (focused != null) {
-                            val targetCat = findHorizontallyAlignedCategoryView(focused)
-                            if (targetCat != null) {
-                                targetCat.requestFocus()
-                                return true
-                            }
-                        }
-                    }
-                } else {
+                if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     val playing = currentPlayingChannel
                     val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
                     if (isSports) {
@@ -2029,18 +1887,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    if (binding.rvCategories.hasFocus()) {
-                        val focused = currentFocus ?: binding.rvCategories.findFocus()
-                        if (focused != null) {
-                            val targetChan = findHorizontallyAlignedChannelView(focused)
-                            if (targetChan != null) {
-                                targetChan.requestFocus()
-                                return true
-                            }
-                        }
-                    }
-                } else {
+                if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     // Phím Phải khi xem toàn màn hình: Mở menu chọn danh sách phát nhanh
                     showQuickPlaylistDialog()
                     return true
