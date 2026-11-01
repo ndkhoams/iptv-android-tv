@@ -985,8 +985,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 binding.ivSpotlightLogo.setImageResource(R.drawable.ic_tv_placeholder)
             }
-            binding.tvSpotlightStreamInfo.text = "Trận đấu: ${channel.name}
-Bấm phím OK để xem danh sách nguồn phát"
+            binding.tvSpotlightStreamInfo.text = "Trận đấu: ${channel.name}\nBấm phím OK để xem danh sách nguồn phát"
             binding.rvSpotlightEpg.visibility = View.GONE
             binding.tvEpgEmpty.visibility = View.VISIBLE
             binding.tvEpgEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát"
