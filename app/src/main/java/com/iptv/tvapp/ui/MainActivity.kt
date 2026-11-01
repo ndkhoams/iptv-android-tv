@@ -1970,10 +1970,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         }
-                focusPlayingChannel()
-                return
-            }
-        }
 
         if (playing != null) {
             // Đảm bảo danh mục đang chọn có chứa kênh đang phát
