@@ -66,6 +66,25 @@ class PlaylistManager(private val context: Context) {
     }
 
     /**
+     * Xóa sạch file cache của toàn bộ danh sách M3U người dùng đã lưu và thể thao trực tiếp
+     */
+    fun refreshAllPlaylistCaches() {
+        try {
+            val playlists = prefs.getPlaylists()
+            for (pl in playlists) {
+                val cacheFile = getCacheFile(pl.id)
+                if (cacheFile.exists()) {
+                    cacheFile.delete()
+                }
+            }
+            // Xóa cache thể thao trực tiếp
+            sportsLiveManager.clearCache()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
      * Tự động thay thế hoặc bổ sung tham số udpxy=server:port nếu người dùng đã cấu hình server udpxy
      */
     fun resolvePlaylistUrl(rawUrl: String): String {

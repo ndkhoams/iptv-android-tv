@@ -64,6 +64,16 @@ class SportsLiveManager(private val context: Context) {
         private var cachedCategories: List<Category>? = null
         @Volatile
         private var lastFetchTimeMs: Long = 0L
+
+        fun clearCache() {
+            cachedCategories = null
+            lastFetchTimeMs = 0L
+        }
+    }
+
+    fun clearCache() {
+        cachedCategories = null
+        lastFetchTimeMs = 0L
     }
 
     /**

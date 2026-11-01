@@ -52,6 +52,7 @@ import com.iptv.tvapp.ui.adapter.EpgTimelineAdapter
 import com.iptv.tvapp.ui.dialog.ChannelActionDialog
 import com.iptv.tvapp.ui.dialog.QuickPlaylistDialog
 import com.iptv.tvapp.ui.dialog.SettingsDialog
+import com.iptv.tvapp.update.AppUpdateManager
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefs: PreferencesHelper
     private lateinit var playlistManager: PlaylistManager
     private lateinit var epgManager: EpgManager
+    private lateinit var appUpdateManager: AppUpdateManager
 
     private var player: ExoPlayer? = null
     private var libVLC: LibVLC? = null
@@ -157,6 +159,7 @@ class MainActivity : AppCompatActivity() {
         prefs.ensureKtvActiveOnStartup()
         playlistManager = PlaylistManager(this)
         epgManager = EpgManager(this)
+        appUpdateManager = AppUpdateManager(this)
 
         acquireMulticastLock()
         checkStoragePermission()
@@ -167,6 +170,7 @@ class MainActivity : AppCompatActivity() {
         loadPlaylist(forceRefresh = false)
         loadEpgData()
         startPeriodicSportsRefresh()
+        checkAppUpdate(isManual = false)
     }
 
     private fun loadEpgData() {
@@ -343,6 +347,14 @@ class MainActivity : AppCompatActivity() {
 
         binding.navSidebarSettings.setOnClickListener {
             showSettingsDialog()
+        }
+
+        binding.navRefreshPlaylists.setOnClickListener {
+            refreshAllPlaylists()
+        }
+
+        binding.navCheckUpdate.setOnClickListener {
+            checkAppUpdate(isManual = true)
         }
 
         binding.rootView.setOnClickListener {
@@ -1538,7 +1550,8 @@ class MainActivity : AppCompatActivity() {
                     val focused = currentFocus
                     if (focused != null && (focused.id == R.id.rvSpotlightEpg || focused.id == R.id.rvCategories ||
                                 focused.id == R.id.navFavorites || focused.id == R.id.navPlaylists ||
-                                focused.id == R.id.navSidebarSettings)) {
+                                focused.id == R.id.navSidebarSettings || focused.id == R.id.navRefreshPlaylists ||
+                                focused.id == R.id.navCheckUpdate)) {
                         focusPlayingChannel()
                         return true
                     }
@@ -1678,6 +1691,89 @@ class MainActivity : AppCompatActivity() {
         }
         activeSettingsDialog = dialog
         dialog.show()
+    }
+
+    /**
+     * Nút 1: Làm mới toàn bộ playlist (cả các sự kiện trực tiếp thể thao và các playlist M3U người dùng nhập vào)
+     */
+    private fun refreshAllPlaylists() {
+        Toast.makeText(this, "Đang làm mới toàn bộ danh sách kênh và trực tiếp thể thao...", Toast.LENGTH_SHORT).show()
+        binding.layoutBuffering.visibility = View.VISIBLE
+        binding.tvBufferingText.text = "Đang cập nhật danh sách..."
+
+        lifecycleScope.launch {
+            try {
+                // 1. Xóa sạch file cache của toàn bộ danh sách M3U và thể thao
+                withContext(Dispatchers.IO) {
+                    playlistManager.refreshAllPlaylistCaches()
+                }
+
+                // 2. Tải lại active playlist và các luồng thể thao trực tiếp mới nhất
+                val activeSource = prefs.getActivePlaylist()
+                val categories = withContext(Dispatchers.IO) {
+                    playlistManager.loadPlaylist(activeSource.id, activeSource.url, forceRefresh = true)
+                }
+
+                allCategories.clear()
+                allCategories.addAll(categories)
+
+                allChannels.clear()
+                val allCat = categories.firstOrNull { it.name == "Tất cả" }
+                if (allCat != null) {
+                    allChannels.addAll(allCat.channels)
+                } else if (categories.isNotEmpty()) {
+                    allChannels.addAll(categories.flatMap { it.channels })
+                }
+
+                categoryAdapter.submitList(allCategories)
+
+                // Cập nhật lại danh mục đang chọn (nếu có)
+                val targetCat = allCategories.firstOrNull { it.name == currentSelectedCategory?.name } ?: allCategories.firstOrNull()
+                if (targetCat != null) {
+                    currentSelectedCategory = targetCat
+                    categoryAdapter.setSelectedCategory(targetCat)
+                    displayCategoryChannels(targetCat)
+                }
+
+                // Tải lại EPG
+                loadEpgData()
+
+                binding.layoutBuffering.visibility = View.GONE
+                Toast.makeText(this@MainActivity, "Đã cập nhật ${allChannels.size} kênh & các luồng thể thao mới nhất!", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                binding.layoutBuffering.visibility = View.GONE
+                Toast.makeText(this@MainActivity, "Lỗi cập nhật: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /**
+     * Nút 2: Kiểm tra bản cập nhật ứng dụng từ GitHub Releases
+     * isManual = false: Tự động chạy ẩn khi mở app, chỉ hiện thông báo khi CÓ bản mới.
+     * isManual = true: Người dùng bấm nút "Check for update", hiện tiến trình và thông báo cụ thể.
+     */
+    private fun checkAppUpdate(isManual: Boolean) {
+        if (isManual) {
+            Toast.makeText(this, "Đang kiểm tra phiên bản mới từ GitHub...", Toast.LENGTH_SHORT).show()
+        }
+
+        lifecycleScope.launch {
+            if (!isManual) {
+                // Chờ app khởi động và phát kênh ổn định trước khi check ngầm
+                delay(3000)
+            }
+
+            val release = appUpdateManager.fetchLatestRelease()
+            if (release != null && appUpdateManager.isNewerVersion(release.tagName)) {
+                // Có phiên bản mới -> Hiện dialog cập nhật
+                appUpdateManager.showUpdateDialog(this@MainActivity, lifecycleScope, release)
+            } else {
+                if (isManual) {
+                    val currentVer = appUpdateManager.getAppVersion(this@MainActivity)
+                    Toast.makeText(this@MainActivity, "Bạn đang sử dụng phiên bản mới nhất (v$currentVer)", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     override fun onStart() {

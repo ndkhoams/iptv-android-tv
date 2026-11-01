@@ -55,21 +55,16 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Cập nhật sửa lỗi CDN StreamFree & Phát mượt mà Thể Thao Quốc Tế"
+        name: "${{ github.ref_name }} - Nút Thao Tác Nhanh Làm Mới Kênh & Tự Động Cập Nhật App Trong App"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Sửa lỗi & Hoàn thiện nguồn thể thao quốc tế StreamFree:**
-            - Chuyển đổi máy chủ CDN phân phối luồng sang `strmfree.st` với chữ ký số bảo mật động, vượt qua hoàn toàn lỗi 403 Forbidden.
-            - Bổ sung chuyên mục `🌐 StreamFree (Quốc Tế)` với 4 bộ môn chọn lọc: ⚽ Bóng đá (`soccer`), 🏎️ Đua xe F1 (`racing`), 🎾 Quần vợt (`tennis`), 🏀 Bóng rổ (`basketball`).
-            - Tự động gộp các trận bóng đá quốc tế hấp dẫn vào chuyên mục `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)`.
-            - Cập nhật bộ giải mã luồng động `resolveLiveStreamUrl` và hỗ trợ chuẩn directive `#EXTVLCOPT` cho cả ExoPlayer và LibVLC.
-          - **Kho thể thao trực tiếp đầy đủ 6 chuyên mục:**
-            - `⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)` (kèm nút 🔄 Cập nhật trận đấu)
-            - `🌐 StreamFree (Quốc Tế)`
-            - `🍌 Chuối Chiên TV`
-            - `🐔 Gà Vàng / Tiếu Lâm`
-            - `🍚 Xôi Lạc TV`
-            - `🌶️ Cà Khịa TV`
+          - **Tích hợp 2 nút thao tác nhanh trên thanh Menu bên trái (Sidebar):**
+            - 🔄 **Nút làm mới danh sách kênh**: Xóa sạch cache và tải lại tức thì toàn bộ playlist M3U cùng các trận đấu thể thao trực tiếp mới nhất hôm nay.
+            - 🚀 **Nút kiểm tra cập nhật ứng dụng (Check for update)**: Tự động chạy ẩn kiểm tra phiên bản mới mỗi lần mở app và hỗ trợ bấm kiểm tra thủ công. Tải về và cài đặt trực tiếp file APK ngay trong app.
+          - **Nhóm Kênh Thể Thao Quốc Tế 24/7 (F1 & Tennis):**
+            - Bổ sung nhóm chuyên mục `🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)` gồm các kênh 24/7 chất lượng cao: Sky Sport F1, Sky Sport Tennis, TNT Sports 1-4, Eurosport 1-2, Canal+ Sport.
+          - **Tối ưu & ổn định toàn diện hệ thống thể thao:**
+            - Đầy đủ các kênh bóng đá Việt Nam có BLV từ Chuối Chiên, Gà Vàng, Xôi Lạc và Cà Khịa.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

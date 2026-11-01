@@ -367,9 +367,41 @@
                     android:focusable="true"
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/navPlaylists"
-                    android:nextFocusDown="@+id/navSidebarSettings"
+                    android:nextFocusDown="@+id/navRefreshPlaylists"
                     android:nextFocusRight="@+id/rvCategories"
                     android:contentDescription="Cài đặt" />
+
+                <!-- 4. Làm mới toàn bộ danh sách kênh & trực tiếp thể thao -->
+                <ImageButton
+                    android:id="@+id/navRefreshPlaylists"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/selector_fpt_sidebar"
+                    android:src="@drawable/ic_refresh"
+                    android:scaleType="centerInside"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusUp="@+id/navSidebarSettings"
+                    android:nextFocusDown="@+id/navCheckUpdate"
+                    android:nextFocusRight="@+id/rvCategories"
+                    android:contentDescription="Làm mới danh sách kênh" />
+
+                <!-- 5. Kiểm tra cập nhật ứng dụng (Check for update) -->
+                <ImageButton
+                    android:id="@+id/navCheckUpdate"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/selector_fpt_sidebar"
+                    android:src="@drawable/ic_update"
+                    android:scaleType="centerInside"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:nextFocusUp="@+id/navRefreshPlaylists"
+                    android:nextFocusDown="@+id/navCheckUpdate"
+                    android:nextFocusRight="@+id/rvCategories"
+                    android:contentDescription="Kiểm tra bản cập nhật" />
             </LinearLayout>
 
             <!-- CỘT 1: DANH MỤC NHÓM KÊNH (Thu gọn 150dp) -->
