@@ -18,3 +18,5 @@ source.zip
 *.apk
 .vscode/
 sports_updater.py
+
+scratch/

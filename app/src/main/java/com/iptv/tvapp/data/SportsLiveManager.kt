@@ -451,25 +451,16 @@ class SportsLiveManager(private val context: Context) {
     private fun getInternationalChannels(): List<Channel> {
         val list = mutableListOf<Channel>()
         val intl = listOf(
-            // Kênh bóc tách tự động WebView Sniffer (Nguồn Web Embed quốc tế)
-            Triple("🏎️ [Sniffer] Sky Sports F1 HD - Đua xe F1 trực tiếp", "sniffer://https://embed.st/embed/sports/skysportsf1", "https://r2.thesportsdb.com/images/media/channel/logo/p5csyn1620551587.png"),
-            Triple("🎾 [Sniffer] Sky Sports Tennis HD - Quần vợt ATP / WTA", "sniffer://https://embed.st/embed/sports/skysportstennis", "https://e0.365dm.com/24/01/2048x1152/skysports-sky-sports-tennis_6437040.jpg"),
-            Triple("🏆 [Sniffer] TNT Sports 1 HD - Cúp C1 & Ngoại Hạng Anh", "sniffer://https://embed.st/embed/sports/tntsports1", "https://media.info/l/o/1/1539.1690027797.png"),
-            Triple("🏆 [Sniffer] TNT Sports 2 HD - MotoGP / UFC", "sniffer://https://embed.st/embed/sports/tntsports2", "https://media.info/l/o/1/1540.1690027877.png"),
-            Triple("🚴 [Sniffer] Eurosport 1 HD - Tennis Grand Slam & Đua xe", "sniffer://https://embed.st/embed/sports/eurosport1", "https://upload.wikimedia.org/wikipedia/commons/3/37/Eurosport1hd.png"),
-            Triple("⚽ [Sniffer] beIN Sports 1 English", "sniffer://https://embed.st/embed/sports/beinsports1en", "https://upload.wikimedia.org/wikipedia/commons/2/20/BeIN_Sports_logo.svg"),
-            Triple("⚽ [Sniffer] Premier League TV HD", "sniffer://https://embed.st/embed/sports/premierleague", "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"),
-
-            // Kênh nguồn Watchtivo HD trực tiếp 24/7
-            Triple("🏎️ [24/7] Sky Sport F1 HD - Đua xe Công thức 1", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1149423&extension=ts&play_token=1jkVQWGCqc", "https://r2.thesportsdb.com/images/media/channel/logo/p5csyn1620551587.png"),
-            Triple("🎾 [24/7] Sky Sport Tennis HD - Quần vợt ATP / WTA", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1149433&extension=ts&play_token=Y1kv3yxPS8", "https://e0.365dm.com/24/01/2048x1152/skysports-sky-sports-tennis_6437040.jpg"),
-            Triple("🏆 [24/7] TNT Sports 1 HD - Cúp C1 / Ngoại Hạng Anh", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894977&extension=ts&play_token=W2HvDO5iES", "https://media.info/l/o/1/1539.1690027797.png"),
-            Triple("🏆 [24/7] TNT Sports 2 HD - Đua xe MotoGP / UFC", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1091517&extension=ts&play_token=zKzxFKTNmb", "https://media.info/l/o/1/1540.1690027877.png"),
-            Triple("🏆 [24/7] TNT Sports 3 HD - Thể thao trực tiếp", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894979&extension=ts&play_token=RLLwKaJKqY", "https://media.info/l/o/5/5712.1690027954.png"),
-            Triple("🏆 [24/7] TNT Sports 4 HD - Thể thao trực tiếp", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894980&extension=ts&play_token=4ofwEIdTU4", "https://media.info/l/o/1/1491.1690027975.png"),
-            Triple("🚴 [24/7] Eurosport 1 HD - Thể thao & Tennis Grand Slam", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=933004&extension=ts&play_token=jtuDUMdLno", "https://upload.wikimedia.org/wikipedia/commons/3/37/Eurosport1hd.png"),
-            Triple("🚴 [24/7] Eurosport 2 HD - Thể thao & Đua xe", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=933003&extension=ts&play_token=OIqiUqIbWW", "https://upload.wikimedia.org/wikipedia/commons/d/d5/Eurosport2hd.png"),
-            Triple("⚽ [24/7] Canal+ Sport HD - Thể thao Châu Âu", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=958758&extension=ts&play_token=MskDtCSrpn", "https://upload.wikimedia.org/wikipedia/commons/1/1a/Canal%2B_Sport_2015.png")
+            // Kênh thể thao quốc tế 24/7 (Watchtivo HD)
+            Triple("🏎️ Sky Sport F1 HD - Đua xe Công thức 1", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1149423&extension=ts&play_token=1jkVQWGCqc", "https://r2.thesportsdb.com/images/media/channel/logo/p5csyn1620551587.png"),
+            Triple("🎾 Sky Sport Tennis HD - Quần vợt ATP / WTA", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1149433&extension=ts&play_token=Y1kv3yxPS8", "https://e0.365dm.com/24/01/2048x1152/skysports-sky-sports-tennis_6437040.jpg"),
+            Triple("🏆 TNT Sports 1 HD - Cúp C1 / Ngoại Hạng Anh", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894977&extension=ts&play_token=W2HvDO5iES", "https://media.info/l/o/1/1539.1690027797.png"),
+            Triple("🏆 TNT Sports 2 HD - Đua xe MotoGP / UFC", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=1091517&extension=ts&play_token=zKzxFKTNmb", "https://media.info/l/o/1/1540.1690027877.png"),
+            Triple("🏆 TNT Sports 3 HD - Thể thao trực tiếp", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894979&extension=ts&play_token=RLLwKaJKqY", "https://media.info/l/o/5/5712.1690027954.png"),
+            Triple("🏆 TNT Sports 4 HD - Thể thao trực tiếp", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=894980&extension=ts&play_token=4ofwEIdTU4", "https://media.info/l/o/1/1491.1690027975.png"),
+            Triple("🚴 Eurosport 1 HD - Thể thao & Tennis Grand Slam", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=933004&extension=ts&play_token=jtuDUMdLno", "https://upload.wikimedia.org/wikipedia/commons/3/37/Eurosport1hd.png"),
+            Triple("🚴 Eurosport 2 HD - Thể thao & Đua xe", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=933003&extension=ts&play_token=OIqiUqIbWW", "https://upload.wikimedia.org/wikipedia/commons/d/d5/Eurosport2hd.png"),
+            Triple("⚽ Canal+ Sport HD - Thể thao Châu Âu", "http://line.watchtivo-8k.com:80/play/live.php?mac=00:1A:79:3F:0C:96&stream=958758&extension=ts&play_token=MskDtCSrpn", "https://upload.wikimedia.org/wikipedia/commons/1/1a/Canal%2B_Sport_2015.png")
         )
         intl.forEachIndexed { index, (name, url, logo) ->
             list.add(
@@ -549,15 +540,13 @@ class SportsLiveManager(private val context: Context) {
             e.printStackTrace()
         }
 
-        // Dự phòng: Bàn giao trực tiếp URL trang web cho WebView Sniffer để giải mã bằng trình duyệt thực
-        return@withContext "sniffer://$rawUrl"
+        return@withContext rawUrl
     }
 
     /**
      * Giải mã luồng m3u8 StreamFree trực tiếp từ Embed player và API token
      */
     private fun resolveStreamFreeUrl(rawUrl: String): String {
-        var fallbackPlayerUrl = "https://streamfree.top/"
         try {
             val uri = android.net.Uri.parse(rawUrl)
             val category = uri.host ?: "soccer"
@@ -641,7 +630,7 @@ class SportsLiveManager(private val context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return "sniffer://$fallbackPlayerUrl"
+        return rawUrl
     }
 
     private fun formatTitle(str: String): String {

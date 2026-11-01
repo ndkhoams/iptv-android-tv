@@ -75,7 +75,8 @@ class TvWebServer(
                 if (parts.size < 2) return
 
                 val method = parts[0]
-                val path = parts[1]
+                val rawPath = parts[1]
+                val path = rawPath.substringBefore('?')
 
                 // Đọc Headers để tìm Content-Length
                 var contentLength = 0

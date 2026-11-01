@@ -55,20 +55,19 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Tích Hợp WebView Stream Sniffer & Quản Lý Playlist Web Remote Tức Thì"
+        name: "${{ github.ref_name }} - Sửa Lỗi Web Remote Tải Playlist & Loại Bỏ WebView Sniffer"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Tích hợp cơ chế WebView Stream Sniffer trực tiếp trong ứng dụng:**
-            - Bóc tách luồng trực tiếp `.m3u8` ngầm từ các trang nhúng thể thao quốc tế (PPV.st, Embed.st, StreamFree, Xôi Lạc / Cà Khịa...) cùng đầy đủ Header bản quyền Referer và Origin.
-            - Tự động ngắt nạp segment video trong WebView, chuyển luồng sạch cho ExoPlayer / VLC giải mã phần cứng 1080p mượt mà, không tốn RAM TV Box.
-          - **Bổ sung nhóm kênh Thể Thao Quốc Tế Web Sniffer:**
-            - Sky Sports F1 HD, Sky Sports Tennis HD, TNT Sports 1-2 HD, Eurosport 1 HD, beIN Sports 1 English, Premier League TV HD...
-          - **Nâng cấp Web Remote (port 8080) tức thì (0s delay):**
-            - Thêm link M3U mới hoặc tải file M3U từ điện thoại lên TV xuất hiện ngay lập tức nhờ triệt tiêu HTTP browser cache và cập nhật tự động.
-            - Thêm tùy chọn "Kích hoạt phát danh sách này ngay trên TV" khi thêm/upload playlist.
-          - **Khắc phục triệt để lỗi KTV Playlist bị fix cứng:**
-            - Người dùng hoàn toàn có thể xóa KTV Playlist vĩnh viễn mà không bao giờ bị app tự động tạo lại.
-            - Tự do quản lý và lưu giữ bất kỳ playlist nào bạn muốn.
+          - **Sửa triệt để lỗi 'Lỗi tải danh sách playlist' trên Web Remote:**
+            - Xử lý bóc tách query parameter `?t=...` trong router HTTP `TvWebServer`, giúp các endpoint `/api/playlists`, `/api/channels`, `/api/status`, `/api/settings` phản hồi tức thì 100% không bị 404 Not Found.
+            - Giao diện Web Remote quản lý và hiển thị danh sách playlist đã lưu ngay sau khi thêm hoặc tải file lên mà không cần reload trang.
+          - **Loại bỏ hoàn toàn tính năng WebView Stream Sniffer khỏi ứng dụng:**
+            - Gỡ bỏ toàn bộ engine WebView ngầm và logic sniffer theo yêu cầu người dùng, giúp ứng dụng siêu nhẹ, tối ưu RAM và CPU trên mọi dòng Android TV Box.
+            - Khôi phục luồng phát ổn định trực tiếp qua ExoPlayer và VLC Player.
+          - **Duy trì nhóm Kênh Thể Thao Quốc Tế 24/7 trực tiếp:**
+            - Sky Sport F1 HD, Sky Sport Tennis HD, TNT Sports 1-4 HD, Eurosport 1-2 HD, Canal+ Sport HD chạy mượt mà trên hạ tầng phát sóng ổn định.
+          - **Quản lý danh sách Playlist tự do:**
+            - Người dùng có thể tùy ý xóa bỏ KTV Playlist hoặc bất kỳ danh sách nào mà không bị app tự động phục hồi.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true
