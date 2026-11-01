@@ -90,15 +90,15 @@ class QuickPlaylistDialog(
                     }
                 }
                 binding.root.setOnFocusChangeListener { v, hasFocus ->
+                    v.scaleX = 1.0f
+                    v.scaleY = 1.0f
                     if (hasFocus) {
-                        v.animate().scaleX(1.02f).scaleY(1.02f).setDuration(100).start()
                         binding.tvPlaylistName.setTextColor(Color.parseColor("#111827"))
                         val pos = adapterPosition
                         if (pos != RecyclerView.NO_POSITION && !items[pos].isSelected) {
                             binding.tvRadioIcon.setTextColor(Color.parseColor("#475569"))
                         }
                     } else {
-                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
                         val pos = adapterPosition
                         if (pos != RecyclerView.NO_POSITION) {
                             if (items[pos].isSelected) {

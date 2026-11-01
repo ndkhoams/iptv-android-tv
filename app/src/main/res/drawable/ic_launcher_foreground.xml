@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Khung TV màu Cam FPT đặc trưng kèm chân đế -->
+    <path
+        android:fillColor="#FF6500"
+        android:pathData="M84,24H24c-4.4,0 -8,3.6 -8,8v44c0,4.4 3.6,8 8,8h20v8h-12v6h44v-6H64v-8h20c4.4,0 8,-3.6 8,-8V32c0,-4.4 -3.6,-8 -8,-8zM82,74H26V34h56v40z" />
+
+    <!-- Nền màn hình TV tối -->
+    <path
+        android:fillColor="#161526"
+        android:pathData="M26,34h56v40h-56z" />
+
+    <!-- Chữ T màu trắng nổi bật, căn giữa hoàn hảo -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,44h18v5h-6.5v15h-5v-15H34z" />
+
+    <!-- Chữ V màu trắng nổi bật, cân xứng -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,44l5.5,0 3.5,12 3.5,-12 5.5,0 -6,20 -6,0z" />
+
+    <!-- Đèn tín hiệu xanh lá TV -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M80,71a1.5,1.5 0 1,0 0.01,0z" />
+</vector>
+

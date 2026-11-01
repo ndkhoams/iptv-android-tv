@@ -672,4 +672,39 @@
             android:textSize="11sp" />
     </LinearLayout>
 
+    <!-- 6. Thanh Thông Báo Dưới Màn Hình (Thông báo hoàn tất quét thể thao, trạng thái ứng dụng...) -->
+    <LinearLayout
+        android:id="@+id/layoutBottomNotification"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="32dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_fpt_quick_banner"
+        android:paddingStart="16dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:elevation="20dp"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_app_logo"
+            android:scaleType="fitCenter"
+            android:layout_marginEnd="10dp" />
+
+        <TextView
+            android:id="@+id/tvBottomNotificationText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
 </FrameLayout>

@@ -55,17 +55,25 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v')
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Điều Chỉnh User-Agent Phổ Thông & Hiển Thị Logo Ứng Dụng Trên Toast"
+        name: "${{ github.ref_name }} - Khởi Động Siêu Nhanh, Quét Thể Thao Ngầm, Map Phím Ch+/Ch- & Thanh Thông Báo Mới"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Điều chỉnh HTTP User Agent Mặc định về giá trị phổ thông:**
-            - Đã chuyển sang chuẩn phổ thông Android / Chrome (`Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36`).
-            - Loại bỏ hoàn toàn các thông số phần cứng cụ thể (ZTE, B866V2F, FPT Play), đảm bảo tính trung lập và tương thích tối đa với mọi máy chủ phát sóng.
-          - **Sửa biểu tượng logo trên các dòng thông báo (Toast):**
-            - Xuất và cấu hình đầy đủ bộ bitmap biểu tượng TV Play sắc nét cho cả định dạng vuông (`ic_launcher`) và tròn (`ic_launcher_round`) trên toàn bộ mật độ màn hình (`mdpi` đến `xxxhdpi`).
-            - Cấu hình lại `AndroidManifest.xml` giúp hệ điều hành Android TV hiển thị chuẩn xác logo TV Play thay cho logo robot Android mặc định khi bật thông báo.
-          - **Hoàn thiện trình cập nhật ứng dụng tự động trong app:**
-            - Cơ chế kiểm tra cập nhật mới linh hoạt, tự động phát hiện bản phát hành mới nhất và hỗ trợ tải về cài đặt trực tiếp trên TV.
+          - **Tối ưu tốc độ mở app tức thì (< 1 giây):**
+            - Không còn phải chờ quét luồng trực tiếp thể thao khi mở app. App đọc danh sách M3U từ bộ nhớ đệm và phát ngay kênh mặc định chỉ trong tích tắc.
+          - **Tìm kiếm luồng trực tiếp thể thao chạy ngầm:**
+            - Trong khi kênh TV đang phát mượt mà, app tự động quét ngầm các trận đấu thể thao hôm nay trên Internet và tự động gộp vào danh mục mà không làm gián đoạn việc xem TV.
+          - **Thanh thông báo cạnh dưới màn hình chuyên dụng (Không hiện giữa):**
+            - Thiết kế thanh thông báo kính mờ cao cấp ở cạnh dưới màn hình kèm logo TV Play sắc nét, thông báo hoàn tất quét thể thao và trạng thái ứng dụng.
+          - **Map phím Channel + / Channel - trên điều khiển TV:**
+            - Bấm phím **Ch +**: chuyển tới kênh có số thứ tự lớn hơn trong danh sách hiện hành.
+            - Bấm phím **Ch -**: chuyển tới kênh có số thứ tự nhỏ hơn trong danh sách hiện hành.
+            - Tự động cuộn và trỏ khung chọn tới kênh mới khi đang mở bảng hướng dẫn kênh.
+          - **Cải tiến hộp thoại Cài đặt:**
+            - Đổi nhãn nút thành "Mặc định", hỗ trợ phím điều hướng D-Pad di chuyển chuẩn xác giữa ô nhập User-Agent và nhóm lựa chọn chế độ mở kênh.
+          - **Cố định kích thước hộp thoại chọn playlist nhanh:**
+            - Khóa cố định tỉ lệ 1:1, không còn hiện tượng phóng to làm tràn dòng ra ngoài viewport màn hình TV.
+          - **Bổ sung trọn bộ Adaptive Icon cho Android 8.0 đến Android 14:**
+            - Đảm bảo toàn bộ thông báo hệ thống và giao diện hiển thị chuẩn logo TV Play.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

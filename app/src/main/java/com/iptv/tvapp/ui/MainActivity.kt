@@ -55,6 +55,7 @@ import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.update.AppUpdateManager
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -112,6 +113,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val bottomNotificationHandler = Handler(Looper.getMainLooper())
+    private val hideBottomNotificationRunnable = Runnable {
+        binding.layoutBottomNotification.animate()
+            .alpha(0f)
+            .translationY(30f)
+            .setDuration(300)
+            .withEndAction {
+                binding.layoutBottomNotification.visibility = View.GONE
+            }
+            .start()
+    }
+    private var sportsFetchJob: Job? = null
+
+    fun showBottomNotification(message: String) {
+        bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
+        binding.tvBottomNotificationText.text = message
+        binding.layoutBottomNotification.alpha = 0f
+        binding.layoutBottomNotification.translationY = 30f
+        binding.layoutBottomNotification.visibility = View.VISIBLE
+        binding.layoutBottomNotification.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(250)
+            .start()
+        bottomNotificationHandler.postDelayed(hideBottomNotificationRunnable, 3500)
+    }
+
     private var lastRxBytes: Long = 0L
     private var lastRxTime: Long = 0L
     private var currentMeasuredBitrateMbps: Float = 0f
@@ -166,7 +194,7 @@ class MainActivity : AppCompatActivity() {
         initPlayer()
         initWebServer()
         startClock()
-        loadPlaylist(forceRefresh = false)
+        loadPlaylist(forceRefresh = false, isStartup = true)
         loadEpgData()
         startPeriodicSportsRefresh()
         checkAppUpdate(isManual = false)
@@ -649,7 +677,7 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun loadPlaylist(forceRefresh: Boolean) {
+    private fun loadPlaylist(forceRefresh: Boolean, isStartup: Boolean = false) {
         val activeSource = prefs.getActivePlaylist()
         binding.tvActivePlaylistBadge.text = "Danh sách: ${activeSource.name}"
 
@@ -659,7 +687,12 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val categories = playlistManager.loadPlaylist(activeSource.id, activeSource.url, forceRefresh)
+                val categories = playlistManager.loadPlaylist(
+                    activeSource.id,
+                    activeSource.url,
+                    forceRefresh = forceRefresh,
+                    includeSports = !isStartup
+                )
                 allCategories.clear()
                 allCategories.addAll(categories)
 
@@ -671,7 +704,7 @@ class MainActivity : AppCompatActivity() {
                     allChannels.addAll(categories.flatMap { it.channels })
                 }
 
-                categoryAdapter.submitList(allCategories)
+                categoryAdapter.submitList(allCategories.toList())
 
                 if (allCategories.isNotEmpty()) {
                     currentSelectedCategory = allCategories[0]
@@ -681,10 +714,7 @@ class MainActivity : AppCompatActivity() {
                 binding.layoutBuffering.visibility = View.GONE
 
                 val playableChannels = allChannels.filter { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !it.streamUrl.startsWith("action://") }
-                val targetChannel = if (isInitialAppStart) {
-                    isInitialAppStart = false
-                    playableChannels.firstOrNull()
-                } else when (prefs.startupMode) {
+                val targetChannel = when (prefs.startupMode) {
                     PreferencesHelper.MODE_FIRST_CHANNEL -> {
                         playableChannels.firstOrNull()
                     }
@@ -697,8 +727,12 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     PreferencesHelper.MODE_LAST_WATCHED -> {
-                        playableChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
-                            ?: playableChannels.firstOrNull()
+                        if (!prefs.lastChannelUrl.isNullOrBlank()) {
+                            playableChannels.firstOrNull { it.streamUrl == prefs.lastChannelUrl }
+                                ?: playableChannels.firstOrNull()
+                        } else {
+                            playableChannels.firstOrNull()
+                        }
                     }
                     else -> playableChannels.firstOrNull()
                 }
@@ -715,11 +749,41 @@ class MainActivity : AppCompatActivity() {
                     showOverlay()
                 }
 
+                // Nếu là khởi động app, quét luồng thể thao ngầm trong khi TV đã đang phát mượt mà
+                if (isStartup) {
+                    fetchSportsInBackground(forceRefresh = false, showNotification = true)
+                }
+
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
                 binding.tvErrorMessage.visibility = View.VISIBLE
                 binding.tvErrorDetail.text = getString(R.string.load_failed) + "\n" + (e.localizedMessage ?: "")
                 showOverlay()
+            }
+        }
+    }
+
+    private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true) {
+        sportsFetchJob?.cancel()
+        sportsFetchJob = lifecycleScope.launch {
+            // Cho kênh TV phát ổn định 2.5s trước khi quét luồng thể thao ngầm
+            delay(2500)
+            try {
+                val sportsCategories = withContext(Dispatchers.IO) {
+                    playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
+                }
+                if (!isActive) return@launch
+                if (sportsCategories.isNotEmpty()) {
+                    applyUpdatedSportsCategories(sportsCategories)
+                    val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
+                    if (showNotification) {
+                        showBottomNotification("✅ Đã cập nhật xong! Tìm thấy $count sự kiện thể thao hôm nay.")
+                    }
+                } else if (showNotification && forceRefresh) {
+                    showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
+                }
+            } catch (e: Exception) {
+                // Giữ trải nghiệm phát kênh truyền hình liền mạch, không làm gián đoạn
             }
         }
     }
@@ -1470,22 +1534,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchChannel(next: Boolean) {
-        if (allChannels.isEmpty()) return
-
-        val currentIndex = allChannels.indexOfFirst { it.streamUrl == currentPlayingChannel?.streamUrl }
-        val newIndex = if (next) {
-            if (currentIndex == -1 || currentIndex >= allChannels.size - 1) 0 else currentIndex + 1
+        // Lấy danh sách kênh trong danh mục/list hiện hành (loại bỏ các nút chức năng như nút refresh thể thao)
+        val activeChannels = (if (currentCategoryChannels.any { it.streamUrl == currentPlayingChannel?.streamUrl }) {
+            currentCategoryChannels
         } else {
-            if (currentIndex <= 0) allChannels.size - 1 else currentIndex - 1
+            allCategories.firstOrNull { cat ->
+                cat.name != "★ KÊNH YÊU THÍCH" && cat.channels.any { it.streamUrl == currentPlayingChannel?.streamUrl }
+            }?.channels ?: allChannels
+        }).filter { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !it.streamUrl.startsWith("action://") }
+
+        if (activeChannels.isEmpty()) return
+
+        val currentIndex = activeChannels.indexOfFirst { it.streamUrl == currentPlayingChannel?.streamUrl }
+        val newIndex = if (next) {
+            // Ch+ hoặc Dpad Down: Số thứ tự lớn hơn (kênh kế tiếp)
+            if (currentIndex == -1 || currentIndex >= activeChannels.size - 1) 0 else currentIndex + 1
+        } else {
+            // Ch- hoặc Dpad Up: Số thứ tự nhỏ hơn (kênh phía trước)
+            if (currentIndex <= 0) activeChannels.size - 1 else currentIndex - 1
         }
 
-        val targetChannel = allChannels[newIndex]
+        val targetChannel = activeChannels[newIndex]
         playChannel(targetChannel)
+
+        // Nếu bảng danh sách kênh đang hiển thị, tự động cuộn và trỏ focus tới kênh mới
+        if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+            val idxInView = currentCategoryChannels.indexOfFirst { it.streamUrl == targetChannel.streamUrl }
+            if (idxInView != -1) {
+                binding.rvChannels.scrollToPosition(idxInView)
+                binding.rvChannels.post {
+                    binding.rvChannels.findViewHolderForAdapterPosition(idxInView)?.itemView?.requestFocus()
+                }
+            }
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
+                // Phím Channel + (Ch+) trên điều khiển TV -> Kênh có số thứ tự lớn hơn
+                KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+                    if (activeSettingsDialog?.isShowing != true) {
+                        switchChannel(next = true)
+                        resetOverlayTimer()
+                        return true
+                    }
+                }
+                // Phím Channel - (Ch-) trên điều khiển TV -> Kênh có số thứ tự nhỏ hơn
+                KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    if (activeSettingsDialog?.isShowing != true) {
+                        switchChannel(next = false)
+                        resetOverlayTimer()
+                        return true
+                    }
+                }
                 KeyEvent.KEYCODE_MENU,
                 KeyEvent.KEYCODE_SETTINGS,
                 KeyEvent.KEYCODE_HELP -> {
@@ -1501,6 +1603,14 @@ class MainActivity : AppCompatActivity() {
         resetOverlayTimer()
 
         when (keyCode) {
+            KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+                switchChannel(next = true)
+                return true
+            }
+            KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+                switchChannel(next = false)
+                return true
+            }
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                     showOverlay()
@@ -1563,7 +1673,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         backPressedTime = System.currentTimeMillis()
                         currentPlayingChannel?.let { showQuickChannelInfo(it) }
-                        Toast.makeText(this, "Bấm QUAY LẠI lần nữa để thoát ứng dụng", Toast.LENGTH_SHORT).show()
+                        showBottomNotification("Bấm QUAY LẠI lần nữa để thoát ứng dụng")
                         return true
                     }
                 }
@@ -1697,7 +1807,7 @@ class MainActivity : AppCompatActivity() {
      * Nút 1: Làm mới toàn bộ playlist (cả các sự kiện trực tiếp thể thao và các playlist M3U người dùng nhập vào)
      */
     private fun refreshAllPlaylists() {
-        Toast.makeText(this, "Đang làm mới toàn bộ danh sách kênh và trực tiếp thể thao...", Toast.LENGTH_SHORT).show()
+        showBottomNotification("Đang làm mới toàn bộ danh sách kênh và trực tiếp thể thao...")
         binding.layoutBuffering.visibility = View.VISIBLE
         binding.tvBufferingText.text = "Đang cập nhật danh sách..."
 
@@ -1739,10 +1849,10 @@ class MainActivity : AppCompatActivity() {
                 loadEpgData()
 
                 binding.layoutBuffering.visibility = View.GONE
-                Toast.makeText(this@MainActivity, "Đã cập nhật ${allChannels.size} kênh & các luồng thể thao mới nhất!", Toast.LENGTH_LONG).show()
+                showBottomNotification("Đã cập nhật ${allChannels.size} kênh & các luồng thể thao mới nhất!")
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
-                Toast.makeText(this@MainActivity, "Lỗi cập nhật: ${e.message}", Toast.LENGTH_LONG).show()
+                showBottomNotification("Lỗi cập nhật: ${e.message}")
             }
         }
     }
@@ -1925,7 +2035,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshSportsMatchesManually() {
-        Toast.makeText(this, "🔄 Đang làm mới danh sách trận đấu thể thao...", Toast.LENGTH_SHORT).show()
+        showBottomNotification("🔄 Đang làm mới danh sách trận đấu thể thao...")
         binding.tvQuickBufferingText.text = "Đang quét trận đấu..."
         binding.layoutQuickBuffering.visibility = View.VISIBLE
 
@@ -1937,9 +2047,9 @@ class MainActivity : AppCompatActivity() {
             if (sportsCategories.isNotEmpty()) {
                 applyUpdatedSportsCategories(sportsCategories)
                 val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
-                Toast.makeText(this@MainActivity, "✅ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.", Toast.LENGTH_LONG).show()
+                showBottomNotification("✅ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
             } else {
-                Toast.makeText(this@MainActivity, "Không tìm thấy thêm trận đấu mới nào.", Toast.LENGTH_SHORT).show()
+                showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
             }
         }
     }
@@ -1965,6 +2075,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyUpdatedSportsCategories(sportsCategories: List<Category>) {
         val sportsNames = setOf(
             "⚽ TRỰC TIẾP BÓNG ĐÁ (HÔM NAY)",
+            "🌐 THỂ THAO QUỐC TẾ (F1 / TENNIS)",
             "🍌 Chuối Chiên TV",
             "🐔 Gà Vàng / Tiếu Lâm",
             "🍚 Xôi Lạc TV",
@@ -1977,18 +2088,25 @@ class MainActivity : AppCompatActivity() {
         allCategories.addAll(sportsCategories)
         nonSports.filter { it.name != "★ KÊNH YÊU THÍCH" }.forEach { allCategories.add(it) }
 
-        categoryAdapter.submitList(allCategories)
+        categoryAdapter.submitList(allCategories.toList())
 
+        // Giữ nguyên danh mục đang duyệt nếu có
         val currentCatName = currentSelectedCategory?.name ?: ""
-        val updatedCat = allCategories.firstOrNull { it.name == currentCatName } ?: sportsCategories.first()
-        currentSelectedCategory = updatedCat
-        displayCategoryChannels(updatedCat)
+        val updatedCat = allCategories.firstOrNull { it.name == currentCatName } ?: allCategories.firstOrNull()
+        if (updatedCat != null) {
+            currentSelectedCategory = updatedCat
+            if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                displayCategoryChannels(updatedCat)
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         stopTelemetryUpdates()
         telemetryHandler.removeCallbacksAndMessages(null)
+        bottomNotificationHandler.removeCallbacksAndMessages(null)
+        sportsFetchJob?.cancel()
         hideHandler.removeCallbacksAndMessages(null)
         clockHandler.removeCallbacksAndMessages(null)
         spotlightHandler.removeCallbacksAndMessages(null)

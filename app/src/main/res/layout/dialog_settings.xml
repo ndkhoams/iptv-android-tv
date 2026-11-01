@@ -422,17 +422,20 @@
                     <Button
                         android:id="@+id/btnResetUserAgent"
                         android:layout_width="wrap_content"
-                        android:layout_height="34dp"
-                        android:background="#334155"
-                        android:text="Mặc Định FPT Box"
-                        android:textColor="#38BDF8"
-                        android:textSize="11sp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/selector_button_tv"
+                        android:text="Mặc định"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
                         android:textAllCaps="false"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
                         android:nextFocusUp="@+id/etHttpUserAgent"
-                        android:nextFocusDown="@+id/rbLastWatched"
-                        android:focusable="true" />
+                        android:nextFocusDown="@+id/rbFirstChannel"
+                        android:nextFocusLeft="@+id/btnAddPlaylist"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true" />
 
                     <TextView
                         android:layout_width="0dp"

@@ -354,6 +354,36 @@ class SettingsDialog(
             binding.etHttpUserAgent.setText(PreferencesHelper.DEFAULT_USER_AGENT)
             Toast.makeText(context, "Đã khôi phục User-Agent mặc định!", Toast.LENGTH_SHORT).show()
         }
+
+        // Đảm bảo phím điều hướng D-Pad TV di chuyển mượt mà giữa ô nhập và nút Mặc định
+        binding.etHttpUserAgent.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                binding.btnResetUserAgent.requestFocus()
+                return@setOnKeyListener true
+            }
+            false
+        }
+
+        binding.btnResetUserAgent.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                    binding.etHttpUserAgent.requestFocus()
+                    return@setOnKeyListener true
+                } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    binding.rbFirstChannel.requestFocus()
+                    return@setOnKeyListener true
+                }
+            }
+            false
+        }
+
+        binding.rbFirstChannel.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                binding.btnResetUserAgent.requestFocus()
+                return@setOnKeyListener true
+            }
+            false
+        }
     }
 
     private fun initBootSettings() {

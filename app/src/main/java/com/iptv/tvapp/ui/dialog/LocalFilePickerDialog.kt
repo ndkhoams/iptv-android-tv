@@ -267,12 +267,9 @@ class LocalFilePickerDialog(
                         onItemClick(items[pos])
                     }
                 }
-                binding.root.setOnFocusChangeListener { v, hasFocus ->
-                    if (hasFocus) {
-                        v.animate().scaleX(1.02f).scaleY(1.02f).setDuration(100).start()
-                    } else {
-                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start()
-                    }
+                binding.root.setOnFocusChangeListener { v, _ ->
+                    v.scaleX = 1.0f
+                    v.scaleY = 1.0f
                 }
             }
 

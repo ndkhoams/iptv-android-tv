@@ -106,7 +106,12 @@ class PlaylistManager(private val context: Context) {
     /**
      * Tải danh sách kênh từ URL hoặc file cache theo PlaylistSource
      */
-    suspend fun loadPlaylist(playlistId: String, url: String, forceRefresh: Boolean = false): List<Category> =
+    suspend fun loadPlaylist(
+        playlistId: String,
+        url: String,
+        forceRefresh: Boolean = false,
+        includeSports: Boolean = true
+    ): List<Category> =
         withContext(Dispatchers.IO) {
             val channels = mutableListOf<Channel>()
             val cacheFile = getCacheFile(playlistId)
@@ -151,6 +156,11 @@ class PlaylistManager(private val context: Context) {
 
             // Gom nhóm kênh theo Category
             val baseCategories = groupChannels(channels)
+
+            // Nếu không yêu cầu tải thể thao (khi mở app để phát kênh TV tức thì), trả về danh mục gốc ngay lập tức
+            if (!includeSports) {
+                return@withContext baseCategories
+            }
 
             // Tự động tích hợp các danh mục thể thao trực tiếp hôm nay (Gà Vàng, Tiếu Lâm, Xôi Lạc, Cà Khịa, Chuối Chiên)
             return@withContext try {
