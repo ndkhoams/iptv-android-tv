@@ -195,6 +195,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var backPressedTime = 0L
+    private var backHandledOnDown = false
     private var activeSettingsDialog: SettingsDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1856,6 +1857,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                backHandledOnDown = true
+                val isSettingsShowing = (activeSettingsDialog?.isShowing == true)
+                if (isSettingsShowing) {
+                    activeSettingsDialog?.dismiss()
+                    backPressedTime = 0L
+                    return true
+                }
+                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    return handleBackInOverlay()
+                } else {
+                    handleRemoteBackOrLeftFullscreen()
+                    return true
+                }
+            } else if (event.action == KeyEvent.ACTION_UP) {
+                if (backHandledOnDown) {
+                    backHandledOnDown = false
+                    return true
+                }
+            }
+        }
+
         if (event.action == KeyEvent.ACTION_DOWN) {
             val isOverlayVisible = (binding.channelGuideOverlay.visibility == View.VISIBLE)
             val isSettingsShowing = (activeSettingsDialog?.isShowing == true)
@@ -1902,8 +1926,7 @@ class MainActivity : AppCompatActivity() {
                         switchChannel(next = true)
                         return true
                     }
-                    KeyEvent.KEYCODE_DPAD_LEFT,
-                    KeyEvent.KEYCODE_BACK -> {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
                         handleRemoteBackOrLeftFullscreen()
                         return true
                     }
@@ -2012,8 +2035,15 @@ class MainActivity : AppCompatActivity() {
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
                 categoryAdapter.setSelectedCategory(liveCat)
-                val matchChannel = if (currentPlayingMatchGroup != null) {
-                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                if (mg != null) {
+                    currentPlayingMatchGroup = mg
+                }
+                val matchChannel = if (mg != null) {
+                    liveCat.channels.firstOrNull { it.streamUrl == "match://${mg.key}" }
+                } else if (playing != null) {
+                    liveCat.channels.firstOrNull { it.streamUrl == playing.streamUrl || it.id == playing.id }
+                        ?: liveCat.channels.firstOrNull { it.name.contains(playing.name) || playing.name.contains(it.name) }
                 } else null
                 displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: liveCat.channels.firstOrNull())
             }
@@ -2096,8 +2126,7 @@ class MainActivity : AppCompatActivity() {
         if (isSports) {
             // Mục Thể Thao: Nhấn Dpad Phải mở hộp thoại chọn nguồn phát trực tiếp của trận đấu
             val mg = currentPlayingMatchGroup
-                ?: (if (playing != null) sportsLiveManager.getMatch(playing.name) else null)
-                ?: sportsLiveManager.matchGroupsMap.values.firstOrNull { it.sources.any { s -> s.streamUrl == playing?.streamUrl } }
+                ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
             if (mg != null) {
                 showMatchSourcesDialog(mg)
             } else {
@@ -2167,14 +2196,28 @@ class MainActivity : AppCompatActivity() {
             switchAppMode(targetMode, focusCategories = false)
         }
 
-        // Khi đang ở chế độ sport, nhấn OK hoặc mở overlay luôn luôn mở LIVE EVENTS
+        // Nếu danh mục hiện tại đã được chọn và hợp lệ thì giữ nguyên và focus kênh
+        val currentCat = currentSelectedCategory
+        if (currentCat != null && allCategories.contains(currentCat)) {
+            val inCurrentCat = currentCategoryChannels.any { it.streamUrl == playing?.streamUrl || it.id == playing?.id }
+            if (inCurrentCat || currentAppMode == AppMode.SPORTS) {
+                focusPlayingChannel()
+                return
+            }
+        }
+
+        // Mặc định fallback khi chưa có danh mục chọn
         if (currentAppMode == AppMode.SPORTS) {
             val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
                 categoryAdapter.setSelectedCategory(liveCat)
-                val matchChannel = if (currentPlayingMatchGroup != null) {
-                    liveCat.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                if (mg != null) {
+                    currentPlayingMatchGroup = mg
+                }
+                val matchChannel = if (mg != null) {
+                    liveCat.channels.firstOrNull { it.streamUrl == "match://${mg.key}" }
                 } else null
                 displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: liveCat.channels.firstOrNull())
                 focusPlayingChannel()
@@ -2183,19 +2226,135 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (playing != null) {
-            // Đảm bảo danh mục đang chọn có chứa kênh đang phát
-            val inCurrentCat = currentCategoryChannels.any { it.streamUrl == playing.streamUrl }
-            if (!inCurrentCat) {
-                val matchedCat = allCategories.firstOrNull { cat ->
-                    cat.channels.any { it.streamUrl == playing.streamUrl }
-                } ?: allCategories.firstOrNull { it.name == "Tất cả" } ?: allCategories.firstOrNull()
+            val matchedCat = allCategories.firstOrNull { cat ->
+                cat.channels.any { it.streamUrl == playing.streamUrl }
+            } ?: allCategories.firstOrNull { it.name == "Tất cả" } ?: allCategories.firstOrNull()
 
-                if (matchedCat != null) {
-                    currentSelectedCategory = matchedCat
-                    categoryAdapter.setSelectedCategory(matchedCat)
-                    displayCategoryChannels(matchedCat, focusChannel = playing)
+            if (matchedCat != null) {
+                currentSelectedCategory = matchedCat
+                categoryAdapter.setSelectedCategory(matchedCat)
+                displayCategoryChannels(matchedCat, focusChannel = playing)
+                return
+            }
+
+            focusPlayingChannel()
+            return
+        }
+
+        binding.rvChannels.requestFocus()
+    }
+
+    private fun focusPlayingChannel() {
+        val playing = currentPlayingChannel
+        if (currentAppMode == AppMode.SPORTS) {
+            val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+            if (mg != null) {
+                currentPlayingMatchGroup = mg
+                val matchUrl = "match://${mg.key}"
+                val matchIndex = currentCategoryChannels.indexOfFirst { it.streamUrl == matchUrl }
+                if (matchIndex != -1) {
+                    val matchChannel = currentCategoryChannels[matchIndex]
+                    binding.rvChannels.scrollToPosition(matchIndex)
+                    binding.rvChannels.post {
+                        val vh = binding.rvChannels.findViewHolderForAdapterPosition(matchIndex)
+                        if (vh != null) {
+                            vh.itemView.requestFocus()
+                        } else {
+                            binding.rvChannels.layoutManager?.findViewByPosition(matchIndex)?.requestFocus() ?: run {
+                                binding.rvChannels.postDelayed({
+                                    binding.rvChannels.findViewHolderForAdapterPosition(matchIndex)?.itemView?.requestFocus()
+                                        ?: binding.rvChannels.layoutManager?.findViewByPosition(matchIndex)?.requestFocus()
+                                        ?: binding.rvChannels.getChildAt(0)?.requestFocus()
+                                }, 60)
+                            }
+                        }
+                    }
+                    updateSpotlight(matchChannel)
                     return
                 }
+            }
+        }
+
+        if (playing == null) {
+            binding.rvChannels.requestFocus()
+            return
+        }
+        val playingIndex = currentCategoryChannels.indexOfFirst { it.streamUrl == playing.streamUrl || it.id == playing.id }
+        if (playingIndex != -1) {
+            val targetChannel = currentCategoryChannels[playingIndex]
+            binding.rvChannels.scrollToPosition(playingIndex)
+            binding.rvChannels.post {
+                val vh = binding.rvChannels.findViewHolderForAdapterPosition(playingIndex)
+                if (vh != null) {
+                    vh.itemView.requestFocus()
+                } else {
+                    binding.rvChannels.layoutManager?.findViewByPosition(playingIndex)?.requestFocus() ?: run {
+                        binding.rvChannels.postDelayed({
+                            binding.rvChannels.findViewHolderForAdapterPosition(playingIndex)?.itemView?.requestFocus()
+                                ?: binding.rvChannels.layoutManager?.findViewByPosition(playingIndex)?.requestFocus()
+                                ?: binding.rvChannels.getChildAt(0)?.requestFocus()
+                        }, 60)
+                    }
+                }
+            }
+            updateSpotlight(targetChannel)
+        } else {
+            binding.rvChannels.requestFocus()
+        }
+    }
+
+    private fun showOverlay() {
+        binding.channelGuideOverlay.visibility = View.VISIBLE
+        resetOverlayTimer()
+        startTelemetryUpdates()
+
+        val playing = currentPlayingChannel
+        val shouldBeSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        val targetMode = if (shouldBeSports) AppMode.SPORTS else AppMode.TV
+
+        if (currentAppMode != targetMode) {
+            switchAppMode(targetMode, focusCategories = false)
+        }
+
+        // Nếu danh mục hiện tại đã được chọn và hợp lệ thì giữ nguyên và focus kênh
+        val currentCat = currentSelectedCategory
+        if (currentCat != null && allCategories.contains(currentCat)) {
+            val inCurrentCat = currentCategoryChannels.any { it.streamUrl == playing?.streamUrl || it.id == playing?.id }
+            if (inCurrentCat || currentAppMode == AppMode.SPORTS) {
+                focusPlayingChannel()
+                return
+            }
+        }
+
+        // Mặc định fallback khi chưa có danh mục chọn
+        if (currentAppMode == AppMode.SPORTS) {
+            val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
+            if (liveCat != null) {
+                currentSelectedCategory = liveCat
+                categoryAdapter.setSelectedCategory(liveCat)
+                val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                if (mg != null) {
+                    currentPlayingMatchGroup = mg
+                }
+                val matchChannel = if (mg != null) {
+                    liveCat.channels.firstOrNull { it.streamUrl == "match://${mg.key}" }
+                } else null
+                displayCategoryChannels(liveCat, focusChannel = matchChannel ?: liveCat.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: liveCat.channels.firstOrNull())
+                focusPlayingChannel()
+                return
+            }
+        }
+
+        if (playing != null) {
+            val matchedCat = allCategories.firstOrNull { cat ->
+                cat.channels.any { it.streamUrl == playing.streamUrl }
+            } ?: allCategories.firstOrNull { it.name == "Tất cả" } ?: allCategories.firstOrNull()
+
+            if (matchedCat != null) {
+                currentSelectedCategory = matchedCat
+                categoryAdapter.setSelectedCategory(matchedCat)
+                displayCategoryChannels(matchedCat, focusChannel = playing)
+                return
             }
 
             focusPlayingChannel()

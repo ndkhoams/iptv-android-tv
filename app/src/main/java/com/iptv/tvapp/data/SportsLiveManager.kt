@@ -89,6 +89,18 @@ class SportsLiveManager(private val context: Context) {
         return null
     }
 
+    fun findMatchForChannel(channel: Channel?): MatchGroup? {
+        if (channel == null) return null
+        if (channel.streamUrl.startsWith("match://")) {
+            val key = channel.streamUrl.removePrefix("match://")
+            getMatch(key)?.let { return it }
+        }
+        getMatch(channel.name)?.let { return it }
+        return matchGroupsMap.values.firstOrNull { mg ->
+            mg.sources.any { s -> s.streamUrl == channel.streamUrl || s.id == channel.id }
+        }
+    }
+
     companion object {
         const val ACTION_REFRESH_SPORTS = "action_refresh_sports"
         const val CATEGORY_LIVE_EVENTS = "🔴 LIVE EVENTS"
