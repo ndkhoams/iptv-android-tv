@@ -52,7 +52,7 @@ jobs:
 
     - name: Publish Official Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      if: startsWith(github.ref, 'refs/tags/v')
       with:
         tag_name: ${{ github.ref_name }}
         name: "${{ github.ref_name }} - Sửa Lỗi Web Remote Tải Playlist & Loại Bỏ WebView Sniffer"

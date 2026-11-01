@@ -40,6 +40,8 @@ class AppUpdateManager(private val context: Context) {
     companion object {
         private const val GITHUB_LATEST_RELEASE_URL =
             "https://api.github.com/repos/ndkhoams/iptv-android-tv/releases/latest"
+        private const val GITHUB_RELEASES_LIST_URL =
+            "https://api.github.com/repos/ndkhoams/iptv-android-tv/releases?per_page=5"
     }
 
     private val httpClient = OkHttpClient.Builder()
@@ -86,7 +88,41 @@ class AppUpdateManager(private val context: Context) {
     /**
      * Kiểm tra GitHub Release để lấy thông tin phiên bản mới nhất
      */
+    private fun isValidVersionTag(tag: String): Boolean {
+        val clean = tag.trim().removePrefix("v").removePrefix("V")
+        val parts = clean.split(".").mapNotNull { it.toIntOrNull() }
+        return parts.isNotEmpty()
+    }
+
+    private fun parseReleaseObject(json: JSONObject): ReleaseInfo? {
+        val tagName = json.optString("tag_name", "").trim()
+        val title = json.optString("name", tagName)
+        val body = json.optString("body", "")
+        val assets = json.optJSONArray("assets") ?: return null
+
+        var downloadUrl = ""
+        var apkSize = 0L
+        for (i in 0 until assets.length()) {
+            val asset = assets.getJSONObject(i)
+            val name = asset.optString("name", "")
+            if (name.endsWith(".apk", ignoreCase = true)) {
+                downloadUrl = asset.optString("browser_download_url", "")
+                apkSize = asset.optLong("size", 0L)
+                break
+            }
+        }
+
+        if (tagName.isNotBlank() && downloadUrl.isNotBlank()) {
+            return ReleaseInfo(tagName, title, body, downloadUrl, apkSize)
+        }
+        return null
+    }
+
+    /**
+     * Kiểm tra GitHub Release để lấy thông tin phiên bản mới nhất
+     */
     suspend fun fetchLatestRelease(): ReleaseInfo? = withContext(Dispatchers.IO) {
+        // 1. Thử lấy từ /releases/latest trước
         try {
             val request = Request.Builder()
                 .url(GITHUB_LATEST_RELEASE_URL)
@@ -95,44 +131,47 @@ class AppUpdateManager(private val context: Context) {
                 .build()
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val jsonString = response.body?.string() ?: return@withContext null
-                val json = JSONObject(jsonString)
-
-                val tagName = json.optString("tag_name", "")
-                val title = json.optString("name", tagName)
-                val body = json.optString("body", "")
-
-                // Tìm asset file .apk (ưu tiên file .apk)
-                val assets = json.optJSONArray("assets")
-                var downloadUrl = ""
-                var apkSize = 0L
-
-                if (assets != null) {
-                    for (i in 0 until assets.length()) {
-                        val asset = assets.getJSONObject(i)
-                        val name = asset.optString("name", "")
-                        if (name.endsWith(".apk", ignoreCase = true)) {
-                            downloadUrl = asset.optString("browser_download_url", "")
-                            apkSize = asset.optLong("size", 0L)
-                            break
+                if (response.isSuccessful) {
+                    val jsonString = response.body?.string()
+                    if (!jsonString.isNullOrBlank()) {
+                        val info = parseReleaseObject(JSONObject(jsonString))
+                        if (info != null && isValidVersionTag(info.tagName)) {
+                            return@withContext info
                         }
                     }
-                }
-
-                if (tagName.isNotBlank() && downloadUrl.isNotBlank()) {
-                    return@withContext ReleaseInfo(
-                        tagName = tagName,
-                        title = title,
-                        body = body,
-                        apkDownloadUrl = downloadUrl,
-                        apkSize = apkSize
-                    )
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
+        // 2. Dự phòng: Nếu /releases/latest trỏ vào bản tag không hợp lệ (như 'main'), quét danh sách /releases
+        try {
+            val request = Request.Builder()
+                .url(GITHUB_RELEASES_LIST_URL)
+                .header("User-Agent", "TVPlay-IPTV-App")
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val jsonString = response.body?.string()
+                    if (!jsonString.isNullOrBlank()) {
+                        val arr = org.json.JSONArray(jsonString)
+                        for (i in 0 until arr.length()) {
+                            val obj = arr.getJSONObject(i)
+                            val info = parseReleaseObject(obj)
+                            if (info != null && isValidVersionTag(info.tagName)) {
+                                return@withContext info
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         return@withContext null
     }
 
