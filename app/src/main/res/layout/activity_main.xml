@@ -12,6 +12,8 @@
         android:id="@+id/vlcVideoLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
         android:visibility="visible" />
 
     <!-- 1b. Trình phát ExoPlayer (Dự phòng) -->
@@ -19,6 +21,8 @@
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
         app:use_controller="false"
         app:surface_type="surface_view"
         app:resize_mode="fit"
@@ -190,6 +194,18 @@
             android:textColor="#38BDF8"
             android:textSize="11sp"
             android:textStyle="bold" />
+
+        <!-- Dòng 4: Hướng dần điều khiển (▶ Nhấn [Sang Phải] để chọn nguồn phát) -->
+        <TextView
+            android:id="@+id/tvQuickHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="#E2E8F0"
+            android:textSize="11sp"
+            android:textStyle="normal"
+            android:text="▶ Nhấn [Sang Phải] để chọn nguồn phát"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvQuickAudioBitrate"

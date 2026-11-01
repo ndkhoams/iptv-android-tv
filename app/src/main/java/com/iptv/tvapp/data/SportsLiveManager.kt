@@ -327,80 +327,48 @@ class SportsLiveManager(private val context: Context) {
     /**
      * Tự động lấy lịch thi đấu thực tế hôm nay từ ESPN Scoreboard API để đối chiếu lần 2
      */
-    private suspend fun fetchTodayEspnFixtures() = withContext(Dispatchers.IO) {
-        val now = System.currentTimeMillis()
-        if (espnFixturesCache.isNotEmpty() && (now - lastEspnFetchTimeMs) < ESPN_CACHE_TTL_MS) {
-            return@withContext
-        }
-
-        val leagues = mapOf(
-            "EPL" to "eng.1",
-            "UCL" to "uefa.champions",
-            "LALIGA" to "esp.1",
-            "BUNDESLIGA" to "ger.1",
-            "SERIE_A" to "ita.1",
-            "LIGUE1" to "fra.1"
-        )
-
-        val fastClient = httpClient.newBuilder()
-            .connectTimeout(4, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
-            .build()
-
-        coroutineScope {
-            leagues.map { (leagueKey, code) ->
-                async {
-                    try {
-                        val url = "https://site.api.espn.com/apis/site/v2/sports/soccer/$code/scoreboard"
-                        val request = Request.Builder()
-                            .url(url)
-                            .header("User-Agent", CHROME_UA)
-                            .build()
-                        val response = fastClient.newCall(request).execute()
-                        if (response.isSuccessful) {
-                            val bodyStr = response.body?.string()
-                            if (!bodyStr.isNullOrBlank()) {
-                                val root = JSONObject(bodyStr)
-                                val events = root.optJSONArray("events")
-                                if (events != null) {
-                                    val fixtures = mutableListOf<EspnFixture>()
-                                    for (i in 0 until events.length()) {
-                                        val ev = events.getJSONObject(i)
-                                        val comps = ev.optJSONArray("competitions")
-                                        if (comps != null && comps.length() > 0) {
-                                            val competitors = comps.getJSONObject(0).optJSONArray("competitors")
-                                            if (competitors != null && competitors.length() >= 2) {
-                                                val t1 = competitors.getJSONObject(0).optJSONObject("team")?.optString("name", "") ?: ""
-                                                val t2 = competitors.getJSONObject(1).optJSONObject("team")?.optString("name", "") ?: ""
-                                                val statusObj = ev.optJSONObject("status")
-                                                val typeObj = statusObj?.optJSONObject("type")
-                                                val state = typeObj?.optString("state", "pre") ?: "pre"
-                                                val nameType = typeObj?.optString("name", "") ?: ""
-                                                val detail = typeObj?.optString("detail", "") ?: ""
-                                                val isCompleted = (typeObj?.optBoolean("completed", false) == true) ||
-                                                        state == "post" ||
-                                                        nameType.contains("FULL_TIME") ||
-                                                        nameType.contains("FINAL") ||
-                                                        detail.equals("FT", ignoreCase = true) ||
-                                                        detail.contains("Final", ignoreCase = true)
-
-                                                if (t1.isNotBlank() && t2.isNotBlank()) {
-                                                    fixtures.add(EspnFixture(t1, t2, leagueKey, isCompleted, state, detail))
-                                                }
-                                            }
-                                        }
-                                    }
-                                    espnFixturesCache[leagueKey] = fixtures
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        // Bỏ qua lỗi mạng cục bộ với 1 giải
+    fun parseSportsDataJson(jsonStr: String) {
+        try {
+            val root = JSONObject(jsonStr)
+            val fixturesArr = root.optJSONArray("fixtures")
+            if (fixturesArr != null) {
+                val byLeague = mutableMapOf<String, MutableList<EspnFixture>>()
+                for (i in 0 until fixturesArr.length()) {
+                    val f = fixturesArr.getJSONObject(i)
+                    val t1 = f.optString("home_team", "")
+                    val t2 = f.optString("away_team", "")
+                    val lg = f.optString("league", "OTHER")
+                    val isComp = f.optBoolean("is_completed", false)
+                    val state = f.optString("state", "pre")
+                    val detail = f.optString("detail", "")
+                    if (t1.isNotBlank() && t2.isNotBlank()) {
+                        byLeague.getOrPut(lg) { mutableListOf() }.add(
+                            EspnFixture(t1, t2, lg, isComp, state, detail)
+                        )
                     }
                 }
-            }.awaitAll()
+                for ((k, list) in byLeague) {
+                    espnFixturesCache[k] = list
+                }
+            }
+            // Đồng bộ dữ liệu bảng xếp hạng các giải sang SportsStandingsManager
+            SportsStandingsManager.updateFromDataJson(root)
+            lastEspnFetchTimeMs = System.currentTimeMillis()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        lastEspnFetchTimeMs = now
+    }
+
+    private fun loadLocalSportsDataJson(): Boolean {
+        val f = File(context.cacheDir, "thethao_data_cache.json")
+        if (f.exists() && f.length() > 0L) {
+            try {
+                val jsonStr = f.readText(Charsets.UTF_8)
+                parseSportsDataJson(jsonStr)
+                return true
+            } catch (e: Exception) {}
+        }
+        return false
     }
 
     private fun findEspnFixture(home: String, away: String): EspnFixture? {
@@ -731,14 +699,39 @@ class SportsLiveManager(private val context: Context) {
             tempFile.renameTo(cacheFile)
         }
 
-        // 2. Chạy ESPN song song ngầm (các tiến trình mất nhiều thời gian thì để sau)
-        try {
-            fetchTodayEspnFixtures()
-        } catch (e: Exception) {}
+        // 2. Tải thethao-data.json (do Armbian tổng hợp sẵn lịch thi đấu & BXH)
+        val dataCacheFile = File(context.cacheDir, "thethao_data_cache.json")
+        val dataTempFile = File(context.cacheDir, "thethao_data_cache.tmp")
+        val dataUrls = listOf(
+            "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now",
+            "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now"
+        )
+        for (u in dataUrls) {
+            try {
+                val req = Request.Builder()
+                    .url(u)
+                    .header("User-Agent", CHROME_UA)
+                    .header("Cache-Control", "no-cache")
+                    .build()
+                val resp = fastClient.newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val bytes = resp.body?.bytes()
+                    if (bytes != null && bytes.size > 200) {
+                        FileOutputStream(dataTempFile).use { it.write(bytes) }
+                        dataTempFile.renameTo(dataCacheFile)
+                        parseSportsDataJson(String(bytes, Charsets.UTF_8))
+                        break
+                    }
+                }
+            } catch (e: Exception) {}
+        }
     }
 
     private fun parseSportsCategoriesFromFile(cacheFile: File, sportsUrl: String): List<Category> {
         if (!cacheFile.exists() || cacheFile.length() == 0L) return emptyList()
+        if (espnFixturesCache.isEmpty()) {
+            loadLocalSportsDataJson()
+        }
 
         return try {
             val rawChannels = FileInputStream(cacheFile).use { input ->

@@ -199,6 +199,11 @@ class MainActivity : AppCompatActivity() {
     private var lastBackPressTimestamp = 0L
     private var exitPromptActiveUntil = 0L
     private var backKeyDownTimestamp = 0L
+    private var pendingSingleBackRunnable: Runnable? = null
+    private var okHandledOnDown = false
+    private var rightHandledOnDown = false
+    private var leftHandledOnDown = false
+    private var upDownHandledOnDown = false
     private var activeSettingsDialog: SettingsDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1152,7 +1157,7 @@ class MainActivity : AppCompatActivity() {
                 "Trận đấu: ${channel.name}\nBấm phím OK để xem trực tiếp"
             }
 
-            if (targetLeague in SportsLiveManager.PRIORITY_LEAGUES) {
+            if (targetLeague in SportsLiveManager.PRIORITY_LEAGUES || targetLeague == "NBA") {
                 binding.layoutEpgTimeline.visibility = View.GONE
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
                 binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
@@ -1826,6 +1831,15 @@ class MainActivity : AppCompatActivity() {
         // Dòng 3 (Màu xanh Cyan): Kích thước độ phân giải @ FPS • Bitrate • Thông tin Audio chi tiết
         binding.tvQuickResolution.text = "$initialResDim • $initialBitrate • AAC Stereo 2.0 (48kHz)"
         binding.tvQuickAudioBitrate.text = "Âm thanh: AAC Stereo 2.0 (48kHz)"
+
+        // Dòng 4: Hướng dẫn nhấn sang phải để chọn nguồn phát (yêu cầu 2)
+        binding.tvQuickHint.text = if (isSports) {
+            "▶ Nhấn [Sang Phải] để chọn nguồn phát trực tiếp"
+        } else {
+            "▶ Nhấn [Sang Phải] để chọn danh sách phát"
+        }
+        binding.tvQuickHint.visibility = View.VISIBLE
+
         updateDynamicTelemetry()
         startTelemetryUpdates()
 
@@ -1922,24 +1936,29 @@ class MainActivity : AppCompatActivity() {
                     backKeyDownTimestamp = now
                     event.startTracking()
                 } else if (event.repeatCount >= 1 && (now - backKeyDownTimestamp >= 500L)) {
-                    // Yêu cầu 3: Ấn giữ BACK để thoát luôn
+                    // Ấn giữ BACK để thoát luôn
+                    pendingSingleBackRunnable?.let { hideHandler.removeCallbacks(it) }
+                    pendingSingleBackRunnable = null
                     finish()
                     return true
                 }
 
-                // Yêu cầu 3: Nếu đang có thông báo xác nhận thoát app đang chờ bấm lần 3:
+                // 1. Nếu đang có thông báo xác nhận thoát app đang chờ bấm lần 3:
                 if (now < exitPromptActiveUntil) {
+                    pendingSingleBackRunnable?.let { hideHandler.removeCallbacks(it) }
+                    pendingSingleBackRunnable = null
                     finish()
                     return true
                 }
 
-                // Yêu cầu 3: Kiểm tra double BACK liên tục nhanh (2 lần bấm trong vòng 600ms):
-                val timeSinceLastBack = now - lastBackPressTimestamp
-                lastBackPressTimestamp = now
-
-                if (timeSinceLastBack in 1..600L) {
-                    exitPromptActiveUntil = now + 2500L
+                // 2. Yêu cầu 4: Nếu đang có pendingSingleBackRunnable (bấm lần 2 trong vòng 280ms) -> DOUBLE BACK!
+                // TUYỆT ĐỐI KHÔNG mở menu danh sách kênh!
+                if (pendingSingleBackRunnable != null) {
+                    pendingSingleBackRunnable?.let { hideHandler.removeCallbacks(it) }
+                    pendingSingleBackRunnable = null
+                    exitPromptActiveUntil = now + 3000L
                     showBottomNotification("⚠️ Bấm thêm 1 lần QUAY LẠI nữa để thoát ứng dụng")
+                    backHandledOnDown = true
                     return true
                 }
 
@@ -1950,10 +1969,18 @@ class MainActivity : AppCompatActivity() {
                     backPressedTime = 0L
                     return true
                 }
+
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    // Đang ở trong menu: Bấm BACK để đóng menu
                     return handleBackInOverlay()
                 } else {
-                    handleRemoteBackFullscreen()
+                    // Đang xem toàn màn hình: Lên lịch mở menu sau 280ms để kiểm tra xem có double BACK hay không
+                    val runnable = Runnable {
+                        pendingSingleBackRunnable = null
+                        handleRemoteBackFullscreen()
+                    }
+                    pendingSingleBackRunnable = runnable
+                    hideHandler.postDelayed(runnable, 280L)
                     return true
                 }
             } else if (event.action == KeyEvent.ACTION_UP) {
@@ -1962,6 +1989,12 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             }
+        }
+
+        // Bất kỳ phím nào khác được bấm sẽ hủy chờ phím BACK đơn
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode != KeyEvent.KEYCODE_BACK) {
+            pendingSingleBackRunnable?.let { hideHandler.removeCallbacks(it) }
+            pendingSingleBackRunnable = null
         }
 
         if (event.action == KeyEvent.ACTION_DOWN) {
@@ -1993,30 +2026,65 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Khi đang xem toàn màn hình (Overlay KHÔNG hiển thị):
-            // Bắt trực tiếp mọi phím D-pad trên điều khiển để tránh bị Android ViewGroup nuốt phím khi không có view focus
+            // Bắt trực tiếp mọi phím D-pad trên điều khiển
             if (!isOverlayVisible && !isSettingsShowing) {
                 when (event.keyCode) {
                     KeyEvent.KEYCODE_DPAD_CENTER,
                     KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                         handleRemoteOkFullscreen()
+                        okHandledOnDown = true
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
                         switchChannel(next = false)
+                        upDownHandledOnDown = true
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
                         switchChannel(next = true)
+                        upDownHandledOnDown = true
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
                         // Nhấn Dpad Trái khi đang xem toàn màn hình: Mở lại thanh tiêu đề OSD góc trái bên dưới
                         currentPlayingChannel?.let { showQuickChannelInfo(it) }
+                        leftHandledOnDown = true
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         handleRemoteRightFullscreen()
+                        rightHandledOnDown = true
+                        return true
+                    }
+                }
+            }
+        } else if (event.action == KeyEvent.ACTION_UP) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    if (okHandledOnDown) {
+                        okHandledOnDown = false
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (rightHandledOnDown) {
+                        rightHandledOnDown = false
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (leftHandledOnDown) {
+                        leftHandledOnDown = false
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (upDownHandledOnDown) {
+                        upDownHandledOnDown = false
                         return true
                     }
                 }
