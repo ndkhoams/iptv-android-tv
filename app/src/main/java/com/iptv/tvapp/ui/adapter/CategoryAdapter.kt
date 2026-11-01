@@ -38,7 +38,7 @@ class CategoryAdapter(
     }
 
     override fun onBindViewHolder(holder: CategoryViewHolder, position: Int) {
-        holder.bind(categories[position], position == selectedIndex)
+        holder.bind(categories[position], position == selectedIndex, position)
     }
 
     override fun getItemCount(): Int = categories.size
@@ -48,8 +48,6 @@ class CategoryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
-            binding.root.nextFocusRightId = com.iptv.tvapp.R.id.rvChannels
-
             binding.root.setOnClickListener {
                 val pos = adapterPosition
                 if (pos != RecyclerView.NO_POSITION) {
@@ -71,7 +69,12 @@ class CategoryAdapter(
             }
         }
 
-        fun bind(category: Category, isSelected: Boolean) {
+        fun bind(category: Category, isSelected: Boolean, position: Int) {
+            if (position % 2 == 1) {
+                binding.root.setBackgroundResource(com.iptv.tvapp.R.drawable.selector_category_item_odd)
+            } else {
+                binding.root.setBackgroundResource(com.iptv.tvapp.R.drawable.selector_category_item_even)
+            }
             binding.tvCategoryName.text = category.name
             binding.root.isSelected = isSelected
         }

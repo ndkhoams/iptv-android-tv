@@ -51,7 +51,7 @@ class ChannelAdapter(
     }
 
     override fun onBindViewHolder(holder: ChannelViewHolder, position: Int) {
-        holder.bind(channels[position])
+        holder.bind(channels[position], position)
     }
 
     override fun getItemCount(): Int = channels.size
@@ -61,8 +61,6 @@ class ChannelAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
-            binding.root.nextFocusLeftId = com.iptv.tvapp.R.id.rvCategories
-
             binding.root.setOnClickListener {
                 val pos = adapterPosition
                 if (pos != RecyclerView.NO_POSITION) {
@@ -91,7 +89,13 @@ class ChannelAdapter(
             }
         }
 
-        fun bind(channel: Channel) {
+        fun bind(channel: Channel, position: Int) {
+            if (position % 2 == 1) {
+                binding.root.setBackgroundResource(R.drawable.selector_channel_item_odd)
+            } else {
+                binding.root.setBackgroundResource(R.drawable.selector_channel_item_even)
+            }
+
             if (channel.id == "action_refresh_sports" || channel.streamUrl == "action://refresh_sports") {
                 binding.tvChannelNumber.text = "🔄"
                 binding.ivChannelLogo.setImageResource(R.drawable.ic_tv_placeholder)

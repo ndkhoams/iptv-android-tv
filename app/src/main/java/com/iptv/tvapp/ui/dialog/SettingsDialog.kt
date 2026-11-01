@@ -42,7 +42,6 @@ class SettingsDialog(
         initPlaylistsList()
         initPlayerEngineSettings()
         initDeinterlaceSettings()
-        initUserAgentSettings()
         initBootSettings()
         initUdpxySettings()
         initFocusNavigation()
@@ -115,7 +114,6 @@ class SettingsDialog(
                             initPlaylistsList()
                             initPlayerEngineSettings()
                             initDeinterlaceSettings()
-                            initUserAgentSettings()
                             initBootSettings()
                             initUdpxySettings()
                             binding.tvBackupStatus.text = "✓ Đã khôi phục thành công từ file: ${file.name}"
@@ -139,6 +137,10 @@ class SettingsDialog(
         binding.btnCloseSettings.setOnClickListener {
             saveSettings()
             onSettingsChanged(hasChangedPlaylist, hasChangedEngine)
+            dismiss()
+        }
+
+        binding.btnCancelSettings.setOnClickListener {
             dismiss()
         }
     }
@@ -186,7 +188,7 @@ class SettingsDialog(
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        binding.etUdpxyServer.requestFocus()
+                        binding.btnCloseSettings.requestFocus()
                         true
                     }
                     else -> false
@@ -213,7 +215,7 @@ class SettingsDialog(
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        binding.rbPlayerVlc.requestFocus()
+                        binding.btnCloseSettings.requestFocus()
                         true
                     }
                     else -> false
@@ -235,6 +237,34 @@ class SettingsDialog(
                         binding.etNewPlaylistUrl.requestFocus()
                         true
                     }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        binding.etUdpxyServer.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+
+        binding.btnAddPlaylist.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        binding.btnCloseSettings.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        binding.btnBrowseLocalFile.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.etNewPlaylistUrl.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        binding.etUdpxyServer.requestFocus()
+                        true
+                    }
                     else -> false
                 }
             } else false
@@ -252,10 +282,43 @@ class SettingsDialog(
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.btnAddPlaylist.requestFocus()
                         true
                     }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        binding.btnCloseSettings.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+
+        binding.btnCloseSettings.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        binding.etNewPlaylistName.requestFocus()
+                        binding.btnAddPlaylist.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        binding.btnCancelSettings.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
+
+        binding.btnCancelSettings.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        binding.btnBackupConfig.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        binding.btnCloseSettings.requestFocus()
                         true
                     }
                     else -> false
@@ -267,19 +330,15 @@ class SettingsDialog(
     private fun initUdpxySettings() {
         binding.etUdpxyServer.setText(prefs.udpxyServer)
 
-        // Tự động cuộn lên vị trí đầu trang khi focus hoặc mở bàn phím ảo
         binding.etUdpxyServer.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                binding.scrollViewSettingsRight.post {
-                    binding.scrollViewSettingsRight.smoothScrollTo(0, 0)
+                binding.scrollViewSettingsLeft.post {
+                    binding.scrollViewSettingsLeft.smoothScrollTo(0, binding.layoutUdpxySection.top)
                 }
             }
         }
         binding.etUdpxyServer.setOnClickListener { v ->
             showSoftKeyboard(v)
-            binding.scrollViewSettingsRight.post {
-                binding.scrollViewSettingsRight.smoothScrollTo(0, 0)
-            }
         }
         binding.etUdpxyServer.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
@@ -348,44 +407,6 @@ class SettingsDialog(
         }
     }
 
-    private fun initUserAgentSettings() {
-        binding.etHttpUserAgent.setText(prefs.httpUserAgent)
-        binding.btnResetUserAgent.setOnClickListener {
-            binding.etHttpUserAgent.setText(PreferencesHelper.DEFAULT_USER_AGENT)
-            Toast.makeText(context, "Đã khôi phục User-Agent mặc định!", Toast.LENGTH_SHORT).show()
-        }
-
-        // Đảm bảo phím điều hướng D-Pad TV di chuyển mượt mà giữa ô nhập và nút Mặc định
-        binding.etHttpUserAgent.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                binding.btnResetUserAgent.requestFocus()
-                return@setOnKeyListener true
-            }
-            false
-        }
-
-        binding.btnResetUserAgent.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    binding.etHttpUserAgent.requestFocus()
-                    return@setOnKeyListener true
-                } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    binding.rbFirstChannel.requestFocus()
-                    return@setOnKeyListener true
-                }
-            }
-            false
-        }
-
-        binding.rbFirstChannel.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                binding.btnResetUserAgent.requestFocus()
-                return@setOnKeyListener true
-            }
-            false
-        }
-    }
-
     private fun initBootSettings() {
         when (prefs.startupMode) {
             PreferencesHelper.MODE_FIXED_CHANNEL -> binding.rbFixedChannel.isChecked = true
@@ -423,13 +444,6 @@ class SettingsDialog(
         if (selectedDeinterlace != prefs.deinterlaceMode) {
             prefs.deinterlaceMode = selectedDeinterlace
             hasChangedEngine = true
-        }
-
-        val newUa = binding.etHttpUserAgent.text.toString().trim()
-        if (newUa.isNotBlank() && newUa != prefs.httpUserAgent) {
-            prefs.httpUserAgent = newUa
-            hasChangedEngine = true
-            hasChangedPlaylist = true
         }
 
         prefs.startupMode = when {
