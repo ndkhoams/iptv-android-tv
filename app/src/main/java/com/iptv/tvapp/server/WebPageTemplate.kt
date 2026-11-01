@@ -628,7 +628,7 @@ object WebPageTemplate {
             }).catch(function() {});
         }
 
-        var DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; ZTE B866V2F Build/STTC.230104.002) IPTV/9.1.16";
+        var DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
         function loadSettings() {
             fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })

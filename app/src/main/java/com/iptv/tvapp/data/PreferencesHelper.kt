@@ -184,7 +184,7 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getString(KEY_DEINTERLACE_MODE, DEINTERLACE_YADIF) ?: DEINTERLACE_YADIF
         set(value) = prefs.edit().putString(KEY_DEINTERLACE_MODE, value).apply()
 
-    // HTTP User Agent tùy chỉnh (Mặc định: FPT Play Box ZTE B866V2F chuẩn IPTV 9.1.16)
+    // HTTP User Agent tùy chỉnh (Mặc định: Phổ thông chuẩn Android / Chrome)
     var httpUserAgent: String
         get() = prefs.getString(KEY_HTTP_USER_AGENT, DEFAULT_USER_AGENT) ?: DEFAULT_USER_AGENT
         set(value) = prefs.edit().putString(KEY_HTTP_USER_AGENT, value.trim().ifBlank { DEFAULT_USER_AGENT }).apply()
@@ -453,7 +453,7 @@ class PreferencesHelper(context: Context) {
         private const val KEY_HTTP_USER_AGENT = "key_http_user_agent"
         private const val KEY_UDPXY_SERVER = "key_udpxy_server"
 
-        const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; ZTE B866V2F Build/STTC.230104.002) IPTV/9.1.16"
+        const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
         const val ENGINE_VLC = "VLC"
         const val ENGINE_VLC_SW = "VLC_SW"

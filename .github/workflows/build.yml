@@ -55,19 +55,17 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v')
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - Sửa Lỗi Web Remote Tải Playlist & Loại Bỏ WebView Sniffer"
+        name: "${{ github.ref_name }} - Điều Chỉnh User-Agent Phổ Thông & Hiển Thị Logo Ứng Dụng Trên Toast"
         body: |
           ### Bản cập nhật ${{ github.ref_name }} cho TV Play Android TV:
-          - **Sửa triệt để lỗi 'Lỗi tải danh sách playlist' trên Web Remote:**
-            - Xử lý bóc tách query parameter `?t=...` trong router HTTP `TvWebServer`, giúp các endpoint `/api/playlists`, `/api/channels`, `/api/status`, `/api/settings` phản hồi tức thì 100% không bị 404 Not Found.
-            - Giao diện Web Remote quản lý và hiển thị danh sách playlist đã lưu ngay sau khi thêm hoặc tải file lên mà không cần reload trang.
-          - **Loại bỏ hoàn toàn tính năng WebView Stream Sniffer khỏi ứng dụng:**
-            - Gỡ bỏ toàn bộ engine WebView ngầm và logic sniffer theo yêu cầu người dùng, giúp ứng dụng siêu nhẹ, tối ưu RAM và CPU trên mọi dòng Android TV Box.
-            - Khôi phục luồng phát ổn định trực tiếp qua ExoPlayer và VLC Player.
-          - **Duy trì nhóm Kênh Thể Thao Quốc Tế 24/7 trực tiếp:**
-            - Sky Sport F1 HD, Sky Sport Tennis HD, TNT Sports 1-4 HD, Eurosport 1-2 HD, Canal+ Sport HD chạy mượt mà trên hạ tầng phát sóng ổn định.
-          - **Quản lý danh sách Playlist tự do:**
-            - Người dùng có thể tùy ý xóa bỏ KTV Playlist hoặc bất kỳ danh sách nào mà không bị app tự động phục hồi.
+          - **Điều chỉnh HTTP User Agent Mặc định về giá trị phổ thông:**
+            - Đã chuyển sang chuẩn phổ thông Android / Chrome (`Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36`).
+            - Loại bỏ hoàn toàn các thông số phần cứng cụ thể (ZTE, B866V2F, FPT Play), đảm bảo tính trung lập và tương thích tối đa với mọi máy chủ phát sóng.
+          - **Sửa biểu tượng logo trên các dòng thông báo (Toast):**
+            - Xuất và cấu hình đầy đủ bộ bitmap biểu tượng TV Play sắc nét cho cả định dạng vuông (`ic_launcher`) và tròn (`ic_launcher_round`) trên toàn bộ mật độ màn hình (`mdpi` đến `xxxhdpi`).
+            - Cấu hình lại `AndroidManifest.xml` giúp hệ điều hành Android TV hiển thị chuẩn xác logo TV Play thay cho logo robot Android mặc định khi bật thông báo.
+          - **Hoàn thiện trình cập nhật ứng dụng tự động trong app:**
+            - Cơ chế kiểm tra cập nhật mới linh hoạt, tự động phát hiện bản phát hành mới nhất và hỗ trợ tải về cài đặt trực tiếp trên TV.
         files: app/build/outputs/apk/debug/app-debug.apk
         prerelease: false
         make_latest: true

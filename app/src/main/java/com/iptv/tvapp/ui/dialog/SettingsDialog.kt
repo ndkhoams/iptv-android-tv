@@ -352,7 +352,7 @@ class SettingsDialog(
         binding.etHttpUserAgent.setText(prefs.httpUserAgent)
         binding.btnResetUserAgent.setOnClickListener {
             binding.etHttpUserAgent.setText(PreferencesHelper.DEFAULT_USER_AGENT)
-            Toast.makeText(context, "Đã khôi phục User-Agent FPT Play Box!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Đã khôi phục User-Agent mặc định!", Toast.LENGTH_SHORT).show()
         }
     }
 

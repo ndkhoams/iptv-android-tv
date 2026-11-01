@@ -440,7 +440,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
                         android:layout_gravity="center_vertical"
-                        android:text="FPT Play Box ZTE B866V2F (IPTV/9.1.16)"
+                        android:text="Mặc định phổ thông (Android / Chrome)"
                         android:textColor="#94A3B8"
                         android:textSize="10sp" />
                 </LinearLayout>

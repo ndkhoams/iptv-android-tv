@@ -46,7 +46,7 @@ class PlaylistManager(private val context: Context) {
     companion object {
         // Danh sách các User-Agent xoay vòng: Mặc định ưu tiên FPT Play Box chuẩn IPTV
         val USER_AGENTS = listOf(
-            // 1. FPT Play Box ZTE B866V2F (Chuẩn nhận diện gốc của đài IPTV)
+            // 1. Chuẩn phổ thông (Android / Chrome)
             PreferencesHelper.DEFAULT_USER_AGENT,
             // 2. TiviMate IPTV Player (Danh tính chuẩn IPTV Android TV phổ biến)
             "TiviMate/5.0.4 (Android TV)",
