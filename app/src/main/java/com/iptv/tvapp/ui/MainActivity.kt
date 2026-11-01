@@ -1037,8 +1037,8 @@ class MainActivity : AppCompatActivity() {
             if (targetLeague in SportsLiveManager.PRIORITY_LEAGUES) {
                 binding.layoutEpgTimeline.visibility = View.GONE
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
-                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
-                binding.tvEpgSourceTag.text = "FotMob / ESPN"
+                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
+                binding.tvEpgSourceTag.visibility = View.GONE
                 binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
 
                 binding.rvSpotlightStandings.visibility = View.GONE
@@ -1067,8 +1067,8 @@ class MainActivity : AppCompatActivity() {
             } else if (channel.streamUrl.startsWith("match://")) {
                 binding.layoutEpgTimeline.visibility = View.GONE
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
-                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG • $leagueName"
-                binding.tvEpgSourceTag.text = "FotMob / ESPN"
+                binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
+                binding.tvEpgSourceTag.visibility = View.GONE
                 binding.rvSpotlightStandings.visibility = View.GONE
                 binding.tvStandingsEmpty.visibility = View.VISIBLE
                 binding.tvStandingsEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát trực tiếp"
@@ -1082,7 +1082,8 @@ class MainActivity : AppCompatActivity() {
         binding.layoutLeagueStandings.visibility = View.GONE
         binding.layoutEpgTimeline.visibility = View.VISIBLE
         binding.tvRightPanelTitle.text = "LỊCH PHÁT SÓNG (EPG)"
-        binding.tvEpgSourceTag.text = "lichphatsong.io.vn" 
+        binding.tvEpgSourceTag.text = "lichphatsong.io.vn"
+        binding.tvEpgSourceTag.visibility = View.VISIBLE 
 
         // Logo chính hãng FPT CDN hoặc M3U (Khống chế kích thước và RGB_565 tiết kiệm RAM)
         val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)

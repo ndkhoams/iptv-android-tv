@@ -122,7 +122,9 @@ class SportsLiveManager(private val context: Context) {
         val TEAM_ALIASES = listOf(
             "bilbao" to listOf("athletic bilbao", "athletic club", "ath bilbao", "bilbao"),
             "realsociedad" to listOf("real sociedad", "sociedad"),
-            "tphcm" to listOf("công an tp.hồ chí minh", "cong an ho chi minh", "tp. hồ chí minh", "tp.hồ chí minh", "hồ chí minh", "ho chi minh", "tp.hcm", "tphcm", "clb tp.hcm"),
+            "torino" to listOf("torino f.c.", "torino fc", "torino", "torinofc"),
+            "frosinone" to listOf("frosinone calcio", "frosinone fc", "frosinone", "frosinonecalcio"),
+            "tphcm" to listOf("công an tp.hồ chí minh", "công an tp. hồ chí minh", "cong an ho chi minh", "tp. hồ chí minh", "tp.hồ chí minh", "thành phố hồ chí minh", "hồ chí minh", "ho chi minh", "tp.hcm", "tphcm", "clb tp.hcm"),
             "danang" to listOf("shb đà nẵng", "shb da nang", "đà nẵng", "da nang"),
             "manutd" to listOf("manchester united", "manchester utd", "man united", "man utd", "mu"),
             "mancity" to listOf("manchester city", "man city", "mc"),
@@ -233,16 +235,157 @@ class SportsLiveManager(private val context: Context) {
             lastFetchTimeMs = 0L
         }
 
+        // Bảng tên hiển thị chuẩn hóa theo FotMob & Wikipedia tiếng Việt
+        val CANONICAL_DISPLAY_NAMES = mapOf(
+            // Ngoại Hạng Anh (FotMob)
+            "arsenal" to "Arsenal",
+            "astonvilla" to "Aston Villa",
+            "bournemouth" to "Bournemouth",
+            "brentford" to "Brentford",
+            "brighton" to "Brighton",
+            "chelsea" to "Chelsea",
+            "crystalpalace" to "Crystal Palace",
+            "everton" to "Everton",
+            "fulham" to "Fulham",
+            "ipswich" to "Ipswich Town",
+            "leicester" to "Leicester City",
+            "liverpool" to "Liverpool",
+            "mancity" to "Manchester City",
+            "manutd" to "Manchester United",
+            "newcastle" to "Newcastle United",
+            "nottingham" to "Nottingham Forest",
+            "southampton" to "Southampton",
+            "tottenham" to "Tottenham Hotspur",
+            "westham" to "West Ham United",
+            "wolves" to "Wolverhampton",
+
+            // La Liga (FotMob)
+            "realmadrid" to "Real Madrid",
+            "barcelona" to "Barcelona",
+            "atleticomadrid" to "Atletico Madrid",
+            "bilbao" to "Athletic Club",
+            "realsociedad" to "Real Sociedad",
+            "villarreal" to "Villarreal",
+            "betis" to "Real Betis",
+            "sevilla" to "Sevilla",
+            "celtavigo" to "Celta Vigo",
+            "valencia" to "Valencia",
+            "osasuna" to "Osasuna",
+            "getafe" to "Getafe",
+            "girona" to "Girona",
+            "mallorca" to "Mallorca",
+            "laspalmas" to "Las Palmas",
+            "rayovallecano" to "Rayo Vallecano",
+            "espanyol" to "Espanyol",
+            "alaves" to "Alaves",
+            "leganes" to "Leganes",
+            "valladolid" to "Real Valladolid",
+            "santander" to "Racing Santander",
+            "elche" to "Elche",
+
+            // Serie A (FotMob)
+            "juventus" to "Juventus",
+            "intermilan" to "Inter",
+            "acmilan" to "Milan",
+            "napoli" to "Napoli",
+            "roma" to "Roma",
+            "lazio" to "Lazio",
+            "atalanta" to "Atalanta",
+            "fiorentina" to "Fiorentina",
+            "bologna" to "Bologna",
+            "torino" to "Torino",
+            "frosinone" to "Frosinone",
+            "como" to "Como",
+            "venezia" to "Venezia",
+            "genoa" to "Genoa",
+            "cagliari" to "Cagliari",
+            "lecce" to "Lecce",
+            "monza" to "Monza",
+            "parma" to "Parma",
+            "udinese" to "Udinese",
+            "empoli" to "Empoli",
+            "verona" to "Hellas Verona",
+
+            // Bundesliga (FotMob)
+            "bayern" to "Bayern München",
+            "dortmund" to "Borussia Dortmund",
+            "leverkusen" to "Bayer Leverkusen",
+            "leipzig" to "RB Leipzig",
+            "frankfurt" to "Eintracht Frankfurt",
+            "stuttgart" to "Stuttgart",
+            "wolfsburg" to "Wolfsburg",
+            "freiburg" to "Freiburg",
+            "monchengladbach" to "Borussia M'gladbach",
+            "unionberlin" to "Union Berlin",
+            "bremen" to "Werder Bremen",
+            "augsburg" to "Augsburg",
+            "heidenheim" to "FC Heidenheim",
+            "mainz" to "Mainz 05",
+            "hoffenheim" to "Hoffenheim",
+            "stpauli" to "St. Pauli",
+            "holsteinkiel" to "Holstein Kiel",
+            "bochum" to "Bochum",
+            "koln" to "1. FC Köln",
+            "hamburg" to "Hamburg SV",
+
+            // Ligue 1 (FotMob)
+            "psg" to "Paris Saint-Germain",
+            "marseille" to "Marseille",
+            "monaco" to "Monaco",
+            "lyon" to "Lyon",
+            "lille" to "Lille",
+            "lens" to "Lens",
+            "rennes" to "Rennes",
+            "nice" to "Nice",
+            "reims" to "Reims",
+            "strasbourg" to "Strasbourg",
+            "brest" to "Brest",
+            "toulouse" to "Toulouse",
+            "montpellier" to "Montpellier",
+            "nantes" to "Nantes",
+            "auxerre" to "Auxerre",
+            "lehavre" to "Le Havre",
+            "angers" to "Angers",
+            "saintetienne" to "Saint-Etienne",
+
+            // V-League 1 (Chuẩn Wikipedia tiếng Việt)
+            "namdinh" to "Thép Xanh Nam Định",
+            "hanoi" to "Hà Nội",
+            "cahn" to "Công An Hà Nội",
+            "viettel" to "Thể Công – Viettel",
+            "hatinh" to "Hồng Lĩnh Hà Tĩnh",
+            "haiphong" to "Hải Phòng",
+            "binhduong" to "Becamex Bình Dương",
+            "thanhhoa" to "Đông Á Thanh Hóa",
+            "hagl" to "Hoàng Anh Gia Lai",
+            "tphcm" to "Công an TP. Hồ Chí Minh",
+            "quangnam" to "Quảng Nam",
+            "slna" to "Sông Lam Nghệ An",
+            "danang" to "SHB Đà Nẵng",
+            "binhdinh" to "Quy Nhơn Bình Định"
+        )
+
+        fun getStandardTeamName(rawName: String): String {
+            val canon = canonicalizeTeam(rawName)
+            CANONICAL_DISPLAY_NAMES[canon]?.let { return it }
+            return rawName.trim()
+        }
+
         fun canonicalizeTeam(name: String): String {
-            val t = name.lowercase().trim()
+            val clean = name.lowercase().trim()
+                .replace(Regex("""(?i)\b(clb|f\.?\s*c\.?|c\.?\s*f\.?|calcio|club)\b"""), "")
+                .trim()
             for ((canon, aliases) in TEAM_ALIASES) {
+                if (clean == canon) return canon
                 for (al in aliases) {
-                    if (t.contains(al) || al.contains(t)) {
+                    val alClean = al.lowercase().replace(Regex("""[^a-z0-9\p{L}]"""), "")
+                    val targetClean = clean.replace(Regex("""[^a-z0-9\p{L}]"""), "")
+                    if (targetClean == alClean || targetClean.contains(alClean) || alClean.contains(targetClean)) {
                         return canon
                     }
                 }
             }
-            return t.replace(Regex("""[^a-z0-9]"""), "")
+            return clean.replace(Regex("""[^a-z0-9]"""), "")
         }
     }
 
@@ -481,7 +624,7 @@ class SportsLiveManager(private val context: Context) {
         // 6. Xóa tên nhà cung cấp / website (có hoặc không có dấu gạch ngang, có hoặc không có chữ TV)
         s = s.replace(Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm)(?:\s+TV)?\b"""), "")
         // 7. Xóa các từ phụ trợ kỹ thuật và tiền tố CLB
-        s = s.replace(Regex("""(?i)\b(CLB|FC|CF|S\.S\.|AC|AS|FK|RC|Olympique|Calcio|hls|geo|hd|fhd|sd|4k|live)\b\.?"""), "")
+        s = s.replace(Regex("""(?i)\b(clb|f\.?\s*c\.?|c\.?\s*f\.?|s\.?\s*s\.?\s*c?\.?|a\.?\s*c\.?|a\.?\s*s\.?|s\.?\s*c\.?|f\.?\s*k\.?|r\.?\s*c\.?|olympique|calcio|club|hls|geo|hd|fhd|sd|4k|live)\b\.?"""), "")
         // 8. Cắt các ký tự phân cách ở đầu và cuối chuỗi
         s = s.replace(Regex("""^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$"""), "")
         return s.replace(Regex("""\s+"""), " ").trim()
@@ -620,13 +763,23 @@ class SportsLiveManager(private val context: Context) {
 
                         val cHome = canonicalizeTeam(homeTeam)
                         val cAway = canonicalizeTeam(awayTeam)
+                        val stdHome = getStandardTeamName(homeTeam)
+                        val stdAway = if (awayTeam.isNotBlank()) getStandardTeamName(awayTeam) else ""
+                        val sortedCanonPair = if (cAway.isNotBlank()) listOf(cHome, cAway).sorted() else listOf(cHome)
                         val normKey = if (cAway.isNotBlank()) {
-                            "${dateStr}_${timeStr}_${listOf(cHome, cAway).sorted().joinToString("_")}"
+                            "${dateStr}_${timeStr}_${sortedCanonPair.joinToString("_")}"
                         } else {
                             "${dateStr}_${timeStr}_$cHome"
                         }
 
-                        val existing = grouped[normKey]
+                        // Tìm xem đã có trận nào của 2 đội này trong cùng ngày (hoặc trong khoảng +/- 4 tiếng) chưa
+                        val existing = grouped.values.firstOrNull { ex ->
+                            val exHomeC = canonicalizeTeam(ex.homeTeam)
+                            val exAwayC = canonicalizeTeam(ex.awayTeam)
+                            val exPair = if (exAwayC.isNotBlank()) listOf(exHomeC, exAwayC).sorted() else listOf(exHomeC)
+                            (exPair == sortedCanonPair) && (ex.date == dateStr || Math.abs(ex.timestamp - matchTimestamp) < 4 * 3600 * 1000L)
+                        } ?: grouped[normKey]
+
                         if (existing != null) {
                             existing.sources.add(ch)
                             if (existing.league == "OTHER") {
@@ -636,16 +789,16 @@ class SportsLiveManager(private val context: Context) {
                                         league = lg,
                                         leagueName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
                                     )
-                                    grouped[normKey] = updated
+                                    grouped[existing.key] = updated
                                 }
                             }
                         } else {
-                            val lg = detectLeague(rawName, homeTeam, awayTeam)
+                            val lg = detectLeague(rawName, stdHome, stdAway)
                             val lgName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
                             val group = MatchGroup(
                                 key = normKey,
-                                homeTeam = homeTeam.ifBlank { "Đội nhà" },
-                                awayTeam = awayTeam.ifBlank { "Đội khách" },
+                                homeTeam = stdHome.ifBlank { "Đội nhà" },
+                                awayTeam = stdAway.ifBlank { "Đội khách" },
                                 time = timeStr,
                                 date = dateStr,
                                 timestamp = matchTimestamp,

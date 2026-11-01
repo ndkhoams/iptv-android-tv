@@ -533,8 +533,7 @@
                 <!-- Logo Kênh nổi bật -->
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="80dp"
-                    android:background="#181818">
+                    android:layout_height="80dp">
 
                     <ImageView
                         android:id="@+id/ivSpotlightLogo"
