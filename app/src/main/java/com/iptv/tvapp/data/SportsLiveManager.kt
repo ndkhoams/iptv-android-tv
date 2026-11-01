@@ -134,7 +134,7 @@ class SportsLiveManager(private val context: Context) {
             "nottingham" to listOf("nottingham forest", "nottingham"),
             "leicester" to listOf("leicester city", "leicester"),
             "ipswich" to listOf("ipswich town", "ipswich"),
-            "atleticomadrid" to listOf("atletico madrid", "atletico de madrid", "atletico", "atleti"),
+            "atleticomadrid" to listOf("atletico madrid", "atletico de madrid", "atlético madrid"),
             "realmadrid" to listOf("real madrid"),
             "betis" to listOf("real betis", "betis"),
             "celtavigo" to listOf("celta vigo", "celta"),
@@ -187,7 +187,7 @@ class SportsLiveManager(private val context: Context) {
         )
 
         val LALIGA_CLUBS = listOf(
-            "real madrid", "barcelona", "barca", "atletico madrid", "atletico", "athletic bilbao",
+            "real madrid", "barcelona", "barca", "atletico madrid", "atletico de madrid", "atlético madrid", "athletic bilbao",
             "athletic club", "real sociedad", "villarreal", "real betis", "sevilla", "celta vigo",
             "valencia", "osasuna", "getafe", "girona", "mallorca", "las palmas", "rayo vallecano",
             "espanyol", "alaves", "leganes", "valladolid", "racing santander", "elche"
@@ -233,12 +233,45 @@ class SportsLiveManager(private val context: Context) {
             lastFetchTimeMs = 0L
         }
 
+        fun isYouthMatch(vararg texts: String): Boolean {
+            val combined = texts.joinToString(" ").lowercase()
+            val patterns = listOf(
+                Regex("""\b(u[- ]?(?:1[4-9]|2[0-3]))\b"""), // U14 - U23
+                Regex("""\b(youth|primavera|juvenil|cadete|sub[- ]?(?:1[4-9]|2[0-3]))\b"""),
+                Regex("""\b(trẻ|đội trẻ)\b"""),
+                Regex("""\b(premier\s+league\s+2|pl2|fa\s+youth\s+cup|uefa\s+youth)\b"""),
+                Regex("""\b(castilla|jong\s+[a-z]+)\b"""),
+                Regex("""\b(barcelona\s+b|bayern\s+ii|dortmund\s+ii)\b""")
+            )
+            return patterns.any { it.containsMatchIn(combined) }
+        }
+
+        fun isWomenMatch(vararg texts: String): Boolean {
+            val combined = texts.joinToString(" ").lowercase()
+            val patterns = listOf(
+                Regex("""\b(nu|nữ|women|woman|wsl|ladies|femenino|frauen|dames|femmes|féminin|femme)\b"""),
+                Regex("""\(w\)|\[w\]|\(nữ\)|\[nữ\]|\(nu\)|\[nu\]"""),
+                Regex("""\b(u\d{2}\s+nữ|nữ\s+u\d{2})\b"""),
+                Regex("""\bnu\s+"""),
+                Regex("""\bnữ\s+"""),
+                Regex("""\s+nu\b"""),
+                Regex("""\s+nữ\b""")
+            )
+            return patterns.any { it.containsMatchIn(combined) }
+        }
+
         fun canonicalizeTeam(name: String): String {
             val t = name.lowercase().trim()
+            val isYouth = isYouthMatch(t)
             for ((canon, aliases) in TEAM_ALIASES) {
                 for (al in aliases) {
-                    if (t.contains(al) || al.contains(t)) {
-                        return canon
+                    val matches = if (al.contains(" ")) {
+                        t.contains(al)
+                    } else {
+                        Regex("""\b${Regex.escape(al)}\b""").containsMatchIn(t)
+                    }
+                    if (matches) {
+                        return if (isYouth) "${canon}_youth" else canon
                     }
                 }
             }
@@ -313,6 +346,7 @@ class SportsLiveManager(private val context: Context) {
     }
 
     private fun matchEspnFixture(home: String, away: String): String? {
+        if (isYouthMatch(home, away) || isWomenMatch(home, away)) return null
         val h = home.lowercase()
         val a = away.lowercase()
         for ((league, fixtures) in espnFixturesCache) {
@@ -325,6 +359,16 @@ class SportsLiveManager(private val context: Context) {
             }
         }
         return null
+    }
+
+    private fun matchClub(teamName: String, club: String): Boolean {
+        val t = teamName.lowercase().trim()
+        val c = club.lowercase().trim()
+        if (t == c) return true
+        if (c.contains(" ")) {
+            return t.contains(c)
+        }
+        return Regex("""\b${Regex.escape(c)}\b""").containsMatchIn(t)
     }
 
     /**
@@ -349,6 +393,11 @@ class SportsLiveManager(private val context: Context) {
             return "NBA"
         }
 
+        // Nếu là trận đội trẻ hoặc đội nữ: Tuyệt đối không xếp vào giải đấu hàng đầu của đội chính (UCL, EPL, La Liga...)
+        if (isYouthMatch(text, homeTeam, awayTeam) || isWomenMatch(text, homeTeam, awayTeam)) {
+            return "OTHER"
+        }
+
         // 2. Đối chiếu lịch thi đấu thực tế hôm nay
         val espnLeague = matchEspnFixture(homeTeam, awayTeam)
         if (espnLeague != null) return espnLeague
@@ -369,12 +418,12 @@ class SportsLiveManager(private val context: Context) {
         val h = homeTeam.lowercase()
         val a = awayTeam.lowercase()
         if (h.isNotBlank() && a.isNotBlank()) {
-            if (EPL_CLUBS.any { h.contains(it) || it.contains(h) } && EPL_CLUBS.any { a.contains(it) || it.contains(a) }) return "EPL"
-            if (LALIGA_CLUBS.any { h.contains(it) || it.contains(h) } && LALIGA_CLUBS.any { a.contains(it) || it.contains(a) }) return "LALIGA"
-            if (SERIE_A_CLUBS.any { h.contains(it) || it.contains(h) } && SERIE_A_CLUBS.any { a.contains(it) || it.contains(a) }) return "SERIE_A"
-            if (BUNDESLIGA_CLUBS.any { h.contains(it) || it.contains(h) } && BUNDESLIGA_CLUBS.any { a.contains(it) || it.contains(a) }) return "BUNDESLIGA"
-            if (LIGUE1_CLUBS.any { h.contains(it) || it.contains(h) } && LIGUE1_CLUBS.any { a.contains(it) || it.contains(a) }) return "LIGUE1"
-            if (VLEAGUE_CLUBS.any { h.contains(it) || it.contains(h) } && VLEAGUE_CLUBS.any { a.contains(it) || it.contains(a) }) return "VLEAGUE"
+            if (EPL_CLUBS.any { matchClub(h, it) } && EPL_CLUBS.any { matchClub(a, it) }) return "EPL"
+            if (LALIGA_CLUBS.any { matchClub(h, it) } && LALIGA_CLUBS.any { matchClub(a, it) }) return "LALIGA"
+            if (SERIE_A_CLUBS.any { matchClub(h, it) } && SERIE_A_CLUBS.any { matchClub(a, it) }) return "SERIE_A"
+            if (BUNDESLIGA_CLUBS.any { matchClub(h, it) } && BUNDESLIGA_CLUBS.any { matchClub(a, it) }) return "BUNDESLIGA"
+            if (LIGUE1_CLUBS.any { matchClub(h, it) } && LIGUE1_CLUBS.any { matchClub(a, it) }) return "LIGUE1"
+            if (VLEAGUE_CLUBS.any { matchClub(h, it) } && VLEAGUE_CLUBS.any { matchClub(a, it) }) return "VLEAGUE"
         }
 
         return "OTHER"
@@ -445,22 +494,78 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
-     * Kiểm tra ngày: Chỉ lấy các trận đấu diễn ra HÔM NAY hoặc rạng sáng mai
-     * Tránh hiển thị các link cũ từ tuần trước (ví dụ 25/10)
+     * Trích xuất chính xác thời điểm thi đấu từ tiêu đề luồng (HH:mm dd/MM)
+     * Tự động xử lý qua nửa đêm (cross-midnight) cho các trận rạng sáng
+     */
+    fun parseMatchDateTime(name: String): Calendar? {
+        val dateMatch = Regex("""\b(\d{1,2})[/-](\d{1,2})\b""").find(name)
+        val timeMatch = Regex("""\b(\d{1,2}):(\d{2})\b""").find(name)
+
+        val now = Calendar.getInstance()
+        val curYear = now.get(Calendar.YEAR)
+        val curMonth = now.get(Calendar.MONTH) + 1
+        val curDay = now.get(Calendar.DAY_OF_MONTH)
+        val curHour = now.get(Calendar.HOUR_OF_DAY)
+
+        val hour = timeMatch?.groupValues?.get(1)?.toIntOrNull()
+        val minute = timeMatch?.groupValues?.get(2)?.toIntOrNull() ?: 0
+
+        if (dateMatch != null) {
+            val d = dateMatch.groupValues[1].toIntOrNull() ?: curDay
+            val m = dateMatch.groupValues[2].toIntOrNull() ?: curMonth
+            var y = curYear
+            if (curMonth == 12 && m == 1) y++
+            if (curMonth == 1 && m == 12) y--
+
+            return Calendar.getInstance().apply {
+                set(Calendar.YEAR, y)
+                set(Calendar.MONTH, m - 1)
+                set(Calendar.DAY_OF_MONTH, d)
+                set(Calendar.HOUR_OF_DAY, hour ?: 12)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        } else if (hour != null) {
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            // Trận đá đêm muộn (20h - 23h) khi đang ở rạng sáng (0h - 5h) => lùi về ngày hôm qua
+            if (curHour in 0..5 && hour in 20..23) {
+                cal.add(Calendar.DAY_OF_MONTH, -1)
+            }
+            // Trận đá rạng sáng (0h - 5h) khi đang ở đêm muộn (20h - 23h) => tiến tới ngày mai
+            else if (curHour in 20..23 && hour in 0..5) {
+                cal.add(Calendar.DAY_OF_MONTH, 1)
+            }
+            return cal
+        }
+        return null
+    }
+
+    /**
+     * Kiểm tra trạng thái trận đấu:
+     * - Trận đang diễn ra hoặc vừa mới đá xong (<= 3.5 tiếng từ khi bắt đầu)
+     * - Trận sắp diễn ra trong vòng 48 tiếng tới (hôm nay và ngày mai)
      */
     private fun isDateTodayOrUpcoming(name: String): Boolean {
-        val dm = Regex("""\b(\d{1,2})[/-](\d{1,2})\b""").find(name) ?: return true
-        val d = dm.groupValues[1].toIntOrNull() ?: return true
-        val m = dm.groupValues[2].toIntOrNull() ?: return true
+        val matchCal = parseMatchDateTime(name) ?: return true
+        val matchTimeMs = matchCal.timeInMillis
+        val nowMs = System.currentTimeMillis()
+        val diffMs = nowMs - matchTimeMs
 
-        val cal = Calendar.getInstance()
-        val todayD = cal.get(Calendar.DAY_OF_MONTH)
-        val todayM = cal.get(Calendar.MONTH) + 1
+        // Trận đã diễn ra (kickoff trước hoặc bằng hiện tại):
+        if (diffMs >= 0) {
+            // Vẫn giữ lại nếu chưa quá 3.5 tiếng (trận đang diễn ra hoặc vừa kết thúc)
+            return diffMs <= (3.5 * 3600 * 1000L).toLong()
+        }
 
-        if (m == todayM && (d == todayD || d == todayD + 1)) return true
-        if (m == todayM + 1 && d == 1 && todayD >= 28) return true
-
-        return false
+        // Trận sắp diễn ra trong tương lai (diffMs < 0):
+        val futureHours = (-diffMs) / (1000.0 * 3600.0)
+        return futureHours <= 48.0
     }
 
     /**
@@ -571,41 +676,11 @@ class SportsLiveManager(private val context: Context) {
                         val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(rawName)
                         val timeStr = timeMatch?.groupValues?.get(1) ?: "LIVE"
 
-                        val dateMatch = Regex("""\b(\d{1,2})[/-](\d{1,2})\b""").find(rawName)
-                        val nowCal = Calendar.getInstance()
-                        val curDay = nowCal.get(Calendar.DAY_OF_MONTH)
-                        val curMonth = nowCal.get(Calendar.MONTH) + 1
-                        val curHour = nowCal.get(Calendar.HOUR_OF_DAY)
-
-                        var mDay = curDay
-                        var mMonth = curMonth
-
-                        if (dateMatch != null) {
-                            mDay = dateMatch.groupValues[1].toIntOrNull() ?: curDay
-                            mMonth = dateMatch.groupValues[2].toIntOrNull() ?: curMonth
-                        } else if (timeStr != "LIVE") {
-                            val h = timeStr.substringBefore(":").toIntOrNull() ?: 12
-                            if (curHour >= 12 && h < 7) {
-                                val nextDayCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
-                                mDay = nextDayCal.get(Calendar.DAY_OF_MONTH)
-                                mMonth = nextDayCal.get(Calendar.MONTH) + 1
-                            }
-                        }
-
+                        val matchCal = parseMatchDateTime(rawName) ?: Calendar.getInstance()
+                        val matchTimestamp = if (timeStr == "LIVE") System.currentTimeMillis() else matchCal.timeInMillis
+                        val mDay = matchCal.get(Calendar.DAY_OF_MONTH)
+                        val mMonth = matchCal.get(Calendar.MONTH) + 1
                         val dateStr = String.format("%02d/%02d", mDay, mMonth)
-
-                        val matchCal = Calendar.getInstance().apply {
-                            set(Calendar.MONTH, mMonth - 1)
-                            set(Calendar.DAY_OF_MONTH, mDay)
-                            if (timeStr != "LIVE") {
-                                val parts = timeStr.split(":")
-                                set(Calendar.HOUR_OF_DAY, parts[0].toIntOrNull() ?: 0)
-                                set(Calendar.MINUTE, parts.getOrNull(1)?.toIntOrNull() ?: 0)
-                                set(Calendar.SECOND, 0)
-                                set(Calendar.MILLISECOND, 0)
-                            }
-                        }
-                        val matchTimestamp = matchCal.timeInMillis
 
                         val parts = cleaned.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
                         val (homeTeam, awayTeam) = if (parts.size >= 2) {
@@ -657,29 +732,55 @@ class SportsLiveManager(private val context: Context) {
                         }
                     }
 
+                    val nowTimestamp = System.currentTimeMillis()
+                    fun isMatchOngoing(mg: MatchGroup): Boolean {
+                        if (mg.time == "LIVE") return true
+                        val diff = nowTimestamp - mg.timestamp
+                        // Đang diễn ra: trận đã bắt đầu và chưa quá 2.5 tiếng (150 phút)
+                        return diff in 0..(150 * 60 * 1000L)
+                    }
+
                     // Tách thành:
-                    // 1. Giải bóng đá ưu tiên (7 giải hàng đầu)
-                    val priorityMatches = grouped.values.filter { it.league in PRIORITY_LEAGUES }
+                    // 1. Giải bóng đá ưu tiên (chỉ đội chính, không lấy đội U hay đội nữ)
+                    val priorityMatches = grouped.values.filter {
+                        it.league in PRIORITY_LEAGUES && !isYouthMatch(it.homeTeam, it.awayTeam) && !isWomenMatch(it.homeTeam, it.awayTeam)
+                    }
                     // 2. Các trận thể thao lớn nổi bật (F1, Tennis Grand Slam/ATP, NBA)
                     val featuredSportsMatches = grouped.values.filter { it.league in FEATURED_SPORTS }
-                    // 3. Các trận bóng đá khác
-                    val otherMatches = grouped.values.filter { it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS }
+                    // 3. Các trận bóng đá khác (chỉ đội chính)
+                    val otherMatches = grouped.values.filter {
+                        it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS &&
+                        !isYouthMatch(it.homeTeam, it.awayTeam) && !isWomenMatch(it.homeTeam, it.awayTeam)
+                    }
 
                     // Sắp xếp:
-                    // - Ưu tiên UCL -> EPL -> VLEAGUE -> LALIGA -> BUNDESLIGA -> SERIE_A -> LIGUE1, sau đó theo mốc thời gian thực tế
-                    val sortedPriority = priorityMatches.sortedWith(
-                        compareBy({ PRIORITY_LEAGUES.indexOf(it.league) }, { it.timestamp })
+                    // - TRẬN ĐANG DIỄN RA (LIVE NOW): Đưa lên đầu danh sách để bấm vào xem ngay
+                    // - TRẬN SẮP DIỄN RA: Sắp xếp theo mốc thời gian sớm nhất
+                    val livePriority = priorityMatches.filter { isMatchOngoing(it) }.sortedWith(
+                        compareBy(
+                            { PRIORITY_LEAGUES.indexOf(it.league).let { idx -> if (idx < 0) 999 else idx } },
+                            { it.timestamp }
+                        )
                     )
-                    val sortedOther = otherMatches.sortedBy { it.timestamp }
-                    val sortedFeaturedSports = featuredSportsMatches.sortedBy { it.timestamp }
+                    val upcomingPriority = priorityMatches.filter { !isMatchOngoing(it) }.sortedWith(
+                        compareBy(
+                            { it.timestamp },
+                            { PRIORITY_LEAGUES.indexOf(it.league).let { idx -> if (idx < 0) 999 else idx } }
+                        )
+                    )
+
+                    val liveOther = otherMatches.filter { isMatchOngoing(it) }.sortedBy { it.timestamp }
+                    val upcomingOther = otherMatches.filter { !isMatchOngoing(it) }.sortedBy { it.timestamp }
 
                     val targetMatches = mutableListOf<MatchGroup>()
-                    if (sortedPriority.isNotEmpty()) {
-                        targetMatches.addAll(sortedPriority)
+                    if (livePriority.isNotEmpty() || upcomingPriority.isNotEmpty()) {
+                        targetMatches.addAll(livePriority)
+                        targetMatches.addAll(upcomingPriority)
                     } else {
-                        targetMatches.addAll(sortedOther)
+                        targetMatches.addAll(liveOther)
+                        targetMatches.addAll(upcomingOther)
                     }
-                    targetMatches.addAll(sortedFeaturedSports)
+                    targetMatches.addAll(featuredSportsMatches.sortedBy { it.timestamp })
 
                     // Lưu vào cache Map để MatchSourcesDialog truy xuất khi click
                     for (m in grouped.values) {
@@ -698,17 +799,19 @@ class SportsLiveManager(private val context: Context) {
                     matchesWithRefresh.add(refreshItem)
 
                     targetMatches.forEachIndexed { idx, mg ->
+                        val ongoing = isMatchOngoing(mg)
                         val sportIcon = when (mg.league) {
                             "F1" -> "🏎️"
                             "TENNIS" -> "🎾"
                             "NBA" -> "🏀"
-                            else -> "⚽"
+                            else -> if (ongoing) "🔴" else "⚽"
                         }
                         val timePart = if (mg.date.isNotBlank()) "[${mg.time} ${mg.date}]" else "[${mg.time}]"
+                        val ongoingSuffix = if (ongoing) " • [Đang diễn ra]" else ""
                         val matchName = if (mg.awayTeam.isNotBlank()) {
-                            "$sportIcon $timePart ${mg.homeTeam} vs ${mg.awayTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                            "$sportIcon $timePart ${mg.homeTeam} vs ${mg.awayTeam}$ongoingSuffix • ${mg.leagueName} (${mg.sources.size} nguồn)"
                         } else {
-                            "$sportIcon $timePart ${mg.homeTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                            "$sportIcon $timePart ${mg.homeTeam}$ongoingSuffix • ${mg.leagueName} (${mg.sources.size} nguồn)"
                         }
                         val leagueLogoUri = getLeagueLogoUri(mg.league)
                         val matchChannel = Channel(
