@@ -810,12 +810,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isSportsLiveMatch(channel: Channel?): Boolean {
-        if (channel == null) return false
-        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return true
-        return sportsCategoriesList.any { cat -> cat.channels.any { it.streamUrl == channel.streamUrl } }
-    }
-
     private fun switchAppMode(mode: AppMode, focusCategories: Boolean = false) {
         currentAppMode = mode
         binding.navModeTv.isSelected = (mode == AppMode.TV)
@@ -2038,7 +2032,10 @@ class MainActivity : AppCompatActivity() {
         player?.pause()
     }
 
-    private fun isSportsLiveMatch(channel: Channel): Boolean {
+    private fun isSportsLiveMatch(channel: Channel?): Boolean {
+        if (channel == null) return false
+        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return true
+        if (sportsCategoriesList.any { cat -> cat.channels.any { it.streamUrl == channel.streamUrl } }) return true
         return channel.streamUrl.contains("/truc-tiep/") ||
                 channel.streamUrl.startsWith("streamfree://") ||
                 channel.id.startsWith("streamfree_") ||
