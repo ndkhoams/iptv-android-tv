@@ -196,6 +196,9 @@ class MainActivity : AppCompatActivity() {
 
     private var backPressedTime = 0L
     private var backHandledOnDown = false
+    private var lastBackPressTimestamp = 0L
+    private var exitPromptActiveUntil = 0L
+    private var backKeyDownTimestamp = 0L
     private var activeSettingsDialog: SettingsDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -839,8 +842,18 @@ class MainActivity : AppCompatActivity() {
     private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true) {
         sportsFetchJob?.cancel()
         sportsFetchJob = lifecycleScope.launch {
-            // Cho kênh TV phát ổn định 2.5s trước khi quét luồng thể thao ngầm
-            delay(2500)
+            // Yêu cầu 1: Ưu tiên tải ngay từ cache file để hiển thị tức thì nếu chưa có danh sách
+            if (sportsCategoriesList.isEmpty()) {
+                val cached = withContext(Dispatchers.IO) {
+                    playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = false)
+                }
+                if (cached.isNotEmpty()) {
+                    applyUpdatedSportsCategories(cached)
+                }
+            }
+
+            // Cho kênh TV phát ổn định 1.5s trước khi quét luồng thể thao ngầm từ mạng
+            delay(1500)
             try {
                 val sportsCategories = withContext(Dispatchers.IO) {
                     playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
@@ -877,7 +890,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
             allCategories.addAll(sportsCategoriesList)
             if (sportsCategoriesList.isEmpty()) {
-                fetchSportsInBackground(forceRefresh = true, showNotification = true)
+                fetchSportsInBackground(forceRefresh = false, showNotification = false)
             }
         }
 
@@ -1903,7 +1916,33 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            val now = System.currentTimeMillis()
             if (event.action == KeyEvent.ACTION_DOWN) {
+                if (event.repeatCount == 0) {
+                    backKeyDownTimestamp = now
+                    event.startTracking()
+                } else if (event.repeatCount >= 1 && (now - backKeyDownTimestamp >= 500L)) {
+                    // Yêu cầu 3: Ấn giữ BACK để thoát luôn
+                    finish()
+                    return true
+                }
+
+                // Yêu cầu 3: Nếu đang có thông báo xác nhận thoát app đang chờ bấm lần 3:
+                if (now < exitPromptActiveUntil) {
+                    finish()
+                    return true
+                }
+
+                // Yêu cầu 3: Kiểm tra double BACK liên tục nhanh (2 lần bấm trong vòng 600ms):
+                val timeSinceLastBack = now - lastBackPressTimestamp
+                lastBackPressTimestamp = now
+
+                if (timeSinceLastBack in 1..600L) {
+                    exitPromptActiveUntil = now + 2500L
+                    showBottomNotification("⚠️ Bấm thêm 1 lần QUAY LẠI nữa để thoát ứng dụng")
+                    return true
+                }
+
                 backHandledOnDown = true
                 val isSettingsShowing = (activeSettingsDialog?.isShowing == true)
                 if (isSettingsShowing) {
@@ -1984,6 +2023,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            finish()
+            return true
+        }
+        return super.onKeyLongPress(keyCode, event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -2401,7 +2448,7 @@ class MainActivity : AppCompatActivity() {
     private fun resetOverlayTimer() {
         hideHandler.removeCallbacks(hideOverlayRunnable)
         if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-            hideHandler.postDelayed(hideOverlayRunnable, 7000)
+            hideHandler.postDelayed(hideOverlayRunnable, 15000L) // Yêu cầu 2: Tăng thời gian hiển thị lên 15 giây
         }
     }
 
