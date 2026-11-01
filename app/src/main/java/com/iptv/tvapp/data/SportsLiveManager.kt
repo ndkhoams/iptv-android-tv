@@ -4,7 +4,7 @@ import android.content.Context
 import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.parser.M3UParser
-import com.iptv.tvapp.util.PreferenceHelper
+import com.iptv.tvapp.data.PreferencesHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 
 class SportsLiveManager(private val context: Context) {
 
-    private val prefs = PreferenceHelper(context)
+    private val prefs = PreferencesHelper(context)
     private val httpClient = OkHttpClient.Builder().apply {
         connectTimeout(8, TimeUnit.SECONDS)
         readTimeout(10, TimeUnit.SECONDS)
