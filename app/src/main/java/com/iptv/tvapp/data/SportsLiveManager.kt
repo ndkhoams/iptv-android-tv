@@ -12,6 +12,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.iptv.tvapp.util.NetworkUtils
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -25,13 +26,14 @@ import java.util.concurrent.TimeUnit
 class SportsLiveManager(private val context: Context) {
 
     private val prefs = PreferencesHelper(context)
-    private val httpClient = OkHttpClient.Builder().apply {
-        connectTimeout(8, TimeUnit.SECONDS)
-        readTimeout(10, TimeUnit.SECONDS)
-        writeTimeout(10, TimeUnit.SECONDS)
-        followRedirects(true)
-        followSslRedirects(true)
-    }.build()
+    private val httpClient: OkHttpClient = NetworkUtils.configureTrustAllSsl(
+        OkHttpClient.Builder()
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+    ).build()
 
     data class MatchGroup(
         val key: String,
@@ -103,7 +105,7 @@ class SportsLiveManager(private val context: Context) {
         @Volatile private var lastEspnFetchTimeMs: Long = 0L
         private const val CACHE_TTL_MS = 30 * 60 * 1000L // Tự động cập nhật 30 phút 1 lần
         private const val ESPN_CACHE_TTL_MS = 60 * 60 * 1000L // Cache lịch thi đấu 1 tiếng
-        const val DEFAULT_SPORTS_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao.m3u"
+        const val DEFAULT_SPORTS_URL = "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u"
         private const val CHROME_UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
         val PRIORITY_LEAGUES = listOf("UCL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1", "NBA")
@@ -712,6 +714,45 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
+     * Nạp nhanh danh mục thể thao đồng bộ từ bộ nhớ cache hoặc file builtin/cache đĩa
+     * giúp giao diện Thể thao lập tức có dữ liệu hiển thị, không bị trắng màn hình.
+     */
+    fun getCachedCategoriesSync(): List<Category> {
+        cachedCategories?.let { if (it.isNotEmpty()) return it }
+
+        val cacheFile = File(context.cacheDir, "thethao_sports_cache.m3u")
+        if (!cacheFile.exists() || cacheFile.length() == 0L) {
+            try {
+                context.assets.open("builtin_sports.m3u").use { input ->
+                    FileOutputStream(cacheFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            } catch (e: Exception) {
+                return emptyList()
+            }
+        }
+
+        return try {
+            val rawChannels = FileInputStream(cacheFile).use { input ->
+                M3UParser.parse(input)
+            }
+            val channels = rawChannels.filter {
+                !it.streamUrl.contains("/refresh") && it.streamUrl.isNotBlank()
+            }
+            if (channels.isNotEmpty()) {
+                val cats = buildCategoriesFromChannels(channels)
+                cachedCategories = cats
+                cats
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
      * Tải danh sách trực tiếp thể thao từ file thethao.m3u (được máy chủ Armbian tự động đẩy lên GitHub)
      */
     suspend fun getSportsCategories(forceRefresh: Boolean = false): List<Category> =
@@ -729,27 +770,56 @@ class SportsLiveManager(private val context: Context) {
                 if (baseSportsUrl.contains("?")) "$baseSportsUrl&_ts=$now" else "$baseSportsUrl?_ts=$now"
             } else baseSportsUrl
 
-            try {
-                // 1. Tải file thethao.m3u từ GitHub vào file tạm, không xóa cache cũ để đề phòng rớt mạng
-                val request = Request.Builder()
-                    .url(sportsUrl)
-                    .header("User-Agent", CHROME_UA)
-                    .header("Cache-Control", "no-cache")
-                    .build()
+            val urlsToTry = mutableListOf<String>()
+            urlsToTry.add(sportsUrl)
+            val jsdelivrUrl = if (forceRefresh) "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u?_ts=$now" else "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u"
+            if (!urlsToTry.contains(jsdelivrUrl)) {
+                urlsToTry.add(jsdelivrUrl)
+            }
+            val fastlyUrl = "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u"
+            if (!urlsToTry.contains(fastlyUrl)) {
+                urlsToTry.add(fastlyUrl)
+            }
+            val rawGithubUrl = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao.m3u"
+            if (!urlsToTry.contains(rawGithubUrl)) {
+                urlsToTry.add(rawGithubUrl)
+            }
 
-                val response = httpClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val bodyBytes = response.body?.bytes()
-                    if (bodyBytes != null && bodyBytes.isNotEmpty()) {
-                        FileOutputStream(tempFile).use { it.write(bodyBytes) }
-                        if (tempFile.exists() && tempFile.length() > 0L) {
-                            tempFile.copyTo(cacheFile, overwrite = true)
-                            tempFile.delete()
+            for (targetUrl in urlsToTry) {
+                try {
+                    val request = Request.Builder()
+                        .url(targetUrl)
+                        .header("User-Agent", CHROME_UA)
+                        .header("Cache-Control", "no-cache")
+                        .build()
+
+                    val response = httpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val bodyBytes = response.body?.bytes()
+                        if (bodyBytes != null && bodyBytes.isNotEmpty()) {
+                            FileOutputStream(tempFile).use { it.write(bodyBytes) }
+                            if (tempFile.exists() && tempFile.length() > 0L) {
+                                tempFile.copyTo(cacheFile, overwrite = true)
+                                tempFile.delete()
+                                break
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    // Tiếp tục thử URL dự phòng tiếp theo
                 }
-            } catch (e: Exception) {
-                // Sử dụng file cache đã lưu nếu lỗi mạng
+            }
+
+            if (!cacheFile.exists() || cacheFile.length() == 0L) {
+                try {
+                    context.assets.open("builtin_sports.m3u").use { input ->
+                        FileOutputStream(cacheFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
             }
 
             if (!cacheFile.exists() || cacheFile.length() == 0L) {
@@ -774,212 +844,7 @@ class SportsLiveManager(private val context: Context) {
                     return@withContext cachedCategories ?: emptyList()
                 }
 
-                // 3. Phân nhóm các category:
-                // Nhóm 1: "🔴 LIVE EVENTS" - Nhóm gom các luồng cùng 1 trận đấu thành 1 title duy nhất
-                val matchChannels = channels.filter {
-                    !it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) &&
-                    !it.name.contains("[24/7]", ignoreCase = true) &&
-                    isEligibleSportsMatch(it.name, it.groupTitle) &&
-                    isDateTodayOrUpcoming(it.name)
-                }
-
-                val categories = mutableListOf<Category>()
-
-                if (matchChannels.isNotEmpty()) {
-                    matchGroupsMap.clear()
-                    val grouped = LinkedHashMap<String, MatchGroup>()
-
-                    for (ch in matchChannels) {
-                        val rawName = ch.name
-                        val cleaned = cleanTeamName(rawName)
-                        val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(rawName)
-                        val timeStr = timeMatch?.groupValues?.get(1) ?: "LIVE"
-
-                        val dateMatch = Regex("""\b(\d{1,2})[/-](\d{1,2})\b""").find(rawName)
-                        val nowCal = Calendar.getInstance()
-                        val curDay = nowCal.get(Calendar.DAY_OF_MONTH)
-                        val curMonth = nowCal.get(Calendar.MONTH) + 1
-                        val curHour = nowCal.get(Calendar.HOUR_OF_DAY)
-
-                        var mDay = curDay
-                        var mMonth = curMonth
-
-                        if (dateMatch != null) {
-                            mDay = dateMatch.groupValues[1].toIntOrNull() ?: curDay
-                            mMonth = dateMatch.groupValues[2].toIntOrNull() ?: curMonth
-                        } else if (timeStr != "LIVE") {
-                            val h = timeStr.substringBefore(":").toIntOrNull() ?: 12
-                            if (curHour >= 12 && h < 7) {
-                                val nextDayCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
-                                mDay = nextDayCal.get(Calendar.DAY_OF_MONTH)
-                                mMonth = nextDayCal.get(Calendar.MONTH) + 1
-                            }
-                        }
-
-                        val dateStr = String.format("%02d/%02d", mDay, mMonth)
-
-                        val matchCal = Calendar.getInstance().apply {
-                            set(Calendar.MONTH, mMonth - 1)
-                            set(Calendar.DAY_OF_MONTH, mDay)
-                            if (timeStr != "LIVE") {
-                                val parts = timeStr.split(":")
-                                set(Calendar.HOUR_OF_DAY, parts[0].toIntOrNull() ?: 0)
-                                set(Calendar.MINUTE, parts.getOrNull(1)?.toIntOrNull() ?: 0)
-                                set(Calendar.SECOND, 0)
-                                set(Calendar.MILLISECOND, 0)
-                            }
-                        }
-                        val matchTimestamp = matchCal.timeInMillis
-
-                        val parts = cleaned.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
-                        val (homeTeam, awayTeam) = if (parts.size >= 2) {
-                            parts[0].trim() to parts[1].trim()
-                        } else {
-                            cleaned.trim() to ""
-                        }
-
-                        if (isWomenMatch(rawName, homeTeam, awayTeam)) {
-                            continue
-                        }
-
-                        val cHome = canonicalizeTeam(homeTeam)
-                        val cAway = canonicalizeTeam(awayTeam)
-                        val stdHome = getStandardTeamName(homeTeam)
-                        val stdAway = if (awayTeam.isNotBlank()) getStandardTeamName(awayTeam) else ""
-                        val sortedCanonPair = if (cAway.isNotBlank()) listOf(cHome, cAway).sorted() else listOf(cHome)
-                        val normKey = if (cAway.isNotBlank()) {
-                            "${dateStr}_${timeStr}_${sortedCanonPair.joinToString("_")}"
-                        } else {
-                            "${dateStr}_${timeStr}_$cHome"
-                        }
-
-                        // Tìm xem đã có trận nào của 2 đội này trong cùng ngày (hoặc trong khoảng +/- 4 tiếng) chưa
-                        val existing = grouped.values.firstOrNull { ex ->
-                            val exHomeC = canonicalizeTeam(ex.homeTeam)
-                            val exAwayC = canonicalizeTeam(ex.awayTeam)
-                            val exPair = if (exAwayC.isNotBlank()) listOf(exHomeC, exAwayC).sorted() else listOf(exHomeC)
-                            (exPair == sortedCanonPair) && (ex.date == dateStr || Math.abs(ex.timestamp - matchTimestamp) < 4 * 3600 * 1000L)
-                        } ?: grouped[normKey]
-
-                        if (existing != null) {
-                            existing.sources.add(ch)
-                            if (existing.league == "OTHER") {
-                                val lg = detectLeague(rawName, existing.homeTeam, existing.awayTeam)
-                                if (lg != "OTHER") {
-                                    val updated = existing.copy(
-                                        league = lg,
-                                        leagueName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
-                                    )
-                                    grouped[existing.key] = updated
-                                }
-                            }
-                        } else {
-                            val lg = detectLeague(rawName, stdHome, stdAway)
-                            val lgName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
-                            val group = MatchGroup(
-                                key = normKey,
-                                homeTeam = stdHome.ifBlank { "Đội nhà" },
-                                awayTeam = stdAway.ifBlank { "Đội khách" },
-                                time = timeStr,
-                                date = dateStr,
-                                timestamp = matchTimestamp,
-                                league = lg,
-                                leagueName = lgName,
-                                sources = mutableListOf(ch)
-                            )
-                            grouped[normKey] = group
-                        }
-                    }
-
-                    // Tách thành:
-                    // 1. Giải bóng đá ưu tiên (7 giải hàng đầu)
-                    val priorityMatches = grouped.values.filter { it.league in PRIORITY_LEAGUES }
-                    // 2. Các trận thể thao lớn nổi bật (F1, Tennis Grand Slam/ATP, NBA)
-                    val featuredSportsMatches = grouped.values.filter { it.league in FEATURED_SPORTS }
-                    // 3. Các trận bóng đá khác
-                    val otherMatches = grouped.values.filter { it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS }
-
-                    // Sắp xếp:
-                    // - Ưu tiên UCL -> EPL -> VLEAGUE -> LALIGA -> BUNDESLIGA -> SERIE_A -> LIGUE1, sau đó theo mốc thời gian thực tế
-                    val sortedPriority = priorityMatches.sortedWith(
-                        compareBy({ PRIORITY_LEAGUES.indexOf(it.league) }, { it.timestamp })
-                    )
-                    val sortedOther = otherMatches.sortedBy { it.timestamp }
-                    val sortedFeaturedSports = featuredSportsMatches.sortedBy { it.timestamp }
-
-                    val targetMatches = mutableListOf<MatchGroup>()
-                    targetMatches.addAll(sortedPriority)
-                    targetMatches.addAll(sortedOther)
-                    targetMatches.addAll(sortedFeaturedSports)
-
-                    // Lưu vào cache Map để MatchSourcesDialog truy xuất khi click
-                    for (m in grouped.values) {
-                        matchGroupsMap[m.key] = m
-                    }
-
-                    val matchesWithRefresh = mutableListOf<Channel>()
-                    val refreshItem = Channel(
-                        id = ACTION_REFRESH_SPORTS,
-                        name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
-                        logoUrl = null,
-                        streamUrl = "action://refresh_sports",
-                        groupTitle = CATEGORY_LIVE_EVENTS,
-                        number = 0
-                    )
-                    matchesWithRefresh.add(refreshItem)
-
-                    targetMatches.forEachIndexed { idx, mg ->
-                        val sportIcon = when (mg.league) {
-                            "F1" -> "🏎️"
-                            "TENNIS" -> "🎾"
-                            "NBA" -> "🏀"
-                            else -> "⚽"
-                        }
-                        val timePart = if (mg.date.isNotBlank()) "[${mg.time} ${mg.date}]" else "[${mg.time}]"
-                        val matchName = if (mg.awayTeam.isNotBlank()) {
-                            "$sportIcon $timePart ${mg.homeTeam} vs ${mg.awayTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
-                        } else {
-                            "$sportIcon $timePart ${mg.homeTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
-                        }
-                        val leagueLogoUri = getLeagueLogoUri(mg.league)
-                        val matchChannel = Channel(
-                            id = "match_${mg.key}",
-                            name = matchName,
-                            logoUrl = leagueLogoUri,
-                            streamUrl = "match://${mg.key}",
-                            groupTitle = CATEGORY_LIVE_EVENTS,
-                            number = idx + 1
-                        )
-                        matchesWithRefresh.add(matchChannel)
-                    }
-
-                    categories.add(Category(CATEGORY_LIVE_EVENTS, matchesWithRefresh))
-                }
-
-                // Nhóm 2: "📺 SPORT 24/7 TV"
-                val intlChannels = channels.filter {
-                    it.groupTitle.contains("SPORT 24/7", ignoreCase = true) ||
-                    it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) ||
-                    it.name.contains("[24/7]", ignoreCase = true)
-                }
-                if (intlChannels.isNotEmpty()) {
-                    intlChannels.forEachIndexed { idx, ch -> ch.number = idx + 1 }
-                    categories.add(Category(CATEGORY_SPORT_TV, intlChannels.toMutableList()))
-                }
-
-                // Các nhóm theo nguồn: "🍌 Chuối Chiên TV", "🐔 Gà Vàng / Tiếu Lâm", "🌶️ Cà Khịa TV", ...
-                val groupedBySource = channels.groupBy { it.groupTitle }
-                for ((groupName, groupList) in groupedBySource) {
-                    if (groupName.isNotBlank() &&
-                        !groupName.contains("LIVE EVENTS", ignoreCase = true) &&
-                        !groupName.contains("TRỰC TIẾP", ignoreCase = true) &&
-                        !groupName.contains("SPORT 24/7", ignoreCase = true) &&
-                        !groupName.contains("QUỐC TẾ", ignoreCase = true)) {
-                        groupList.forEachIndexed { idx, ch -> ch.number = idx + 1 }
-                        categories.add(Category(groupName, groupList.toMutableList()))
-                    }
-                }
-
+                val categories = buildCategoriesFromChannels(channels)
                 cachedCategories = categories
                 lastFetchTimeMs = System.currentTimeMillis()
                 categories
@@ -987,6 +852,217 @@ class SportsLiveManager(private val context: Context) {
                 cachedCategories ?: emptyList()
             }
         }
+
+    /**
+     * Phân nhóm và xử lý các sự kiện thể thao từ danh sách Channels
+     */
+    fun buildCategoriesFromChannels(channels: List<Channel>): List<Category> {
+        val matchChannels = channels.filter {
+            !it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) &&
+            !it.name.contains("[24/7]", ignoreCase = true) &&
+            isEligibleSportsMatch(it.name, it.groupTitle) &&
+            isDateTodayOrUpcoming(it.name)
+        }
+
+        val categories = mutableListOf<Category>()
+
+        if (matchChannels.isNotEmpty()) {
+            matchGroupsMap.clear()
+            val grouped = LinkedHashMap<String, MatchGroup>()
+
+            for (ch in matchChannels) {
+                val rawName = ch.name
+                val cleaned = cleanTeamName(rawName)
+                val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(rawName)
+                val timeStr = timeMatch?.groupValues?.get(1) ?: "LIVE"
+
+                val dateMatch = Regex("""\b(\d{1,2})[/-](\d{1,2})\b""").find(rawName)
+                val nowCal = Calendar.getInstance()
+                val curDay = nowCal.get(Calendar.DAY_OF_MONTH)
+                val curMonth = nowCal.get(Calendar.MONTH) + 1
+                val curHour = nowCal.get(Calendar.HOUR_OF_DAY)
+
+                var mDay = curDay
+                var mMonth = curMonth
+
+                if (dateMatch != null) {
+                    mDay = dateMatch.groupValues[1].toIntOrNull() ?: curDay
+                    mMonth = dateMatch.groupValues[2].toIntOrNull() ?: curMonth
+                } else if (timeStr != "LIVE") {
+                    val h = timeStr.substringBefore(":").toIntOrNull() ?: 12
+                    if (curHour >= 12 && h < 7) {
+                        val nextDayCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) }
+                        mDay = nextDayCal.get(Calendar.DAY_OF_MONTH)
+                        mMonth = nextDayCal.get(Calendar.MONTH) + 1
+                    }
+                }
+
+                val dateStr = String.format("%02d/%02d", mDay, mMonth)
+
+                val matchCal = Calendar.getInstance().apply {
+                    set(Calendar.MONTH, mMonth - 1)
+                    set(Calendar.DAY_OF_MONTH, mDay)
+                    if (timeStr != "LIVE") {
+                        val parts = timeStr.split(":")
+                        set(Calendar.HOUR_OF_DAY, parts[0].toIntOrNull() ?: 0)
+                        set(Calendar.MINUTE, parts.getOrNull(1)?.toIntOrNull() ?: 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                }
+                val matchTimestamp = matchCal.timeInMillis
+
+                val parts = cleaned.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
+                val (homeTeam, awayTeam) = if (parts.size >= 2) {
+                    parts[0].trim() to parts[1].trim()
+                } else {
+                    cleaned.trim() to ""
+                }
+
+                if (isWomenMatch(rawName, homeTeam, awayTeam)) {
+                    continue
+                }
+
+                val cHome = canonicalizeTeam(homeTeam)
+                val cAway = canonicalizeTeam(awayTeam)
+                val stdHome = getStandardTeamName(homeTeam)
+                val stdAway = if (awayTeam.isNotBlank()) getStandardTeamName(awayTeam) else ""
+                val sortedCanonPair = if (cAway.isNotBlank()) listOf(cHome, cAway).sorted() else listOf(cHome)
+                val normKey = if (cAway.isNotBlank()) {
+                    "${dateStr}_${timeStr}_${sortedCanonPair.joinToString("_")}"
+                } else {
+                    "${dateStr}_${timeStr}_$cHome"
+                }
+
+                // Tìm xem đã có trận nào của 2 đội này trong cùng ngày (hoặc trong khoảng +/- 4 tiếng) chưa
+                val existing = grouped.values.firstOrNull { ex ->
+                    val exHomeC = canonicalizeTeam(ex.homeTeam)
+                    val exAwayC = canonicalizeTeam(ex.awayTeam)
+                    val exPair = if (exAwayC.isNotBlank()) listOf(exHomeC, exAwayC).sorted() else listOf(exHomeC)
+                    (exPair == sortedCanonPair) && (ex.date == dateStr || Math.abs(ex.timestamp - matchTimestamp) < 4 * 3600 * 1000L)
+                } ?: grouped[normKey]
+
+                if (existing != null) {
+                    existing.sources.add(ch)
+                    if (existing.league == "OTHER") {
+                        val lg = detectLeague(rawName, existing.homeTeam, existing.awayTeam)
+                        if (lg != "OTHER") {
+                            val updated = existing.copy(
+                                league = lg,
+                                leagueName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
+                            )
+                            grouped[existing.key] = updated
+                        }
+                    }
+                } else {
+                    val lg = detectLeague(rawName, stdHome, stdAway)
+                    val lgName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp"
+                    val group = MatchGroup(
+                        key = normKey,
+                        homeTeam = stdHome.ifBlank { "Đội nhà" },
+                        awayTeam = stdAway.ifBlank { "Đội khách" },
+                        time = timeStr,
+                        date = dateStr,
+                        timestamp = matchTimestamp,
+                        league = lg,
+                        leagueName = lgName,
+                        sources = mutableListOf(ch)
+                    )
+                    grouped[normKey] = group
+                }
+            }
+
+            // Tách thành:
+            // 1. Giải bóng đá ưu tiên (7 giải hàng đầu)
+            val priorityMatches = grouped.values.filter { it.league in PRIORITY_LEAGUES }
+            // 2. Các trận thể thao lớn nổi bật (F1, Tennis Grand Slam/ATP, NBA)
+            val featuredSportsMatches = grouped.values.filter { it.league in FEATURED_SPORTS }
+            // 3. Các trận bóng đá khác
+            val otherMatches = grouped.values.filter { it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS }
+
+            // Sắp xếp:
+            // - Ưu tiên UCL -> EPL -> VLEAGUE -> LALIGA -> BUNDESLIGA -> SERIE_A -> LIGUE1, sau đó theo mốc thời gian thực tế
+            val sortedPriority = priorityMatches.sortedWith(
+                compareBy({ PRIORITY_LEAGUES.indexOf(it.league) }, { it.timestamp })
+            )
+            val sortedOther = otherMatches.sortedBy { it.timestamp }
+            val sortedFeaturedSports = featuredSportsMatches.sortedBy { it.timestamp }
+
+            val targetMatches = mutableListOf<MatchGroup>()
+            targetMatches.addAll(sortedPriority)
+            targetMatches.addAll(sortedOther)
+            targetMatches.addAll(sortedFeaturedSports)
+
+            // Lưu vào cache Map để MatchSourcesDialog truy xuất khi click
+            for (m in grouped.values) {
+                matchGroupsMap[m.key] = m
+            }
+
+            val matchesWithRefresh = mutableListOf<Channel>()
+            val refreshItem = Channel(
+                id = ACTION_REFRESH_SPORTS,
+                name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
+                logoUrl = null,
+                streamUrl = "action://refresh_sports",
+                groupTitle = CATEGORY_LIVE_EVENTS,
+                number = 0
+            )
+            matchesWithRefresh.add(refreshItem)
+
+            targetMatches.forEachIndexed { idx, mg ->
+                val sportIcon = when (mg.league) {
+                    "F1" -> "🏎️"
+                    "TENNIS" -> "🎾"
+                    "NBA" -> "🏀"
+                    else -> "⚽"
+                }
+                val timePart = if (mg.date.isNotBlank()) "[${mg.time} ${mg.date}]" else "[${mg.time}]"
+                val matchName = if (mg.awayTeam.isNotBlank()) {
+                    "$sportIcon $timePart ${mg.homeTeam} vs ${mg.awayTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                } else {
+                    "$sportIcon $timePart ${mg.homeTeam} • ${mg.leagueName} (${mg.sources.size} nguồn)"
+                }
+                val leagueLogoUri = getLeagueLogoUri(mg.league)
+                val matchChannel = Channel(
+                    id = "match_${mg.key}",
+                    name = matchName,
+                    logoUrl = leagueLogoUri,
+                    streamUrl = "match://${mg.key}",
+                    groupTitle = CATEGORY_LIVE_EVENTS,
+                    number = idx + 1
+                )
+                matchesWithRefresh.add(matchChannel)
+            }
+
+            categories.add(Category(CATEGORY_LIVE_EVENTS, matchesWithRefresh))
+        }
+
+        // Nhóm 2: "📺 SPORT 24/7 TV"
+        val intlChannels = channels.filter {
+            it.groupTitle.contains("SPORT 24/7", ignoreCase = true) ||
+            it.groupTitle.contains("QUỐC TẾ", ignoreCase = true) ||
+            it.name.contains("[24/7]", ignoreCase = true)
+        }
+        if (intlChannels.isNotEmpty()) {
+            intlChannels.forEachIndexed { idx, ch -> ch.number = idx + 1 }
+            categories.add(Category(CATEGORY_SPORT_TV, intlChannels.toMutableList()))
+        }
+
+        // Các nhóm theo nguồn: "🍌 Chuối Chiên TV", "🐔 Gà Vàng / Tiếu Lâm", "🌶️ Cà Khịa TV", ...
+        val groupedBySource = channels.groupBy { it.groupTitle }
+        for ((groupName, groupList) in groupedBySource) {
+            if (groupName.isNotBlank() &&
+                !groupName.contains("LIVE EVENTS", ignoreCase = true) &&
+                !groupName.contains("TRỰC TIẾP", ignoreCase = true) &&
+                !groupName.contains("SPORT 24/7", ignoreCase = true) &&
+                !groupName.contains("QUỐC TẾ", ignoreCase = true)) {
+                groupList.forEachIndexed { idx, ch -> ch.number = idx + 1 }
+                categories.add(Category(groupName, groupList.toMutableList()))
+            }
+        }
+
+        return categories
+    }
 
     suspend fun resolveLiveStreamUrl(rawUrl: String): String = withContext(Dispatchers.IO) {
         rawUrl

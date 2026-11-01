@@ -196,7 +196,10 @@ class PreferencesHelper(context: Context) {
 
     // ===== ĐƯỜNG DẪN FILE THỂ THAO TRỰC TIẾP (THETHAO.M3U TỪ GITHUB / ARMBIAN) =====
     var sportsPlaylistUrl: String
-        get() = prefs.getString(KEY_SPORTS_PLAYLIST_URL, SportsLiveManager.DEFAULT_SPORTS_URL) ?: SportsLiveManager.DEFAULT_SPORTS_URL
+        get() {
+            val url = prefs.getString(KEY_SPORTS_PLAYLIST_URL, SportsLiveManager.DEFAULT_SPORTS_URL) ?: SportsLiveManager.DEFAULT_SPORTS_URL
+            return if (url.contains("raw.githubusercontent.com")) SportsLiveManager.DEFAULT_SPORTS_URL else url
+        }
         set(value) = prefs.edit().putString(KEY_SPORTS_PLAYLIST_URL, value.trim().ifBlank { SportsLiveManager.DEFAULT_SPORTS_URL }).apply()
 
     // ===== SAO LƯU & KHÔI PHỤC TOÀN BỘ CẤU HÌNH (BACKUP / RESTORE) =====

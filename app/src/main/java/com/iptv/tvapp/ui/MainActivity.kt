@@ -858,14 +858,20 @@ class MainActivity : AppCompatActivity() {
             allCategories.addAll(tvCategories)
         } else {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
+            if (sportsCategoriesList.isEmpty()) {
+                val cached = playlistManager.sportsLiveManager.getCachedCategoriesSync()
+                if (cached.isNotEmpty()) {
+                    sportsCategoriesList.addAll(cached)
+                }
+            }
             allCategories.addAll(sportsCategoriesList)
             if (sportsCategoriesList.isEmpty()) {
                 binding.tvCategoryHeader.text = "🔴 LIVE EVENTS"
                 binding.tvChannelCount.text = "Đang tải dữ liệu..."
                 binding.tvQuickBufferingText.text = "Đang tải trận đấu trực tiếp..."
                 binding.layoutQuickBuffering.visibility = View.VISIBLE
-                fetchSportsInBackground(forceRefresh = true, showNotification = false, delayMs = 0L)
             }
+            fetchSportsInBackground(forceRefresh = true, showNotification = false, delayMs = 0L)
         }
 
         categoryAdapter.submitList(allCategories.toList())
@@ -2048,6 +2054,15 @@ class MainActivity : AppCompatActivity() {
 
         // Khi đang ở chế độ sport, nhấn OK hoặc mở overlay luôn luôn mở LIVE EVENTS
         if (currentAppMode == AppMode.SPORTS) {
+            if (sportsCategoriesList.isEmpty()) {
+                val cached = playlistManager.sportsLiveManager.getCachedCategoriesSync()
+                if (cached.isNotEmpty()) {
+                    sportsCategoriesList.addAll(cached)
+                    allCategories.clear()
+                    allCategories.addAll(sportsCategoriesList)
+                    categoryAdapter.submitList(allCategories.toList())
+                }
+            }
             val liveCat = allCategories.firstOrNull { it.name.contains("LIVE EVENTS", ignoreCase = true) || it.name.contains("TRỰC TIẾP", ignoreCase = true) }
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
