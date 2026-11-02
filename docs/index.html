@@ -521,10 +521,20 @@
                 })
                 .then(function(data) {
                     sportsData = data;
-                    document.getElementById('txtLiveStatus').textContent = "Đã cập nhật (" + (data.updated_at ? data.updated_at.split(' ')[1] : '') + ")";
-                    buildCategories();
-                    renderCategories();
-                    renderChannels();
+                    try {
+                        buildCategories();
+                        renderCategories();
+                        renderChannels();
+                        var curCat = categories[activeCategoryIndex];
+                        if (curCat && curCat.channels && curCat.channels.length > 0) {
+                            selectChannel(0, true);
+                        }
+                        var timeStr = data.updated_at ? data.updated_at.split(' ')[1] : '';
+                        document.getElementById('txtLiveStatus').textContent = "Đã cập nhật (" + timeStr + ")";
+                    } catch (e) {
+                        console.error("Lỗi giao diện:", e);
+                        document.getElementById('txtLiveStatus').textContent = "Lỗi hiển thị: " + e.message;
+                    }
                 })
                 .catch(function(err) {
                     console.error("Lỗi tải data:", err);
@@ -553,6 +563,18 @@
         }
 
         /* ================= RENDER GIAO DIỆN ================= */
+        function updateCategoriesHighlight() {
+            var items = document.querySelectorAll('#sidebarCategories .cat-item');
+            items.forEach(function(item, idx) {
+                if (idx === activeCategoryIndex) item.classList.add('active');
+                else item.classList.remove('active');
+
+                if (currentZone === 0 && idx === focusedCategoryIndex) item.classList.add('focused');
+                else item.classList.remove('focused');
+            });
+            scrollFocusedIntoView();
+        }
+
         function renderCategories() {
             var container = document.getElementById('sidebarCategories');
             container.innerHTML = '';
@@ -561,14 +583,34 @@
                 div.className = 'cat-item' + (idx === activeCategoryIndex ? ' active' : '') + (currentZone === 0 && idx === focusedCategoryIndex ? ' focused' : '');
                 div.innerHTML = '<span>' + cat.name + '</span>';
                 div.onclick = function() {
-                    activeCategoryIndex = idx;
-                    focusedCategoryIndex = idx;
-                    activeChannelIndex = 0;
-                    focusedChannelIndex = 0;
-                    renderCategories();
-                    renderChannels();
+                    switchCategory(idx);
                 };
                 container.appendChild(div);
+            });
+            scrollFocusedIntoView();
+        }
+
+        function switchCategory(idx) {
+            activeCategoryIndex = idx;
+            focusedCategoryIndex = idx;
+            activeChannelIndex = 0;
+            focusedChannelIndex = 0;
+            updateCategoriesHighlight();
+            renderChannels();
+            var curCat = categories[activeCategoryIndex];
+            if (curCat && curCat.channels && curCat.channels.length > 0) {
+                selectChannel(0, true);
+            }
+        }
+
+        function updateChannelHighlight() {
+            var cards = document.querySelectorAll('#channelListContainer .ch-card');
+            cards.forEach(function(card, idx) {
+                if (idx === activeChannelIndex) card.classList.add('active');
+                else card.classList.remove('active');
+
+                if (currentZone === 1 && idx === focusedChannelIndex) card.classList.add('focused');
+                else card.classList.remove('focused');
             });
             scrollFocusedIntoView();
         }
@@ -586,7 +628,7 @@
                 var card = document.createElement('div');
                 card.className = 'ch-card' + (idx === activeChannelIndex ? ' active' : '') + (currentZone === 1 && idx === focusedChannelIndex ? ' focused' : '');
                 
-                var title = ch.displayTitle || ch.name;
+                var title = ch.displayTitle || ch.name || '';
                 var timeBadge = ch.time ? (ch.time + (ch.date ? ' ' + ch.date : '')) : '';
                 var leagueBadge = ch.leagueName || '';
                 var sourceCount = (ch.sources && ch.sources.length) ? (ch.sources.length + ' nguồn') : '1 nguồn';
@@ -603,33 +645,43 @@
                     '</div>';
 
                 card.onclick = function() {
-                    selectChannel(idx);
+                    selectChannel(idx, true);
                 };
                 container.appendChild(card);
             });
-
-            // Tự động phát kênh đầu tiên nếu chưa phát
-            if (!videoEl.src && curCat.channels.length > 0) {
-                selectChannel(0);
-            }
             scrollFocusedIntoView();
         }
 
-        function selectChannel(idx) {
+        function selectChannel(idx, autoPlay) {
+            if (autoPlay === undefined) autoPlay = true;
             activeChannelIndex = idx;
             focusedChannelIndex = idx;
             activeSourceIndex = 0;
             focusedSourceIndex = 0;
-            renderChannels();
+            updateChannelHighlight();
 
             var curCat = categories[activeCategoryIndex];
-            if (!curCat) return;
+            if (!curCat || !curCat.channels) return;
             var ch = curCat.channels[idx];
             if (!ch) return;
 
-            document.getElementById('txtCurrentMatch').textContent = ch.displayTitle || ch.name;
+            document.getElementById('txtCurrentMatch').textContent = ch.displayTitle || ch.name || '';
             renderSources(ch);
-            playCurrentSource(ch);
+            if (autoPlay) {
+                playCurrentSource(ch);
+            }
+        }
+
+        function updateSourceHighlight() {
+            var btns = document.querySelectorAll('#sourceTabsContainer .source-btn');
+            btns.forEach(function(btn, idx) {
+                if (idx === activeSourceIndex) btn.classList.add('active');
+                else btn.classList.remove('active');
+
+                if (currentZone === 2 && idx === focusedSourceIndex) btn.classList.add('focused');
+                else btn.classList.remove('focused');
+            });
+            scrollFocusedIntoView();
         }
 
         function renderSources(ch) {
@@ -644,7 +696,7 @@
                 btn.onclick = function() {
                     activeSourceIndex = sIdx;
                     focusedSourceIndex = sIdx;
-                    renderSources(ch);
+                    updateSourceHighlight();
                     playCurrentSource(ch);
                 };
                 container.appendChild(btn);
@@ -824,20 +876,20 @@
             if (document.fullscreenElement) {
                 // Khi toàn màn hình, Up = kênh trước đó
                 var curCat = categories[activeCategoryIndex];
-                if (curCat && activeChannelIndex > 0) {
-                    selectChannel(activeChannelIndex - 1);
+                if (curCat && curCat.channels && activeChannelIndex > 0) {
+                    selectChannel(activeChannelIndex - 1, true);
                 }
                 return;
             }
             if (currentZone === 0) {
                 if (focusedCategoryIndex > 0) {
                     focusedCategoryIndex--;
-                    renderCategories();
+                    updateCategoriesHighlight();
                 }
             } else if (currentZone === 1) {
                 if (focusedChannelIndex > 0) {
                     focusedChannelIndex--;
-                    renderChannels();
+                    updateChannelHighlight();
                 }
             }
         }
@@ -846,21 +898,21 @@
             if (document.fullscreenElement) {
                 // Khi toàn màn hình, Down = kênh tiếp theo
                 var curCat = categories[activeCategoryIndex];
-                if (curCat && activeChannelIndex < curCat.channels.length - 1) {
-                    selectChannel(activeChannelIndex + 1);
+                if (curCat && curCat.channels && activeChannelIndex < curCat.channels.length - 1) {
+                    selectChannel(activeChannelIndex + 1, true);
                 }
                 return;
             }
             if (currentZone === 0) {
                 if (focusedCategoryIndex < categories.length - 1) {
                     focusedCategoryIndex++;
-                    renderCategories();
+                    updateCategoriesHighlight();
                 }
             } else if (currentZone === 1) {
                 var curCat = categories[activeCategoryIndex];
-                if (curCat && focusedChannelIndex < curCat.channels.length - 1) {
+                if (curCat && curCat.channels && focusedChannelIndex < curCat.channels.length - 1) {
                     focusedChannelIndex++;
-                    renderChannels();
+                    updateChannelHighlight();
                 }
             }
         }
@@ -870,16 +922,16 @@
             if (currentZone === 1) {
                 currentZone = 0;
                 focusedCategoryIndex = activeCategoryIndex;
-                renderCategories();
-                renderChannels();
+                updateCategoriesHighlight();
+                updateChannelHighlight();
             } else if (currentZone === 2) {
                 if (focusedSourceIndex > 0) {
                     focusedSourceIndex--;
-                    var curCat = categories[activeCategoryIndex];
-                    if (curCat) renderSources(curCat.channels[activeChannelIndex]);
+                    updateSourceHighlight();
                 } else {
                     currentZone = 1;
-                    renderChannels();
+                    updateChannelHighlight();
+                    updateSourceHighlight();
                 }
             }
         }
@@ -888,23 +940,22 @@
             if (document.fullscreenElement) return;
             if (currentZone === 0) {
                 currentZone = 1;
-                activeCategoryIndex = focusedCategoryIndex;
-                focusedChannelIndex = 0;
-                renderCategories();
-                renderChannels();
+                focusedChannelIndex = activeChannelIndex;
+                updateCategoriesHighlight();
+                updateChannelHighlight();
             } else if (currentZone === 1) {
                 currentZone = 2;
-                focusedSourceIndex = 0;
-                var curCat = categories[activeCategoryIndex];
-                if (curCat) renderSources(curCat.channels[activeChannelIndex]);
+                focusedSourceIndex = activeSourceIndex;
+                updateChannelHighlight();
+                updateSourceHighlight();
             } else if (currentZone === 2) {
                 var curCat = categories[activeCategoryIndex];
-                if (curCat) {
+                if (curCat && curCat.channels) {
                     var ch = curCat.channels[activeChannelIndex];
                     var sources = (ch && ch.sources) ? ch.sources : [];
                     if (focusedSourceIndex < sources.length - 1) {
                         focusedSourceIndex++;
-                        renderSources(ch);
+                        updateSourceHighlight();
                     }
                 }
             }
@@ -916,19 +967,16 @@
                 return;
             }
             if (currentZone === 0) {
-                activeCategoryIndex = focusedCategoryIndex;
+                switchCategory(focusedCategoryIndex);
                 currentZone = 1;
-                focusedChannelIndex = 0;
-                renderCategories();
-                renderChannels();
             } else if (currentZone === 1) {
-                selectChannel(focusedChannelIndex);
+                selectChannel(focusedChannelIndex, true);
             } else if (currentZone === 2) {
                 var curCat = categories[activeCategoryIndex];
-                if (curCat) {
+                if (curCat && curCat.channels) {
                     var ch = curCat.channels[activeChannelIndex];
                     activeSourceIndex = focusedSourceIndex;
-                    renderSources(ch);
+                    updateSourceHighlight();
                     playCurrentSource(ch);
                 }
             }
