@@ -58,6 +58,7 @@ import com.iptv.tvapp.ui.dialog.SettingsDialog
 import com.iptv.tvapp.update.AppUpdateManager
 import com.iptv.tvapp.util.FptLogoHelper
 import com.iptv.tvapp.util.NetworkUtils
+import com.iptv.tvapp.util.DeviceUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -452,6 +453,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.rootView.setOnClickListener {
+            toggleOverlay()
+        }
+        binding.vlcVideoLayout.setOnClickListener {
+            toggleOverlay()
+        }
+        binding.playerView.setOnClickListener {
             toggleOverlay()
         }
     }
@@ -1397,9 +1404,10 @@ class MainActivity : AppCompatActivity() {
             val vlc = libVLC ?: return
             val vp = vlcPlayer ?: return
 
+            val isEmu = DeviceUtils.isEmulator
             try {
                 if (!vp.vlcVout.areViewsAttached()) {
-                    vp.attachViews(binding.vlcVideoLayout, null, false, false)
+                    vp.attachViews(binding.vlcVideoLayout, null, false, isEmu)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -1408,10 +1416,16 @@ class MainActivity : AppCompatActivity() {
             val (cleanUrl, headers) = parseStreamUrlAndHeaders(streamUriString)
             vp.stop()
             val media = Media(vlc, Uri.parse(cleanUrl)).apply {
-                // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
-                setHWDecoderEnabled(true, false)
-                addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
-                addOption(":avcodec-hw=any")
+                if (!isEmu) {
+                    // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
+                    setHWDecoderEnabled(true, false)
+                    addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
+                    addOption(":avcodec-hw=any")
+                } else {
+                    // Trên máy ảo (LDPlayer/BlueStacks): Sử dụng Software Decoding của CPU máy tính, tránh đen màn hình
+                    setHWDecoderEnabled(false, false)
+                    addOption(":codec=all")
+                }
 
                 val userAgent = headers["User-Agent"] ?: headers["user-agent"] ?: prefs.httpUserAgent
                 addOption(":http-user-agent=$userAgent")
@@ -2146,7 +2160,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    currentPlayingChannel?.let { showQuickChannelInfo(it) }
+                    handleRemoteRightFullscreen()
                     return true
                 }
             }
@@ -2167,10 +2181,16 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
             }
+            KeyEvent.KEYCODE_M,
+            KeyEvent.KEYCODE_S,
             KeyEvent.KEYCODE_MENU,
             KeyEvent.KEYCODE_SETTINGS,
             KeyEvent.KEYCODE_HELP -> {
                 showSettingsDialog()
+                return true
+            }
+            KeyEvent.KEYCODE_SPACE -> {
+                toggleOverlay()
                 return true
             }
             KeyEvent.KEYCODE_BACK -> {
@@ -2644,7 +2664,7 @@ class MainActivity : AppCompatActivity() {
             vlcPlayer?.let { vp ->
                 try {
                     if (!vp.vlcVout.areViewsAttached()) {
-                        vp.attachViews(binding.vlcVideoLayout, null, false, false)
+                        vp.attachViews(binding.vlcVideoLayout, null, false, DeviceUtils.isEmulator)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
