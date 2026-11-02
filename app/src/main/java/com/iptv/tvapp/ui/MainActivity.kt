@@ -308,6 +308,8 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     if (currentAppMode == AppMode.TV) {
                         currentPlayingMatchGroup = null
+                    } else {
+                        currentPlayingMatchGroup = playlistManager.sportsLiveManager.findMatchForChannel(channel)
                     }
                     playChannel(channel)
                     hideHandler.postDelayed({ hideOverlay() }, 800)
@@ -1312,6 +1314,11 @@ class MainActivity : AppCompatActivity() {
 
         currentPlayingChannel = channel
         prefs.lastChannelUrl = channel.streamUrl
+        if (currentAppMode == AppMode.TV) {
+            currentPlayingMatchGroup = null
+        } else {
+            currentPlayingMatchGroup = playlistManager.sportsLiveManager.findMatchForChannel(channel)
+        }
 
         currentMeasuredBitrateMbps = 0f
         currentVideoWidth = 0
@@ -2251,7 +2258,7 @@ class MainActivity : AppCompatActivity() {
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
                 categoryAdapter.setSelectedCategory(liveCat)
-                val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: currentPlayingMatchGroup
                 if (mg != null) {
                     currentPlayingMatchGroup = mg
                 }
@@ -2341,9 +2348,11 @@ class MainActivity : AppCompatActivity() {
         val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
         if (isSports) {
             // Mục Thể Thao: Nhấn Dpad Phải mở hộp thoại chọn nguồn phát trực tiếp của trận đấu
-            val mg = currentPlayingMatchGroup
-                ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+            // Luôn ưu tiên tìm trận theo kênh ĐANG PHÁT để tránh bị nhớ nhầm trận cũ
+            val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                ?: currentPlayingMatchGroup
             if (mg != null) {
+                currentPlayingMatchGroup = mg
                 showMatchSourcesDialog(mg)
             } else {
                 showBottomNotification("Không có danh sách nguồn phát khác cho trận đấu này")
@@ -2428,7 +2437,7 @@ class MainActivity : AppCompatActivity() {
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
                 categoryAdapter.setSelectedCategory(liveCat)
-                val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: currentPlayingMatchGroup
                 if (mg != null) {
                     currentPlayingMatchGroup = mg
                 }
@@ -2463,7 +2472,7 @@ class MainActivity : AppCompatActivity() {
     private fun focusPlayingChannel() {
         val playing = currentPlayingChannel
         if (currentAppMode == AppMode.SPORTS) {
-            val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing)
+            val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: currentPlayingMatchGroup
             if (mg != null) {
                 currentPlayingMatchGroup = mg
                 val matchUrl = "match://${mg.key}"
