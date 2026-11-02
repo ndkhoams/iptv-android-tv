@@ -3,19 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TV Play Web - Trực tiếp Thể thao & IPTV</title>
+    <title>TV Play - Trực tiếp Thể Thao & IPTV</title>
     <!-- Hls.js library for streaming m3u8 on Smart TV / Web -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
     <style>
         :root {
-            --bg-main: #0b0f19;
-            --bg-card: rgba(18, 24, 38, 0.95);
-            --bg-focus: #f97316;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --border-color: rgba(255, 255, 255, 0.08);
-            --accent: #f97316;
-            --accent-glow: rgba(249, 115, 22, 0.35);
+            --fpt-orange: #FF6500;
+            --fpt-orange-light: #FF8533;
+            --fpt-bg-dark: #121212;
+            --fpt-surface: #1E1E1E;
+            --fpt-surface-dark: #161616;
+            --fpt-overlay-bg: rgba(18, 18, 18, 0.95);
+            --fpt-panel-bg: rgba(30, 30, 30, 0.95);
+            --fpt-border: rgba(255, 255, 255, 0.09);
+            --fpt-item-focused-bg: #F1F3F5;
+            --fpt-item-focused-text: #111827;
+            --fpt-item-selected-bg: #2C2C2C;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --badge-cyan: #38BDF8;
+            --badge-green: #34D399;
+            --status-live: #EF4444;
         }
 
         * {
@@ -28,214 +37,22 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: var(--bg-main);
-            color: var(--text-main);
+            background: #000;
+            color: var(--text-primary);
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* ========== HEADER ========== */
-        header {
-            height: 52px;
-            background: #0f172a;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            flex-shrink: 0;
-            z-index: 10;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-box {
-            background: linear-gradient(135deg, #f97316, #ea580c);
-            color: #fff;
-            font-weight: 900;
-            font-size: 14px;
-            padding: 3px 8px;
-            border-radius: 6px;
-            letter-spacing: 0.5px;
-        }
-
-        .app-title {
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-        }
-
-        .header-status {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            font-size: 13px;
-            color: var(--text-sub);
-        }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #ef4444;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 4px;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.2); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-
-        /* ========== MAIN LAYOUT ========== */
-        .main-container {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
             position: relative;
         }
 
-        /* Cột 1: Danh mục */
-        .sidebar-categories {
-            width: 220px;
-            background: rgba(15, 23, 42, 0.7);
-            border-right: 1px solid var(--border-color);
-            overflow-y: auto;
-            padding: 10px 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-
-        .cat-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-size: 13.5px;
-            font-weight: 600;
-            color: var(--text-sub);
-            cursor: pointer;
-            transition: all 0.15s ease;
-            outline: none;
-        }
-
-        .cat-item.active {
-            background: rgba(249, 115, 22, 0.15);
-            color: var(--accent);
-            border-left: 3px solid var(--accent);
-        }
-
-        .cat-item.focused {
-            background: var(--bg-focus) !important;
-            color: #fff !important;
-            box-shadow: 0 0 14px var(--accent-glow);
-            transform: scale(1.02);
-        }
-
-        /* Cột 2: Danh sách kênh / Trận đấu */
-        .channel-list-container {
-            width: 380px;
-            background: rgba(11, 15, 25, 0.9);
-            border-right: 1px solid var(--border-color);
-            overflow-y: auto;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-
-        .ch-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 12px;
-            cursor: pointer;
-            outline: none;
-            transition: all 0.15s ease;
-            position: relative;
-        }
-
-        .ch-card.active {
-            border-color: var(--accent);
-            background: rgba(249, 115, 22, 0.08);
-        }
-
-        .ch-card.focused {
-            background: var(--bg-focus) !important;
-            color: #fff !important;
-            border-color: #fff !important;
-            box-shadow: 0 0 16px var(--accent-glow);
-            transform: scale(1.02);
-            z-index: 2;
-        }
-
-        .ch-card.focused .ch-meta,
-        .ch-card.focused .ch-league {
-            color: rgba(255, 255, 255, 0.85) !important;
-        }
-
-        .ch-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-
-        .ch-time-badge {
-            font-size: 11px;
-            font-weight: 700;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #38bdf8;
-        }
-
-        .ch-league {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-sub);
-        }
-
-        .ch-title {
-            font-size: 13.5px;
-            font-weight: 700;
-            line-height: 1.35;
-            margin-bottom: 4px;
-        }
-
-        .ch-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11.5px;
-            color: var(--text-sub);
-        }
-
-        /* Cột 3: Trình phát Video Player */
-        .player-viewport {
-            flex: 1;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .video-wrapper {
-            flex: 1;
-            position: relative;
+        /* ========== 1. BACKGROUND VIDEO PLAYER (TOÀN MÀN HÌNH NỀN) ========== */
+        #videoBackgroundContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
             background: #000;
             display: flex;
             align-items: center;
@@ -250,103 +67,7 @@
             outline: none;
         }
 
-        /* Thanh điều khiển nguồn phát (Sources Bar) */
-        .player-bottom-panel {
-            background: #0f172a;
-            border-top: 1px solid var(--border-color);
-            padding: 10px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-
-        .match-info-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .current-title {
-            font-size: 15px;
-            font-weight: 800;
-            color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 60%;
-        }
-
-        .source-tabs-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 4px 0;
-        }
-
-        .source-btn {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-            outline: none;
-            transition: all 0.15s ease;
-        }
-
-        .source-btn.active {
-            background: rgba(249, 115, 22, 0.2);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .source-btn.focused {
-            background: var(--bg-focus) !important;
-            color: #fff !important;
-            box-shadow: 0 0 10px var(--accent-glow);
-            transform: scale(1.05);
-        }
-
-        /* OSD Overlay khi toàn màn hình */
-        .video-wrapper.fullscreen-mode {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 9999;
-        }
-
-        .video-osd {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.92);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border-color);
-            padding: 10px 20px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-            z-index: 10000;
-        }
-
-        .video-osd.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        /* Loading Spinner */
+        /* Spinner tải luồng */
         .player-loader {
             position: absolute;
             display: none;
@@ -355,154 +76,847 @@
             gap: 12px;
             color: #fff;
             font-size: 13px;
-            font-weight: 600;
-            z-index: 5;
+            font-weight: 700;
+            z-index: 2;
+            background: rgba(18, 18, 18, 0.8);
+            padding: 16px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--fpt-border);
         }
 
         .spinner {
-            width: 44px;
-            height: 44px;
-            border: 4px solid rgba(255, 255, 255, 0.15);
-            border-top-color: var(--accent);
+            width: 36px;
+            height: 36px;
+            border: 3.5px solid rgba(255, 255, 255, 0.15);
+            border-top-color: var(--fpt-orange);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ========== 2. QUICK INFO BANNER (Khi xem toàn màn hình đổi kênh) ========== */
+        .quick-channel-banner {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            z-index: 50;
+            background: rgba(18, 18, 18, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--fpt-border);
+            border-radius: 12px;
+            padding: 12px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            max-width: 500px;
         }
 
-        /* Footer Hướng dẫn bấm phím */
-        .footer-keys {
-            height: 32px;
-            background: #0b0f19;
-            border-top: 1px solid var(--border-color);
+        .quick-channel-banner.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .quick-row-1 {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            gap: 16px;
-            padding: 0 16px;
-            font-size: 11px;
-            color: var(--text-sub);
+            gap: 10px;
+        }
+
+        .quick-num {
+            color: var(--fpt-orange);
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .quick-logo {
+            width: 38px;
+            height: 26px;
+            object-fit: contain;
+        }
+
+        .quick-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .quick-row-2 {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--fpt-orange);
+            margin-top: 2px;
+        }
+
+        .quick-row-3 {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--badge-cyan);
+        }
+
+        /* ========== 3. GIAO DIỆN CHÍNH 3 CỘT (FPT PLAY BOX G2 OVERLAY) ========== */
+        #channelGuideOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            background: var(--fpt-overlay-bg);
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            padding: 10px 14px 8px 14px;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        #channelGuideOverlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Top Header Bar */
+        .fpt-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
             flex-shrink: 0;
         }
 
-        .key-hint {
-            display: inline-flex;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: baseline;
+            gap: 2px;
+        }
+
+        .brand-tv {
+            color: var(--fpt-orange);
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-play {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }
+
+        .badge-iptv {
+            background: rgba(255, 101, 0, 0.15);
+            border: 1px solid var(--fpt-orange);
+            color: var(--fpt-orange);
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 4px;
+        }
+
+        .fpt-badge {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
             align-items: center;
             gap: 4px;
         }
 
-        .key-tag {
-            background: #1e293b;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .clock-display {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .btn-fullscreen {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #f1f5f9;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-fullscreen:hover {
+            background: var(--fpt-orange);
+            color: #fff;
+            border-color: var(--fpt-orange);
+        }
+
+        /* KHU VỰC THÂN GIAO DIỆN 3 CỘT + SIDEBAR */
+        .fpt-body-container {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* 1. THANH SIDEBAR ĐIỀU HƯỚNG BÊN TRÁI (42dp) */
+        .fpt-sidebar {
+            width: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 6px;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-btn.active {
+            background: rgba(255, 101, 0, 0.15);
+            border-color: var(--fpt-orange);
+            color: var(--fpt-orange);
+        }
+
+        .sidebar-btn.focused {
+            background: var(--fpt-orange) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            box-shadow: 0 0 12px rgba(255, 101, 0, 0.5);
+            transform: scale(1.08);
+        }
+
+        /* 2. CỘT 1: DANH MỤC (200dp) */
+        .panel-categories {
+            width: 200px;
+            background: var(--fpt-panel-bg);
+            border: 1px solid var(--fpt-border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 6px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .panel-header-title {
+            color: var(--fpt-orange);
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 8px 8px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+
+        .category-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-right: 2px;
+        }
+
+        .cat-card {
+            background: #1e1e1e;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.15s ease;
+        }
+
+        .cat-card.active {
+            background: #2E2E2E;
+            border-color: var(--fpt-orange);
+            color: var(--fpt-orange);
+        }
+
+        .cat-card.focused {
+            background: linear-gradient(90deg, #FF6500, #FF8533) !important;
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+            box-shadow: 0 0 14px rgba(255, 101, 0, 0.4);
+            transform: scale(1.02);
+            z-index: 2;
+        }
+
+        /* 3. CỘT 2: DANH SÁCH KÊNH / TRẬN ĐẤU (Flex 1) */
+        .panel-channels {
+            flex: 1;
+            background: var(--fpt-panel-bg);
+            border: 1px solid var(--fpt-border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 8px;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .channel-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px 6px 8px;
+            flex-shrink: 0;
+        }
+
+        .cur-category-title {
+            color: var(--fpt-orange);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .cur-channel-count {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-refresh-matches {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .channel-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-right: 2px;
+        }
+
+        /* Thẻ kênh chuẩn FPT Play Box G2 */
+        .ch-card-g2 {
+            height: 52px;
+            background: #1e1e1e;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            transition: all 0.12s ease;
+        }
+
+        .ch-card-g2.active {
+            background: #2C2C2C;
+            border-color: var(--fpt-orange);
+        }
+
+        .ch-card-g2.focused {
+            background: var(--fpt-item-focused-bg) !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+            transform: scale(1.015);
+            z-index: 5;
+        }
+
+        /* Vạch đứng Cam FPT dày 7px ở mép phải khi focus */
+        .ch-card-g2.focused::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 7px;
+            background: var(--fpt-orange);
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .ch-num {
+            width: 28px;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--fpt-orange);
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .ch-card-g2:not(.focused):not(.active) .ch-num {
+            color: var(--text-secondary);
+        }
+
+        .ch-icon-box {
+            width: 36px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
+
+        .ch-icon-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .ch-info-box {
+            flex: 1;
+            margin-left: 10px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .ch-name-text {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ch-card-g2.focused .ch-name-text {
+            color: var(--fpt-item-focused-text) !important;
+        }
+
+        .ch-badges-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .badge-fhd {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid var(--badge-cyan);
+            color: var(--badge-cyan);
+            font-size: 9px;
+            font-weight: 800;
             padding: 1px 5px;
             border-radius: 4px;
-            color: #f1f5f9;
+        }
+
+        .badge-now-playing {
+            background: var(--status-live);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 4px;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* 4. CỘT 3: SPOTLIGHT / BẢNG XẾP HẠNG & LỊCH THI ĐẤU (280dp) */
+        .panel-spotlight {
+            width: 280px;
+            background: var(--fpt-panel-bg);
+            border: 1px solid var(--fpt-border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .spotlight-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--fpt-border);
+            flex-shrink: 0;
+        }
+
+        .spotlight-crest {
+            width: 60px;
+            height: 50px;
+            object-fit: contain;
+            margin-bottom: 6px;
+        }
+
+        .spotlight-title {
+            font-size: 15px;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1.3;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        .spotlight-tags {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        /* Danh sách nút nguồn phát (Bình luận viên) */
+        .sources-selector-box {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+
+        .sources-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-align: left;
+        }
+
+        .sources-buttons-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .src-btn {
+            background: #1e1e1e;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            outline: none;
+            transition: all 0.12s ease;
+        }
+
+        .src-btn.active {
+            background: rgba(255, 101, 0, 0.2);
+            border-color: var(--fpt-orange);
+            color: var(--fpt-orange);
+        }
+
+        .src-btn.focused {
+            background: var(--fpt-orange) !important;
+            color: #fff !important;
+            border-color: #fff !important;
+            transform: scale(1.05);
+        }
+
+        /* Bảng xếp hạng Standings */
+        .standings-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .standings-header-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 2px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--fpt-border);
+            text-transform: uppercase;
+        }
+
+        .standings-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding-top: 4px;
+        }
+
+        .standing-row {
+            height: 26px;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            font-size: 11px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.1s ease;
+        }
+
+        .standing-row.highlight {
+            background: rgba(255, 101, 0, 0.15);
+            border: 1px solid var(--fpt-orange);
+            color: #fff;
             font-weight: 700;
         }
 
-        /* Responsive điều chỉnh cho màn hình nhỏ / Điện thoại */
-        @media (max-width: 900px) {
-            body { overflow-y: auto; }
-            .main-container { flex-direction: column; overflow: visible; }
-            .sidebar-categories { width: 100%; flex-direction: row; overflow-x: auto; height: 50px; }
-            .channel-list-container { width: 100%; height: 260px; }
-            .player-viewport { height: 320px; }
+        .st-rank { width: 20px; font-weight: 800; color: var(--text-muted); text-align: center; }
+        .st-logo { width: 16px; height: 16px; object-fit: contain; margin-left: 4px; }
+        .st-team { flex: 1; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+        .st-played { width: 26px; text-align: center; color: var(--text-secondary); }
+        .st-points { width: 28px; text-align: center; font-weight: 800; color: var(--fpt-orange); }
+
+        .spotlight-stream-info {
+            font-size: 9.5px;
+            color: var(--text-muted);
+            text-align: right;
+            padding-top: 4px;
+            border-top: 1px solid var(--fpt-border);
+            flex-shrink: 0;
         }
+
+        /* 5. FOOTER HƯỚNG DẪN D-PAD */
+        .fpt-footer {
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            padding-top: 4px;
+        }
+
+        /* Tùy chỉnh thanh cuộn siêu mỏng */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
-    <header>
-        <div class="brand">
-            <span class="logo-box">TV PLAY</span>
-            <span class="app-title">Web Player</span>
+    <!-- 1. VIDEO PLAYER NẰM TRỌN NỀN PHÍA SAU -->
+    <div id="videoBackgroundContainer">
+        <video id="videoPlayer" playsinline></video>
+        <div class="player-loader" id="playerLoader">
+            <div class="spinner"></div>
+            <span id="txtLoaderStatus">Đang kết nối luồng phát...</span>
         </div>
-        <div class="header-status">
-            <span><span class="live-dot"></span><span id="txtLiveStatus">Đang tải...</span></span>
-            <span id="txtClock">00:00</span>
-            <button id="btnFullscreenToggle" class="source-btn" style="padding: 4px 8px;" onclick="toggleFullscreen()">⛶ Toàn màn hình</button>
-        </div>
-    </header>
-
-    <!-- MAIN BODY -->
-    <div class="main-container">
-        
-        <!-- CỘT 1: DANH MỤC -->
-        <div class="sidebar-categories" id="sidebarCategories" tabindex="1">
-            <!-- Render động bằng JS -->
-        </div>
-
-        <!-- CỘT 2: DANH SÁCH KÊNH / TRẬN ĐẤU -->
-        <div class="channel-list-container" id="channelListContainer" tabindex="2">
-            <!-- Render động bằng JS -->
-        </div>
-
-        <!-- CỘT 3: TRÌNH PHÁT VIDEO -->
-        <div class="player-viewport">
-            <div class="video-wrapper" id="videoWrapper">
-                <video id="videoPlayer" playsinline></video>
-                <div class="player-loader" id="playerLoader">
-                    <div class="spinner"></div>
-                    <span id="txtLoaderStatus">Đang kết nối luồng phát...</span>
-                </div>
-
-                <!-- OSD Overlay khi toàn màn hình -->
-                <div class="video-osd" id="videoOsd">
-                    <span style="font-weight:800; color:var(--accent);">TV PLAY</span>
-                    <span id="txtOsdTitle" style="font-weight:600;">Tên trận đấu</span>
-                    <span id="txtOsdSource" style="font-size:12px; color:var(--text-sub);">Nguồn 1</span>
-                </div>
-            </div>
-
-            <!-- THANH THÔNG TIN VÀ NGUỒN PHÁT DƯỚI VIDEO -->
-            <div class="player-bottom-panel">
-                <div class="match-info-bar">
-                    <div class="current-title" id="txtCurrentMatch">Chưa chọn trận đấu</div>
-                    <div id="txtCurrentSourceInfo" style="font-size:12px; color:var(--text-sub);">Chọn nguồn bên dưới</div>
-                </div>
-                <div class="source-tabs-container" id="sourceTabsContainer">
-                    <!-- Danh sách nút chọn nguồn (BLV...) -->
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <!-- FOOTER HƯỚNG DẪN REMOTE -->
-    <div class="footer-keys">
-        <span class="key-hint"><span class="key-tag">▲ ▼ ◄ ►</span> Di chuyển</span>
-        <span class="key-hint"><span class="key-tag">OK / Enter</span> Phát / Chọn</span>
-        <span class="key-hint"><span class="key-tag">Back</span> Thoát Toàn màn hình</span>
-        <span class="key-hint"><span class="key-tag">F</span> Bật / Tắt Toàn màn hình</span>
+    <!-- 2. QUICK INFO BANNER KHI XEM TOÀN MÀN HÌNH (G2) -->
+    <div class="quick-channel-banner" id="quickChannelBanner">
+        <div class="quick-row-1">
+            <span class="quick-num" id="quickNum">01</span>
+            <img class="quick-logo" id="quickLogo" src="https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png" alt="">
+            <span class="quick-name" id="quickTitle">Tên trận đấu</span>
+        </div>
+        <div class="quick-row-2" id="quickProgram">● Đang phát trực tiếp</div>
+        <div class="quick-row-3" id="quickStreamInfo">1920x1080 @ 50fps • Hls.js Low-Latency • AAC 2.0</div>
+    </div>
+
+    <!-- 3. GIAO DIỆN CHÍNH 3 CỘT (OVERLAY CHUẨN ANDROID TV) -->
+    <div id="channelGuideOverlay">
+        
+        <!-- HEADER BAR -->
+        <div class="fpt-header">
+            <div class="header-left">
+                <div class="brand-title">
+                    <span class="brand-tv">TV</span>
+                    <span class="brand-play">Play</span>
+                    <span class="badge-iptv">IPTV</span>
+                </div>
+                <div class="fpt-badge" style="color: var(--fpt-orange); border-color: rgba(255, 101, 0, 0.3);">
+                    <span>⚽</span> <span id="txtHeaderMode">Trực tiếp Thể Thao</span>
+                </div>
+                <div class="fpt-badge" style="color: var(--badge-green);">
+                    <span>📱</span> <span id="txtWebRemoteBadge">Web Remote: port 8080</span>
+                </div>
+                <div class="fpt-badge" style="color: var(--badge-cyan);">
+                    <span>⚡</span> <span id="txtSystemStats">CPU: 12% RAM: 71% GPU: HW</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="clock-display" id="txtClock">12:00</span>
+                <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶ Toàn màn hình</button>
+                <button class="btn-fullscreen" style="background:var(--fpt-orange); border-color:var(--fpt-orange);" onclick="hideMenuOverlay()">✕ Ẩn Menu (OK)</button>
+            </div>
+        </div>
+
+        <!-- BODY 3 CỘT + SIDEBAR -->
+        <div class="fpt-body-container">
+            
+            <!-- THANH SIDEBAR BÊN TRÁI -->
+            <div class="fpt-sidebar" id="sidebarNav">
+                <button class="sidebar-btn" title="Kênh yêu thích" onclick="handleSidebarClick(0)">⭐</button>
+                <button class="sidebar-btn" title="Xem TV" onclick="handleSidebarClick(1)">📺</button>
+                <button class="sidebar-btn active" title="Trực tiếp thể thao" onclick="handleSidebarClick(2)">⚽</button>
+                <button class="sidebar-btn" title="Làm mới trận đấu" onclick="loadData()">🔄</button>
+                <button class="sidebar-btn" title="Danh sách phát" onclick="handleSidebarClick(4)">📋</button>
+                <button class="sidebar-btn" title="Cài đặt" onclick="handleSidebarClick(5)">⚙️</button>
+                <button class="sidebar-btn" title="Cập nhật" onclick="handleSidebarClick(6)">☁️</button>
+            </div>
+
+            <!-- CỘT 1: DANH MỤC (200dp) -->
+            <div class="panel-categories">
+                <div class="panel-header-title">DANH MỤC</div>
+                <div class="category-list" id="categoryList">
+                    <!-- Render động bằng JS -->
+                </div>
+            </div>
+
+            <!-- CỘT 2: DANH SÁCH KÊNH / TRẬN ĐẤU (Flex 1) -->
+            <div class="panel-channels">
+                <div class="channel-header-row">
+                    <span class="cur-category-title" id="txtCurCategoryTitle">🔴 LIVE EVENTS</span>
+                    <span class="cur-channel-count" id="txtCurChannelCount">0 kênh</span>
+                </div>
+                <div class="btn-refresh-matches" onclick="loadData()">
+                    <span>🔄</span> <span>Cập nhật trận đấu (Bấm OK để tải lại)</span>
+                </div>
+                <div class="channel-list" id="channelList">
+                    <!-- Render động bằng JS -->
+                </div>
+            </div>
+
+            <!-- CỘT 3: SPOTLIGHT / BẢNG XẾP HẠNG & NGUỒN PHÁT (280dp) -->
+            <div class="panel-spotlight">
+                <div class="spotlight-top">
+                    <img class="spotlight-crest" id="spotlightLogo" src="https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png" alt="">
+                    <div class="spotlight-title" id="spotlightTitle">Deportivo vs Osasuna</div>
+                    <div class="spotlight-tags">
+                        <span class="badge-fhd">FHD 1080</span>
+                        <span class="fpt-badge" style="color:var(--fpt-orange); padding:2px 6px;" id="spotlightLeagueBadge">🇪🇸 La Liga</span>
+                    </div>
+
+                    <!-- Khu vực chọn nguồn phát (BLV) -->
+                    <div class="sources-selector-box">
+                        <div class="sources-label">NGUỒN PHÁT (BÌNH LUẬN):</div>
+                        <div class="sources-buttons-row" id="sourcesButtonsRow">
+                            <!-- Nút chọn nguồn phát render động -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bảng xếp hạng Standings hoặc EPG -->
+                <div class="standings-container">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="color:var(--fpt-orange); font-size:11px; font-weight:800;" id="txtStandingsTitle">BẢNG XẾP HẠNG</span>
+                        <span style="color:var(--text-muted); font-size:9.5px;">ESPN Live</span>
+                    </div>
+                    <div class="standings-header-row">
+                        <span style="width:20px; text-align:center;">#</span>
+                        <span style="flex:1; margin-left:6px;">CÂU LẠC BỘ</span>
+                        <span style="width:26px; text-align:center;">TR</span>
+                        <span style="width:28px; text-align:center; color:var(--fpt-orange);">ĐIỂM</span>
+                    </div>
+                    <div class="standings-list" id="standingsList">
+                        <div style="padding:20px; text-align:center; color:var(--text-muted); font-size:11px;">Đang tải bảng xếp hạng...</div>
+                    </div>
+                </div>
+
+                <div class="spotlight-stream-info" id="txtStreamSpecs">
+                    1920x1080 @ 25fps • 11.7 Mb...2.0 | Hls.js
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FOOTER HƯỚNG DẪN D-PAD -->
+        <div class="fpt-footer">
+            ▲▼ Đổi kênh &nbsp;•&nbsp; ◄► Chuyển danh mục &nbsp;•&nbsp; OK: Phát &nbsp;•&nbsp; F: Toàn màn hình &nbsp;•&nbsp; Back: Ẩn/Hiện Menu &nbsp;•&nbsp; 📱 Web: port 8080
+        </div>
+
     </div>
 
     <script>
-        /* ================= CẤU HÌNH DỮ LIỆU & TRẠNG THÁI ================= */
+        /* ================= CẤU HÌNH & TRẠNG THÁI ================= */
         var DATA_API_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json";
-        
+
         var sportsData = null;
         var categories = [];
         var activeCategoryIndex = 0;
         var activeChannelIndex = 0;
         var activeSourceIndex = 0;
 
-        // Trạng thái điều hướng D-Pad Smart TV:
-        // 0: SIDEBAR (Danh mục), 1: CHANNELS (Danh sách kênh), 2: SOURCES (Nguồn phát), 3: PLAYER
-        var currentZone = 1; 
+        // Vùng điều khiển D-Pad:
+        // 0: SIDEBAR, 1: CATEGORIES, 2: CHANNELS, 3: SOURCES, 4: STANDINGS
+        var currentZone = 2;
+        var focusedSidebarIndex = 2;
         var focusedCategoryIndex = 0;
         var focusedChannelIndex = 0;
         var focusedSourceIndex = 0;
 
         var videoEl = document.getElementById('videoPlayer');
-        var videoWrapper = document.getElementById('videoWrapper');
         var playerLoader = document.getElementById('playerLoader');
-        var hlsInstance = null;
-        var osdTimeout = null;
+        var menuOverlay = document.getElementById('channelGuideOverlay');
+        var quickBanner = document.getElementById('quickChannelBanner');
 
-        /* ================= KHỞI TẠO ĐỒNG HỒ & DỮ LIỆU ================= */
+        var hlsInstance = null;
+        var quickBannerTimeout = null;
+
+        // Logo mặc định cho các giải đấu
+        var LEAGUE_LOGOS = {
+            "EPL": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+            "LALIGA": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
+            "SERIE_A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
+            "BUNDESLIGA": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
+            "LIGUE1": "https://a.espncdn.com/i/leaguelogos/soccer/500/9.png",
+            "UCL": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
+            "NBA": "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
+            "VLEAGUE": "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png"
+        };
+
+        /* ================= ĐỒNG HỒ & DỮ LIỆU ================= */
         function updateClock() {
             var now = new Date();
             var hh = String(now.getHours()).padStart(2, '0');
@@ -516,29 +930,20 @@
             var url = DATA_API_URL + '?t=' + Date.now();
             fetch(url)
                 .then(function(res) {
-                    if (!res.ok) throw new Error("HTTP error " + res.status);
+                    if (!res.ok) throw new Error("HTTP " + res.status);
                     return res.json();
                 })
                 .then(function(data) {
                     sportsData = data;
-                    try {
-                        buildCategories();
-                        renderCategories();
-                        renderChannels();
-                        var curCat = categories[activeCategoryIndex];
-                        if (curCat && curCat.channels && curCat.channels.length > 0) {
-                            selectChannel(0, true);
-                        }
-                        var timeStr = data.updated_at ? data.updated_at.split(' ')[1] : '';
-                        document.getElementById('txtLiveStatus').textContent = "Đã cập nhật (" + timeStr + ")";
-                    } catch (e) {
-                        console.error("Lỗi giao diện:", e);
-                        document.getElementById('txtLiveStatus').textContent = "Lỗi hiển thị: " + e.message;
+                    buildCategories();
+                    renderCategories();
+                    renderChannels();
+                    if (categories.length > 0 && categories[0].channels.length > 0) {
+                        selectChannel(0, true);
                     }
                 })
                 .catch(function(err) {
-                    console.error("Lỗi tải data:", err);
-                    document.getElementById('txtLiveStatus').textContent = "Lỗi nạp dữ liệu!";
+                    console.error("Lỗi nạp dữ liệu:", err);
                 });
         }
 
@@ -562,26 +967,26 @@
             }
         }
 
-        /* ================= RENDER GIAO DIỆN ================= */
+        /* ================= RENDER CÁC THÀNH PHẦN ================= */
         function updateCategoriesHighlight() {
-            var items = document.querySelectorAll('#sidebarCategories .cat-item');
+            var items = document.querySelectorAll('#categoryList .cat-card');
             items.forEach(function(item, idx) {
                 if (idx === activeCategoryIndex) item.classList.add('active');
                 else item.classList.remove('active');
 
-                if (currentZone === 0 && idx === focusedCategoryIndex) item.classList.add('focused');
+                if (currentZone === 1 && idx === focusedCategoryIndex) item.classList.add('focused');
                 else item.classList.remove('focused');
             });
             scrollFocusedIntoView();
         }
 
         function renderCategories() {
-            var container = document.getElementById('sidebarCategories');
+            var container = document.getElementById('categoryList');
             container.innerHTML = '';
             categories.forEach(function(cat, idx) {
                 var div = document.createElement('div');
-                div.className = 'cat-item' + (idx === activeCategoryIndex ? ' active' : '') + (currentZone === 0 && idx === focusedCategoryIndex ? ' focused' : '');
-                div.innerHTML = '<span>' + cat.name + '</span>';
+                div.className = 'cat-card' + (idx === activeCategoryIndex ? ' active' : '') + (currentZone === 1 && idx === focusedCategoryIndex ? ' focused' : '');
+                div.textContent = cat.name;
                 div.onclick = function() {
                     switchCategory(idx);
                 };
@@ -604,44 +1009,49 @@
         }
 
         function updateChannelHighlight() {
-            var cards = document.querySelectorAll('#channelListContainer .ch-card');
+            var cards = document.querySelectorAll('#channelList .ch-card-g2');
             cards.forEach(function(card, idx) {
                 if (idx === activeChannelIndex) card.classList.add('active');
                 else card.classList.remove('active');
 
-                if (currentZone === 1 && idx === focusedChannelIndex) card.classList.add('focused');
+                if (currentZone === 2 && idx === focusedChannelIndex) card.classList.add('focused');
                 else card.classList.remove('focused');
             });
             scrollFocusedIntoView();
         }
 
         function renderChannels() {
-            var container = document.getElementById('channelListContainer');
+            var container = document.getElementById('channelList');
             container.innerHTML = '';
             var curCat = categories[activeCategoryIndex];
             if (!curCat || !curCat.channels || curCat.channels.length === 0) {
-                container.innerHTML = '<div style="padding:20px; color:var(--text-sub); text-align:center;">Không có kênh nào</div>';
+                container.innerHTML = '<div style="padding:20px; color:var(--text-muted); text-align:center;">Không có kênh nào</div>';
+                document.getElementById('txtCurChannelCount').textContent = '0 kênh';
                 return;
             }
 
+            document.getElementById('txtCurCategoryTitle').textContent = curCat.name;
+            document.getElementById('txtCurChannelCount').textContent = curCat.channels.length + ' kênh';
+
             curCat.channels.forEach(function(ch, idx) {
                 var card = document.createElement('div');
-                card.className = 'ch-card' + (idx === activeChannelIndex ? ' active' : '') + (currentZone === 1 && idx === focusedChannelIndex ? ' focused' : '');
-                
+                card.className = 'ch-card-g2' + (idx === activeChannelIndex ? ' active' : '') + (currentZone === 2 && idx === focusedChannelIndex ? ' focused' : '');
+
+                var numStr = String(idx + 1).padStart(2, '0');
+                var logoUrl = ch.logo || getLeagueLogo(ch.league) || 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png';
                 var title = ch.displayTitle || ch.name || '';
-                var timeBadge = ch.time ? (ch.time + (ch.date ? ' ' + ch.date : '')) : '';
-                var leagueBadge = ch.leagueName || '';
-                var sourceCount = (ch.sources && ch.sources.length) ? (ch.sources.length + ' nguồn') : '1 nguồn';
 
                 card.innerHTML = 
-                    '<div class="ch-header">' +
-                        (timeBadge ? '<span class="ch-time-badge">' + timeBadge + '</span>' : '<span></span>') +
-                        '<span class="ch-league">' + leagueBadge + '</span>' +
+                    '<div class="ch-num">' + numStr + '</div>' +
+                    '<div class="ch-icon-box">' +
+                        '<img class="ch-icon-img" src="' + logoUrl + '" onerror="this.src=\'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png\'">' +
                     '</div>' +
-                    '<div class="ch-title">' + title + '</div>' +
-                    '<div class="ch-meta">' +
-                        '<span>' + (ch.homeTeam ? (ch.homeTeam + ' vs ' + ch.awayTeam) : '') + '</span>' +
-                        '<span>' + sourceCount + '</span>' +
+                    '<div class="ch-info-box">' +
+                        '<div class="ch-name-text">' + title + '</div>' +
+                    '</div>' +
+                    '<div class="ch-badges-box">' +
+                        '<span class="badge-fhd">FHD</span>' +
+                        (idx === activeChannelIndex ? '<span class="badge-now-playing">ĐANG PHÁT</span>' : '') +
                     '</div>';
 
                 card.onclick = function() {
@@ -665,33 +1075,50 @@
             var ch = curCat.channels[idx];
             if (!ch) return;
 
-            document.getElementById('txtCurrentMatch').textContent = ch.displayTitle || ch.name || '';
-            renderSources(ch);
+            // Cập nhật Cột Spotlight bên phải
+            renderSpotlight(ch, idx);
+
             if (autoPlay) {
                 playCurrentSource(ch);
             }
         }
 
+        function getLeagueLogo(league) {
+            return LEAGUE_LOGOS[league] || null;
+        }
+
+        function renderSpotlight(ch, idx) {
+            var title = ch.displayTitle || ch.name || '';
+            var logoUrl = ch.logo || getLeagueLogo(ch.league) || 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png';
+            
+            document.getElementById('spotlightLogo').src = logoUrl;
+            document.getElementById('spotlightTitle').textContent = ch.homeTeam ? (ch.homeTeam + ' vs ' + ch.awayTeam) : title;
+            document.getElementById('spotlightLeagueBadge').textContent = ch.leagueName || '🌐 Trực tiếp';
+
+            renderSources(ch);
+            renderStandings(ch.league, ch.homeTeam, ch.awayTeam);
+        }
+
         function updateSourceHighlight() {
-            var btns = document.querySelectorAll('#sourceTabsContainer .source-btn');
+            var btns = document.querySelectorAll('#sourcesButtonsRow .src-btn');
             btns.forEach(function(btn, idx) {
                 if (idx === activeSourceIndex) btn.classList.add('active');
                 else btn.classList.remove('active');
 
-                if (currentZone === 2 && idx === focusedSourceIndex) btn.classList.add('focused');
+                if (currentZone === 3 && idx === focusedSourceIndex) btn.classList.add('focused');
                 else btn.classList.remove('focused');
             });
             scrollFocusedIntoView();
         }
 
         function renderSources(ch) {
-            var container = document.getElementById('sourceTabsContainer');
+            var container = document.getElementById('sourcesButtonsRow');
             container.innerHTML = '';
             var sources = ch.sources || [{ name: "Nguồn chính", url: ch.url }];
 
             sources.forEach(function(s, sIdx) {
                 var btn = document.createElement('button');
-                btn.className = 'source-btn' + (sIdx === activeSourceIndex ? ' active' : '') + (currentZone === 2 && sIdx === focusedSourceIndex ? ' focused' : '');
+                btn.className = 'src-btn' + (sIdx === activeSourceIndex ? ' active' : '') + (currentZone === 3 && sIdx === focusedSourceIndex ? ' focused' : '');
                 btn.textContent = s.name || ('Nguồn ' + (sIdx + 1));
                 btn.onclick = function() {
                     activeSourceIndex = sIdx;
@@ -703,15 +1130,48 @@
             });
         }
 
-        /* ================= PHÁT VIDEO BẰNG HLS.JS / HTML5 ================= */
+        function renderStandings(league, homeTeam, awayTeam) {
+            var container = document.getElementById('standingsList');
+            var titleEl = document.getElementById('txtStandingsTitle');
+            if (!sportsData || !sportsData.standings || !sportsData.standings[league]) {
+                titleEl.textContent = "BẢNG XẾP HẠNG";
+                container.innerHTML = '<div style="padding:24px 10px; text-align:center; color:var(--text-muted); font-size:11px;">Không có bảng xếp hạng cho giải đấu này</div>';
+                return;
+            }
+
+            titleEl.textContent = "BẢNG XẾP HẠNG " + (league || '');
+            var list = sportsData.standings[league];
+            container.innerHTML = '';
+
+            var hLow = (homeTeam || '').toLowerCase();
+            var aLow = (awayTeam || '').toLowerCase();
+
+            list.forEach(function(item) {
+                var row = document.createElement('div');
+                var tLow = (item.teamName || item.shortName || '').toLowerCase();
+                var isMatchTeam = (hLow && (hLow.includes(tLow) || tLow.includes(hLow))) ||
+                                  (aLow && (aLow.includes(tLow) || tLow.includes(aLow)));
+
+                row.className = 'standing-row' + (isMatchTeam ? ' highlight' : '');
+                row.innerHTML = 
+                    '<span class="st-rank">' + item.rank + '</span>' +
+                    '<img class="st-logo" src="' + (item.logoUrl || '') + '" onerror="this.style.display=\'none\'">' +
+                    '<span class="st-team">' + (item.shortName || item.teamName) + '</span>' +
+                    '<span class="st-played">' + item.played + '</span>' +
+                    '<span class="st-points">' + item.points + '</span>';
+
+                container.appendChild(row);
+            });
+        }
+
+        /* ================= PHÁT VIDEO HLS ================= */
         function playCurrentSource(ch) {
             var sources = ch.sources || [{ name: "Nguồn chính", url: ch.url }];
             var s = sources[activeSourceIndex] || sources[0];
             if (!s || !s.url) return;
 
             var playUrl = s.url;
-            document.getElementById('txtCurrentSourceInfo').textContent = s.name || 'Đang phát';
-            showOSD(ch.displayTitle || ch.name, s.name || 'Nguồn phát');
+            showQuickBanner(ch, s.name);
 
             playerLoader.style.display = 'flex';
             document.getElementById('txtLoaderStatus').textContent = 'Đang tải luồng...';
@@ -725,23 +1185,21 @@
                 hlsInstance = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 60
+                    backBufferLength: 45
                 });
                 hlsInstance.loadSource(playUrl);
                 hlsInstance.attachMedia(videoEl);
                 hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
-                    videoEl.play().catch(function(e) { console.log("Cần bấm phím để phát:", e); });
+                    videoEl.play().catch(function(e) { console.log("Cần tương tác:", e); });
                     playerLoader.style.display = 'none';
                 });
                 hlsInstance.on(Hls.Events.ERROR, function(event, data) {
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                document.getElementById('txtLoaderStatus').textContent = 'Lỗi mạng, thử lại...';
                                 hlsInstance.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                document.getElementById('txtLoaderStatus').textContent = 'Lỗi giải mã, phục hồi...';
                                 hlsInstance.recoverMediaError();
                                 break;
                             default:
@@ -752,7 +1210,6 @@
                     }
                 });
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-                // Hỗ trợ native HLS trên Safari / WebKit TV
                 videoEl.src = playUrl;
                 videoEl.addEventListener('loadedmetadata', function() {
                     videoEl.play();
@@ -768,43 +1225,57 @@
             };
             videoEl.onerror = function() {
                 playerLoader.style.display = 'none';
-                document.getElementById('txtCurrentSourceInfo').textContent = 'Lỗi tải luồng phát';
             };
         }
 
-        /* ================= HIỂN THỊ OSD & TOÀN MÀN HÌNH ================= */
-        function showOSD(title, source) {
-            var osd = document.getElementById('videoOsd');
-            document.getElementById('txtOsdTitle').textContent = title;
-            document.getElementById('txtOsdSource').textContent = source;
-            osd.classList.add('show');
-            clearTimeout(osdTimeout);
-            osdTimeout = setTimeout(function() {
-                osd.classList.remove('show');
-            }, 4000);
+        function showQuickBanner(ch, sourceName) {
+            var num = String(activeChannelIndex + 1).padStart(2, '0');
+            var logoUrl = ch.logo || getLeagueLogo(ch.league) || 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png';
+            document.getElementById('quickNum').textContent = num;
+            document.getElementById('quickLogo').src = logoUrl;
+            document.getElementById('quickTitle').textContent = ch.displayTitle || ch.name;
+            document.getElementById('quickProgram').textContent = '● ' + (sourceName || 'Trực tiếp Thể Thao');
+
+            quickBanner.classList.add('show');
+            clearTimeout(quickBannerTimeout);
+            quickBannerTimeout = setTimeout(function() {
+                quickBanner.classList.remove('show');
+            }, 3500);
+        }
+
+        /* ================= ẨN / HIỆN MENU OVERLAY & FULLSCREEN ================= */
+        function hideMenuOverlay() {
+            menuOverlay.classList.add('hidden');
+            var curCat = categories[activeCategoryIndex];
+            if (curCat && curCat.channels) {
+                showQuickBanner(curCat.channels[activeChannelIndex], '');
+            }
+        }
+
+        function showMenuOverlay() {
+            menuOverlay.classList.remove('hidden');
+        }
+
+        function toggleMenuOverlay() {
+            if (menuOverlay.classList.contains('hidden')) {
+                showMenuOverlay();
+            } else {
+                hideMenuOverlay();
+            }
         }
 
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
-                videoWrapper.requestFullscreen().catch(function(err) {
-                    console.log("Lỗi full screen:", err);
-                });
-                videoWrapper.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen().catch(function() {});
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-                videoWrapper.classList.remove('fullscreen-mode');
+                if (document.exitFullscreen) document.exitFullscreen();
             }
         }
 
-        document.addEventListener('fullscreenchange', function() {
-            if (!document.fullscreenElement) {
-                videoWrapper.classList.remove('fullscreen-mode');
-            } else {
-                videoWrapper.classList.add('fullscreen-mode');
-                showOSD(document.getElementById('txtCurrentMatch').textContent, '');
-            }
+        // Click vào video để ẩn/hiện menu
+        videoEl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleMenuOverlay();
         });
 
         /* ================= ĐIỀU HƯỚNG BẰNG REMOTE SMART TV (D-PAD) ================= */
@@ -815,47 +1286,81 @@
             }
         }
 
+        function updateSidebarHighlight() {
+            var btns = document.querySelectorAll('#sidebarNav .sidebar-btn');
+            btns.forEach(function(btn, idx) {
+                if (currentZone === 0 && idx === focusedSidebarIndex) btn.classList.add('focused');
+                else btn.classList.remove('focused');
+            });
+        }
+
+        function handleSidebarClick(idx) {
+            focusedSidebarIndex = idx;
+            updateSidebarHighlight();
+            if (idx === 2) {
+                loadData();
+            } else if (idx === 3) {
+                loadData();
+            }
+        }
+
         window.addEventListener('keydown', function(e) {
             var keyCode = e.keyCode || e.which;
-            
-            // Xử lý các phím Tizen Return (10009), Escape (27), Backspace (8)
-            if (keyCode === 10009 || keyCode === 27 || keyCode === 8) {
-                if (document.fullscreenElement) {
-                    toggleFullscreen();
+
+            // Khi Menu đang ẩn:
+            if (menuOverlay.classList.contains('hidden')) {
+                if (keyCode === 38) { // Up -> Đổi kênh trước
+                    var curCat = categories[activeCategoryIndex];
+                    if (curCat && curCat.channels && activeChannelIndex > 0) {
+                        selectChannel(activeChannelIndex - 1, true);
+                    }
                     e.preventDefault();
                     return;
                 }
-                if (currentZone > 0) {
-                    currentZone = 0;
-                    renderCategories();
-                    renderChannels();
+                if (keyCode === 40) { // Down -> Đổi kênh tiếp theo
+                    var curCat = categories[activeCategoryIndex];
+                    if (curCat && curCat.channels && activeChannelIndex < curCat.channels.length - 1) {
+                        selectChannel(activeChannelIndex + 1, true);
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                if (keyCode === 13 || keyCode === 10009 || keyCode === 27 || keyCode === 8) {
+                    showMenuOverlay();
                     e.preventDefault();
                     return;
                 }
             }
 
+            // Phím Back / Return / Escape:
+            if (keyCode === 10009 || keyCode === 27 || keyCode === 8) {
+                hideMenuOverlay();
+                e.preventDefault();
+                return;
+            }
+
             // Phím F: Toàn màn hình
-            if (keyCode === 70) { // 'F'
+            if (keyCode === 70) {
                 toggleFullscreen();
                 e.preventDefault();
                 return;
             }
 
-            // D-Pad Navigation
+            // D-Pad Navigation khi Menu đang hiện
             switch (keyCode) {
-                case 38: // ARROW UP
+                case 38: // UP
                     handleKeyUp();
                     e.preventDefault();
                     break;
-                case 40: // ARROW DOWN
+                case 40: // DOWN
                     handleKeyDown();
                     e.preventDefault();
                     break;
-                case 37: // ARROW LEFT
+                case 37: // LEFT
                     handleKeyLeft();
                     e.preventDefault();
                     break;
-                case 39: // ARROW RIGHT
+                case 39: // RIGHT
                     handleKeyRight();
                     e.preventDefault();
                     break;
@@ -863,30 +1368,21 @@
                     handleKeyEnter();
                     e.preventDefault();
                     break;
-                case 415: // Media Play
-                    videoEl.play();
-                    break;
-                case 19: // Media Pause
-                    videoEl.pause();
-                    break;
             }
         });
 
         function handleKeyUp() {
-            if (document.fullscreenElement) {
-                // Khi toàn màn hình, Up = kênh trước đó
-                var curCat = categories[activeCategoryIndex];
-                if (curCat && curCat.channels && activeChannelIndex > 0) {
-                    selectChannel(activeChannelIndex - 1, true);
-                }
-                return;
-            }
             if (currentZone === 0) {
+                if (focusedSidebarIndex > 0) {
+                    focusedSidebarIndex--;
+                    updateSidebarHighlight();
+                }
+            } else if (currentZone === 1) {
                 if (focusedCategoryIndex > 0) {
                     focusedCategoryIndex--;
                     updateCategoriesHighlight();
                 }
-            } else if (currentZone === 1) {
+            } else if (currentZone === 2) {
                 if (focusedChannelIndex > 0) {
                     focusedChannelIndex--;
                     updateChannelHighlight();
@@ -895,20 +1391,18 @@
         }
 
         function handleKeyDown() {
-            if (document.fullscreenElement) {
-                // Khi toàn màn hình, Down = kênh tiếp theo
-                var curCat = categories[activeCategoryIndex];
-                if (curCat && curCat.channels && activeChannelIndex < curCat.channels.length - 1) {
-                    selectChannel(activeChannelIndex + 1, true);
-                }
-                return;
-            }
             if (currentZone === 0) {
+                var btns = document.querySelectorAll('#sidebarNav .sidebar-btn');
+                if (focusedSidebarIndex < btns.length - 1) {
+                    focusedSidebarIndex++;
+                    updateSidebarHighlight();
+                }
+            } else if (currentZone === 1) {
                 if (focusedCategoryIndex < categories.length - 1) {
                     focusedCategoryIndex++;
                     updateCategoriesHighlight();
                 }
-            } else if (currentZone === 1) {
+            } else if (currentZone === 2) {
                 var curCat = categories[activeCategoryIndex];
                 if (curCat && curCat.channels && focusedChannelIndex < curCat.channels.length - 1) {
                     focusedChannelIndex++;
@@ -918,37 +1412,44 @@
         }
 
         function handleKeyLeft() {
-            if (document.fullscreenElement) return;
-            if (currentZone === 1) {
-                currentZone = 0;
-                focusedCategoryIndex = activeCategoryIndex;
-                updateCategoriesHighlight();
-                updateChannelHighlight();
-            } else if (currentZone === 2) {
+            if (currentZone === 3) {
                 if (focusedSourceIndex > 0) {
                     focusedSourceIndex--;
                     updateSourceHighlight();
                 } else {
-                    currentZone = 1;
+                    currentZone = 2;
                     updateChannelHighlight();
                     updateSourceHighlight();
                 }
+            } else if (currentZone === 2) {
+                currentZone = 1;
+                focusedCategoryIndex = activeCategoryIndex;
+                updateCategoriesHighlight();
+                updateChannelHighlight();
+            } else if (currentZone === 1) {
+                currentZone = 0;
+                updateSidebarHighlight();
+                updateCategoriesHighlight();
             }
         }
 
         function handleKeyRight() {
-            if (document.fullscreenElement) return;
             if (currentZone === 0) {
                 currentZone = 1;
+                focusedCategoryIndex = activeCategoryIndex;
+                updateSidebarHighlight();
+                updateCategoriesHighlight();
+            } else if (currentZone === 1) {
+                currentZone = 2;
                 focusedChannelIndex = activeChannelIndex;
                 updateCategoriesHighlight();
                 updateChannelHighlight();
-            } else if (currentZone === 1) {
-                currentZone = 2;
+            } else if (currentZone === 2) {
+                currentZone = 3;
                 focusedSourceIndex = activeSourceIndex;
                 updateChannelHighlight();
                 updateSourceHighlight();
-            } else if (currentZone === 2) {
+            } else if (currentZone === 3) {
                 var curCat = categories[activeCategoryIndex];
                 if (curCat && curCat.channels) {
                     var ch = curCat.channels[activeChannelIndex];
@@ -962,29 +1463,30 @@
         }
 
         function handleKeyEnter() {
-            if (document.fullscreenElement) {
-                showOSD(document.getElementById('txtCurrentMatch').textContent, '');
-                return;
-            }
             if (currentZone === 0) {
-                switchCategory(focusedCategoryIndex);
-                currentZone = 1;
+                handleSidebarClick(focusedSidebarIndex);
             } else if (currentZone === 1) {
-                selectChannel(focusedChannelIndex, true);
+                switchCategory(focusedCategoryIndex);
+                currentZone = 2;
             } else if (currentZone === 2) {
+                // Nhấn OK vào kênh -> Phát và ẩn Menu để xem toàn màn hình
+                selectChannel(focusedChannelIndex, true);
+                hideMenuOverlay();
+            } else if (currentZone === 3) {
                 var curCat = categories[activeCategoryIndex];
                 if (curCat && curCat.channels) {
                     var ch = curCat.channels[activeChannelIndex];
                     activeSourceIndex = focusedSourceIndex;
                     updateSourceHighlight();
                     playCurrentSource(ch);
+                    hideMenuOverlay();
                 }
             }
         }
 
-        // Bắt đầu nạp dữ liệu khi tải trang
+        // Bắt đầu nạp dữ liệu khi mở trang
         loadData();
-        // Tự động làm mới dữ liệu sau mỗi 5 phút
+        // Làm mới dữ liệu sau mỗi 5 phút
         setInterval(loadData, 5 * 60 * 1000);
     </script>
 </body>
