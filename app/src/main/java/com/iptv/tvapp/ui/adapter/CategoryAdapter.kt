@@ -59,14 +59,8 @@ class CategoryAdapter(
                 }
             }
 
-            // Hiệu ứng TV Focus chuẩn FPT Play
-            binding.root.setOnFocusChangeListener { view, hasFocus ->
-                if (hasFocus) {
-                    view.animate().scaleX(1.04f).scaleY(1.04f).setDuration(120).start()
-                } else {
-                    view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
-                }
-            }
+            // TV Focus chuẩn drawable selector, không chạy animation nặng để giữ 60fps mượt mà
+            binding.root.setOnFocusChangeListener { _, _ -> }
         }
 
         fun bind(category: Category, isSelected: Boolean, position: Int) {

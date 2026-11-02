@@ -107,6 +107,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var currentAppMode = AppMode.TV
+    private var currentDisplayingLeague: String? = null
     private val tvCategories = mutableListOf<Category>()
     private val sportsCategoriesList = mutableListOf<Category>()
     private val allCategories = mutableListOf<Category>()
@@ -886,6 +887,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun switchAppMode(mode: AppMode, focusCategories: Boolean = false) {
         currentAppMode = mode
+        currentDisplayingLeague = null
         binding.navModeTv.isSelected = (mode == AppMode.TV)
         binding.navModeSports.isSelected = (mode == AppMode.SPORTS)
         binding.rvCategories.nextFocusLeftId = if (mode == AppMode.TV) R.id.navModeTv else R.id.navModeSports
@@ -1048,8 +1050,15 @@ class MainActivity : AppCompatActivity() {
             binding.tvSpotlightResolution.text = "HÔM NAY"
             binding.tvSpotlightCategory.text = "Trực Tiếp Bóng Đá"
             binding.tvSpotlightStatus.visibility = View.GONE
+            binding.tvSpotlightLiveTag.visibility = View.GONE
+
             spotlightHandler.removeCallbacks(spotlightRunnable)
-            performHeavySpotlightUpdate(channel)
+            pendingSpotlightChannel = channel
+            if (immediate) {
+                performHeavySpotlightUpdate(channel)
+            } else {
+                spotlightHandler.postDelayed(spotlightRunnable, 120L)
+            }
             return
         }
 
@@ -1077,25 +1086,40 @@ class MainActivity : AppCompatActivity() {
             binding.tvSpotlightLiveTag.visibility = if (isOngoing) View.VISIBLE else View.GONE
 
             spotlightHandler.removeCallbacks(spotlightRunnable)
-            performHeavySpotlightUpdate(channel)
+            pendingSpotlightChannel = channel
+            if (immediate) {
+                performHeavySpotlightUpdate(channel)
+            } else {
+                spotlightHandler.postDelayed(spotlightRunnable, 120L)
+            }
             return
         }
 
         currentFocusedChannel = channel
-        if (isSportsLiveMatch(channel)) {
-            val (home, away, _) = playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name)
-            if (home.isNotBlank() && away.isNotBlank()) {
-                binding.tvSpotlightName.text = "$home vs $away"
+        val isSportsMode = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(channel)
+        if (isSportsMode) {
+            val mg = playlistManager.sportsLiveManager.findMatchForChannel(channel)
+            if (mg != null) {
+                binding.tvSpotlightName.text = if (mg.awayTeam.isNotBlank()) "${mg.homeTeam} vs ${mg.awayTeam}" else mg.homeTeam
+                binding.tvSpotlightCategory.text = mg.leagueName
+                binding.tvSpotlightLiveTag.visibility = if (mg.isOngoing) View.VISIBLE else View.GONE
             } else {
-                binding.tvSpotlightName.text = channel.name.replace(Regex("""^(\[[^\]]+\]|⚽|\s)+"""), "")
-                    .replace(Regex("""\s*•.*$"""), "")
-                    .trim()
+                val (home, away, _) = playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name)
+                if (home.isNotBlank() && away.isNotBlank()) {
+                    binding.tvSpotlightName.text = "$home vs $away"
+                } else {
+                    binding.tvSpotlightName.text = channel.name.replace(Regex("""^(\[[^\]]+\]|⚽|\s)+"""), "")
+                        .replace(Regex("""\s*•.*$"""), "")
+                        .trim()
+                }
+                val isOngoing = playlistManager.sportsLiveManager.isMatchOngoing(channel)
+                binding.tvSpotlightLiveTag.visibility = if (isOngoing) View.VISIBLE else View.GONE
+                binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "Trực Tiếp Thể Thao"
             }
-            val isOngoing = playlistManager.sportsLiveManager.isMatchOngoing(channel)
-            binding.tvSpotlightLiveTag.visibility = if (isOngoing) View.VISIBLE else View.GONE
         } else {
             binding.tvSpotlightName.text = channel.name
             binding.tvSpotlightLiveTag.visibility = View.GONE
+            binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "IPTV"
         }
 
         // Độ phân giải hiển thị: Ưu tiên FHD 1080 (hoặc 4K), các kênh HD tại Việt Nam là 1080i/1080p
@@ -1106,8 +1130,6 @@ class MainActivity : AppCompatActivity() {
             upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> "FHD 1080"
             else -> "FHD 1080"
         }
-
-        binding.tvSpotlightCategory.text = currentSelectedCategory?.name ?: "IPTV"
 
         val isPlaying = channel.streamUrl == currentPlayingChannel?.streamUrl
         binding.tvSpotlightStatus.visibility = if (isPlaying) View.VISIBLE else View.GONE
@@ -1140,13 +1162,12 @@ class MainActivity : AppCompatActivity() {
 
         val isSportsMode = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(channel)
         if (channel.streamUrl.startsWith("match://") || isSportsMode) {
-            val (homeTeam, awayTeam, targetLeague) = if (channel.streamUrl.startsWith("match://")) {
-                val matchKey = channel.streamUrl.removePrefix("match://")
-                val matchGroup = playlistManager.sportsLiveManager.getMatch(matchKey)
-                Triple(matchGroup?.homeTeam ?: "", matchGroup?.awayTeam ?: "", matchGroup?.league ?: "OTHER")
-            } else {
-                playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name)
-            }
+            val matchKey = if (channel.streamUrl.startsWith("match://")) channel.streamUrl.removePrefix("match://") else ""
+            val matchGroup = if (matchKey.isNotBlank()) playlistManager.sportsLiveManager.getMatch(matchKey)
+                             else playlistManager.sportsLiveManager.findMatchForChannel(channel)
+            val homeTeam = matchGroup?.homeTeam ?: ""
+            val awayTeam = matchGroup?.awayTeam ?: ""
+            val targetLeague = matchGroup?.league ?: playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name).third
 
             val leagueName = SportsLiveManager.LEAGUE_LABELS[targetLeague] ?: "Giải đấu"
             val leagueLogoUri = playlistManager.sportsLiveManager.getLeagueLogoUri(targetLeague)
@@ -1173,30 +1194,41 @@ class MainActivity : AppCompatActivity() {
                 binding.tvEpgSourceTag.visibility = View.GONE
                 binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
 
-                binding.rvSpotlightStandings.visibility = View.GONE
-                binding.tvStandingsEmpty.visibility = View.VISIBLE
-                binding.tvStandingsEmpty.text = "Đang tải bảng xếp hạng $leagueName..."
+                if (currentDisplayingLeague != targetLeague) {
+                    currentDisplayingLeague = targetLeague
+                    binding.rvSpotlightStandings.visibility = View.GONE
+                    binding.tvStandingsEmpty.visibility = View.VISIBLE
+                    binding.tvStandingsEmpty.text = "Đang tải bảng xếp hạng $leagueName..."
 
-                lifecycleScope.launch(Dispatchers.Main) {
-                    val standings = standingsManager.getStandings(targetLeague)
-                    if (currentFocusedChannel?.streamUrl == channel.streamUrl) {
-                        if (standings.isNotEmpty()) {
-                            binding.tvStandingsEmpty.visibility = View.GONE
-                            binding.rvSpotlightStandings.visibility = View.VISIBLE
-                            standingsAdapter.submitList(standings, homeTeam, awayTeam)
-                            val highlightIdx = standingsAdapter.getHighlightedIndex()
-                            if (highlightIdx != -1) {
-                                binding.rvSpotlightStandings.scrollToPosition(highlightIdx.coerceAtLeast(0))
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        val standings = standingsManager.getStandings(targetLeague)
+                        if (currentFocusedChannel?.streamUrl == channel.streamUrl) {
+                            if (standings.isNotEmpty()) {
+                                binding.tvStandingsEmpty.visibility = View.GONE
+                                binding.rvSpotlightStandings.visibility = View.VISIBLE
+                                standingsAdapter.submitList(standings, homeTeam, awayTeam)
+                                val highlightIdx = standingsAdapter.getHighlightedIndex()
+                                if (highlightIdx != -1) {
+                                    binding.rvSpotlightStandings.scrollToPosition(highlightIdx.coerceAtLeast(0))
+                                }
+                            } else {
+                                binding.rvSpotlightStandings.visibility = View.GONE
+                                binding.tvStandingsEmpty.visibility = View.VISIBLE
+                                binding.tvStandingsEmpty.text = "Chưa có bảng xếp hạng cho giải đấu này"
                             }
-                        } else {
-                            binding.rvSpotlightStandings.visibility = View.GONE
-                            binding.tvStandingsEmpty.visibility = View.VISIBLE
-                            binding.tvStandingsEmpty.text = "Chưa có bảng xếp hạng cho giải đấu này"
                         }
+                    }
+                } else {
+                    // CÙNG GIẢI ĐẤU: Giữ nguyên danh sách, chỉ cập nhật highlight 2 đội và cuộn nhanh!
+                    standingsAdapter.updateHighlights(homeTeam, awayTeam)
+                    val highlightIdx = standingsAdapter.getHighlightedIndex()
+                    if (highlightIdx != -1) {
+                        binding.rvSpotlightStandings.scrollToPosition(highlightIdx.coerceAtLeast(0))
                     }
                 }
                 return
             } else if (channel.streamUrl.startsWith("match://")) {
+                currentDisplayingLeague = null
                 binding.layoutEpgTimeline.visibility = View.GONE
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
                 binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
@@ -1208,6 +1240,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         }
+        currentDisplayingLeague = null
 
         // TV Channel mode:
         binding.rvChannels.nextFocusRightId = R.id.rvSpotlightEpg
@@ -2712,25 +2745,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun isSportsLiveMatch(channel: Channel?): Boolean {
         if (channel == null) return false
-        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return true
-        if (sportsCategoriesList.any { cat -> cat.channels.any { it.streamUrl == channel.streamUrl } }) return true
+        if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://") || channel.streamUrl.startsWith("match://")) return true
+        if (currentAppMode == AppMode.SPORTS) return true
+        if (channel.id.startsWith("src_") || channel.id.startsWith("streamfree_") || channel.id.startsWith("intl_sports_")) return true
+        val g = channel.groupTitle
+        if (g.contains("Chuối Chiên") || g.contains("Gà Vàng") || g.contains("Cola") || g.contains("Bia Ôm") ||
+            g.contains("Phá Làng") || g.contains("Vua Sân Cỏ") || g.contains("Sao Kê") || g.contains("LIVE EVENTS")) return true
         return channel.streamUrl.contains("/truc-tiep/") ||
                 channel.streamUrl.startsWith("streamfree://") ||
-                channel.id.startsWith("streamfree_") ||
-                channel.id.startsWith("intl_sports_") ||
-                channel.id.startsWith("chuoichien_") ||
-                channel.id.startsWith("gavang_") ||
-                channel.id.startsWith("xoilac_") ||
-                channel.id.startsWith("cakhia_") ||
-                channel.groupTitle.contains("Chuối Chiên") ||
-                channel.groupTitle.contains("Gà Vàng") ||
-                channel.groupTitle.contains("Xôi Lạc") ||
-                channel.groupTitle.contains("Cà Khịa") ||
-                channel.groupTitle.contains("StreamFree") ||
-                channel.groupTitle.contains("LIVE EVENTS") ||
-                channel.groupTitle.contains("SPORT 24/7") ||
-                channel.groupTitle.contains("THỂ THAO QUỐC TẾ") ||
-                channel.groupTitle.contains("TRỰC TIẾP") ||
                 channel.name.startsWith("🔴") ||
                 channel.name.startsWith("⚽") ||
                 channel.name.startsWith("🏎️") ||

@@ -16,8 +16,10 @@ import com.iptv.tvapp.databinding.ItemStandingRowBinding
 class StandingsAdapter : RecyclerView.Adapter<StandingsAdapter.ViewHolder>() {
 
     private val items = mutableListOf<SportsStandingsManager.StandingEntry>()
+    private val canonTeamNames = mutableListOf<String>()
     private var highlightTeam1Canon: String = ""
     private var highlightTeam2Canon: String = ""
+    private val highlightedPositions = mutableSetOf<Int>()
 
     fun submitList(
         newItems: List<SportsStandingsManager.StandingEntry>,
@@ -26,20 +28,30 @@ class StandingsAdapter : RecyclerView.Adapter<StandingsAdapter.ViewHolder>() {
     ) {
         items.clear()
         items.addAll(newItems)
+        canonTeamNames.clear()
+        for (item in newItems) {
+            canonTeamNames.add(SportsLiveManager.canonicalizeTeam(item.teamName))
+        }
+        updateHighlights(homeTeam, awayTeam)
+    }
+
+    fun updateHighlights(homeTeam: String, awayTeam: String) {
         highlightTeam1Canon = SportsLiveManager.canonicalizeTeam(homeTeam)
         highlightTeam2Canon = SportsLiveManager.canonicalizeTeam(awayTeam)
+        highlightedPositions.clear()
+        for (i in canonTeamNames.indices) {
+            val cTeam = canonTeamNames[i]
+            if (isMatch(cTeam)) {
+                highlightedPositions.add(i)
+            }
+        }
         notifyDataSetChanged()
     }
 
-    fun getHighlightedIndex(): Int {
-        for (i in items.indices) {
-            val cTeam = SportsLiveManager.canonicalizeTeam(items[i].teamName)
-            if (isMatch(cTeam)) return i
-        }
-        return -1
-    }
+    fun getHighlightedIndex(): Int = highlightedPositions.firstOrNull() ?: -1
 
     private fun isMatch(cTeam: String): Boolean {
+        if (cTeam.isBlank()) return false
         if (highlightTeam1Canon.isNotBlank() && (cTeam.contains(highlightTeam1Canon) || highlightTeam1Canon.contains(cTeam))) {
             return true
         }
@@ -77,6 +89,7 @@ class StandingsAdapter : RecyclerView.Adapter<StandingsAdapter.ViewHolder>() {
                 binding.ivStandingLogo.visibility = View.VISIBLE
                 Glide.with(context)
                     .load(entry.logoUrl)
+                    .override(40, 40)
                     .placeholder(R.drawable.ic_tv_placeholder)
                     .error(R.drawable.ic_tv_placeholder)
                     .into(binding.ivStandingLogo)
@@ -84,8 +97,7 @@ class StandingsAdapter : RecyclerView.Adapter<StandingsAdapter.ViewHolder>() {
                 binding.ivStandingLogo.visibility = View.GONE
             }
 
-            val cTeam = SportsLiveManager.canonicalizeTeam(entry.teamName)
-            val isHighlighted = isMatch(cTeam)
+            val isHighlighted = position in highlightedPositions
 
             binding.root.nextFocusLeftId = R.id.rvChannels
 
@@ -125,4 +137,3 @@ class StandingsAdapter : RecyclerView.Adapter<StandingsAdapter.ViewHolder>() {
         }
     }
 }
-

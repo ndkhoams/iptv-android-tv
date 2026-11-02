@@ -113,6 +113,7 @@ class SportsLiveManager(private val context: Context) {
             val key = channel.streamUrl.removePrefix("match://")
             getMatch(key)?.let { return it }
         }
+        urlToMatchMap[channel.streamUrl]?.let { return it }
         getMatch(channel.name)?.let { return it }
         return matchGroupsMap.values.firstOrNull { mg ->
             mg.sources.any { s -> s.streamUrl == channel.streamUrl || s.id == channel.id }
@@ -140,6 +141,9 @@ class SportsLiveManager(private val context: Context) {
         const val CATEGORY_LIVE_EVENTS = "🔴 LIVE EVENTS"
         const val CATEGORY_SPORT_TV = "📺 SPORT 24/7 TV"
         private val matchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
+        private val urlToMatchMap = ConcurrentHashMap<String, MatchGroup>()
+        private val canonicalTeamCache = ConcurrentHashMap<String, String>()
+        private val teamsAndLeagueCache = ConcurrentHashMap<String, Triple<String, String, String>>()
         private val espnFixturesCache = ConcurrentHashMap<String, List<EspnFixture>>()
         @Volatile private var lastEspnFetchTimeMs: Long = 0L
         private const val CACHE_TTL_MS = 30 * 60 * 1000L // Tự động cập nhật 30 phút 1 lần
@@ -302,6 +306,9 @@ class SportsLiveManager(private val context: Context) {
         }
 
         fun canonicalizeTeam(name: String): String {
+            if (name.isBlank()) return ""
+            canonicalTeamCache[name]?.let { return it }
+
             val t = name.lowercase().trim()
             val isYouth = isYouthMatch(t)
             for ((canon, aliases) in TEAM_ALIASES) {
@@ -312,11 +319,15 @@ class SportsLiveManager(private val context: Context) {
                         Regex("""\b${Regex.escape(al)}\b""").containsMatchIn(t)
                     }
                     if (matches) {
-                        return if (isYouth) "${canon}_youth" else canon
+                        val result = if (isYouth) "${canon}_youth" else canon
+                        canonicalTeamCache[name] = result
+                        return result
                     }
                 }
             }
-            return t.replace(Regex("""[^a-z0-9]"""), "")
+            val fallback = t.replace(Regex("""[^a-z0-9]"""), "")
+            canonicalTeamCache[name] = fallback
+            return fallback
         }
     }
 
@@ -324,6 +335,9 @@ class SportsLiveManager(private val context: Context) {
         cachedCategories = null
         lastFetchTimeMs = 0L
         matchGroupsMap.clear()
+        urlToMatchMap.clear()
+        canonicalTeamCache.clear()
+        teamsAndLeagueCache.clear()
         espnFixturesCache.clear()
         lastEspnFetchTimeMs = 0L
     }
@@ -446,6 +460,9 @@ class SportsLiveManager(private val context: Context) {
                     isOngoing = isOngoing
                 )
                 matchGroupsMap[key] = mg
+                for (src in sourceChannels) {
+                    urlToMatchMap[src.streamUrl] = mg
+                }
 
                 // Chỉ hiển thị những trận chưa kết thúc (Full-time)
                 if (!isCompleted) {
@@ -670,12 +687,15 @@ class SportsLiveManager(private val context: Context) {
      * Tách tên 2 đội và nhận diện giải đấu từ tiêu đề luồng (dùng cho mọi nguồn TV/Thể thao)
      */
     fun extractTeamsAndLeague(rawName: String): Triple<String, String, String> {
+        teamsAndLeagueCache[rawName]?.let { return it }
         val cleaned = cleanTeamName(rawName)
         val parts = cleaned.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
         val homeTeam = if (parts.isNotEmpty()) parts[0].trim() else cleaned
         val awayTeam = if (parts.size >= 2) parts[1].trim() else ""
         val lg = detectLeague(rawName, homeTeam, awayTeam)
-        return Triple(homeTeam, awayTeam, lg)
+        val result = Triple(homeTeam, awayTeam, lg)
+        teamsAndLeagueCache[rawName] = result
+        return result
     }
 
     /**
