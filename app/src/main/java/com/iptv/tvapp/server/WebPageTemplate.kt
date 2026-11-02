@@ -32,7 +32,8 @@ object WebPageTemplate {
         .tab-content.active { display: block; }
         
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 62px; background: #131d2e; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-        .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex: 1; padding: 5px 0; }
+        .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; flex: 1; padding: 5px 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
+        .dpad-btn, .action-btn, .channel-item, .cat-pill, .source-btn, .submit-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; }
         .nav-btn.active { color: var(--accent); font-weight: bold; }
         .nav-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
@@ -48,7 +49,8 @@ object WebPageTemplate {
 
         .row-actions { display: flex; gap: 12px; margin-top: 14px; }
         .action-btn { flex: 1; padding: 12px; background: #1e293b; border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .action-btn:active { background: var(--btn-active); }
+        .action-btn:active { background: var(--btn-active); transform: scale(0.96); filter: brightness(1.2); }
+        .dpad-btn:active { background: var(--btn-active); transform: scale(0.95); filter: brightness(1.2); }
 
         .search-box { width: 100%; padding: 12px 14px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
         .search-box:focus { border-color: var(--accent); }
@@ -119,7 +121,7 @@ object WebPageTemplate {
             <span class="ch-badge">ĐANG PHÁT</span>
             <span id="bannerChName" class="ch-name" style="margin-left: 6px;">Đang tải...</span>
         </div>
-        <button onclick="sendKey('center')" style="background:none; border:none; color:var(--accent); font-size:12px; font-weight:bold; cursor:pointer;">Mở OSD 📺</button>
+        <button onclick="sendKey('overlay')" style="background:none; border:none; color:var(--accent); font-size:12px; font-weight:bold; cursor:pointer; touch-action:manipulation;">Mở OSD 📺</button>
     </div>
 
     <!-- TAB 1: REMOTE CONTROLLER -->
@@ -141,6 +143,12 @@ object WebPageTemplate {
             <div class="row-actions">
                 <button class="action-btn" onclick="sendKey('ch_prev')">⏮ Kênh Trước</button>
                 <button class="action-btn" onclick="sendKey('ch_next')">⏭ Kênh Tiếp</button>
+            </div>
+
+            <div class="row-actions">
+                <button class="action-btn" onclick="sendKey('vol_down')">🔉 Giảm Âm</button>
+                <button class="action-btn" onclick="sendKey('mute')">🔇 Tắt Tiếng</button>
+                <button class="action-btn" onclick="sendKey('vol_up')">🔊 Tăng Âm</button>
             </div>
         </div>
     </div>
@@ -369,18 +377,35 @@ object WebPageTemplate {
             if (tabId === 'settings') loadSettings();
         }
 
+        function safeDecode(str) {
+            if (!str) return '';
+            try {
+                return decodeURIComponent(str);
+            } catch(e) {
+                return str;
+            }
+        }
+
         function sendKey(action) {
-            fetch('/api/key', {
+            if (navigator.vibrate) {
+                try { navigator.vibrate(25); } catch(e) {}
+            }
+            fetch('/api/key?action=' + encodeURIComponent(action), {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ action: action })
             }).then(function(res) { return res.json(); })
             .then(function(data) {
                 if (data.nowPlaying) {
-                    document.getElementById('bannerChName').innerText = data.nowPlaying;
+                    var el = document.getElementById('bannerChName');
+                    if (el) el.innerText = data.nowPlaying;
                 }
             }).catch(function() {
-                showToast("Lỗi gửi lệnh!");
+                // Dự phòng GET nếu POST bị chặn
+                fetch('/api/key?action=' + encodeURIComponent(action), { cache: 'no-store' })
+                .catch(function() {
+                    showToast("Lỗi gửi lệnh!");
+                });
             });
         }
 
@@ -419,22 +444,20 @@ object WebPageTemplate {
 
         function renderTvPills() {
             var container = document.getElementById('tvCatPills');
+            if (tvCategories.length > 0 && (!currentTvCat || !tvCategories.some(function(c) { return c.name === currentTvCat; }))) {
+                currentTvCat = tvCategories[0].name;
+            }
             var html = '';
-            var hasCurrent = false;
             for (var i = 0; i < tvCategories.length; i++) {
                 var cName = tvCategories[i].name;
                 var isActive = (cName === currentTvCat);
-                if (isActive) hasCurrent = true;
                 html += '<button class="cat-pill' + (isActive ? ' active' : '') + '" onclick="selectTvCat(\'' + encodeURIComponent(cName) + '\')">' + cName + '</button>';
-            }
-            if (!hasCurrent && tvCategories.length > 0) {
-                currentTvCat = tvCategories[0].name;
             }
             container.innerHTML = html;
         }
 
         function selectTvCat(encodedName) {
-            currentTvCat = decodeURIComponent(encodedName);
+            currentTvCat = safeDecode(encodedName);
             renderTvPills();
             renderTvChannels();
         }
@@ -497,22 +520,20 @@ object WebPageTemplate {
 
         function renderSportsPills() {
             var container = document.getElementById('sportsCatPills');
+            if (sportsCategories.length > 0 && (!currentSportsCat || !sportsCategories.some(function(c) { return c.name === currentSportsCat; }))) {
+                currentSportsCat = sportsCategories[0].name;
+            }
             var html = '';
-            var hasCurrent = false;
             for (var i = 0; i < sportsCategories.length; i++) {
                 var cName = sportsCategories[i].name;
                 var isActive = (cName === currentSportsCat);
-                if (isActive) hasCurrent = true;
                 html += '<button class="cat-pill' + (isActive ? ' active' : '') + '" onclick="selectSportsCat(\'' + encodeURIComponent(cName) + '\')">' + cName + '</button>';
-            }
-            if (!hasCurrent && sportsCategories.length > 0) {
-                currentSportsCat = sportsCategories[0].name;
             }
             container.innerHTML = html;
         }
 
         function selectSportsCat(encodedName) {
-            currentSportsCat = decodeURIComponent(encodedName);
+            currentSportsCat = safeDecode(encodedName);
             renderSportsPills();
             renderSportsContent();
         }
@@ -634,9 +655,12 @@ object WebPageTemplate {
 
         /* ========== PHÁT KÊNH LÊN TV ========== */
         function playChannel(encodedUrl, encodedName, encodedGroup) {
-            var streamUrl = decodeURIComponent(encodedUrl);
-            var name = encodedName ? decodeURIComponent(encodedName) : '';
-            var group = encodedGroup ? decodeURIComponent(encodedGroup) : '';
+            if (navigator.vibrate) {
+                try { navigator.vibrate(25); } catch(e) {}
+            }
+            var streamUrl = safeDecode(encodedUrl);
+            var name = encodedName ? safeDecode(encodedName) : '';
+            var group = encodedGroup ? safeDecode(encodedGroup) : '';
 
             fetch('/api/play', {
                 method: 'POST',
@@ -650,13 +674,24 @@ object WebPageTemplate {
             .then(function(data) {
                 if (data.success) {
                     var display = data.channelName || name || streamUrl;
-                    showToast('📺 Đang phát trên TV: ' + display);
-                    document.getElementById('bannerChName').innerText = display;
+                    showToast('📺 Đang phát: ' + display);
+                    var el = document.getElementById('bannerChName');
+                    if (el) el.innerText = display;
                 } else {
                     showToast('Lỗi: ' + (data.error || 'Không thể phát'));
                 }
             }).catch(function() {
-                showToast('Lỗi kết nối tới TV');
+                // Dự phòng GET nếu POST bị chặn
+                fetch('/api/play?streamUrl=' + encodeURIComponent(streamUrl) + '&name=' + encodeURIComponent(name), { cache: 'no-store' })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var display = data.channelName || name || streamUrl;
+                    showToast('📺 Đang phát: ' + display);
+                    var el = document.getElementById('bannerChName');
+                    if (el) el.innerText = display;
+                }).catch(function() {
+                    showToast('Lỗi kết nối tới TV');
+                });
             });
         }
 
@@ -717,11 +752,11 @@ object WebPageTemplate {
             fetch('/api/favorite/toggle', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ streamUrl: decodeURIComponent(encodedUrl) })
+                body: JSON.stringify({ streamUrl: safeDecode(encodedUrl) })
             }).then(function(res) { return res.json(); })
             .then(function(data) {
                 showToast(data.isFavorite ? 'Đã thêm Yêu Thích ★' : 'Đã bỏ Yêu Thích');
-                var targetUrl = decodeURIComponent(encodedUrl);
+                var targetUrl = safeDecode(encodedUrl);
                 for (var i = 0; i < allChannels.length; i++) {
                     if (allChannels[i].streamUrl === targetUrl) {
                         allChannels[i].isFavorite = data.isFavorite;

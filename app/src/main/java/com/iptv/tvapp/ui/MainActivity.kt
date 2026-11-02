@@ -2,6 +2,9 @@ package com.iptv.tvapp.ui
 
 import android.Manifest
 import android.app.ActivityManager
+import android.app.Dialog
+import android.media.AudioManager
+import android.view.ViewParent
 import java.io.File
 import android.content.Context
 import android.content.pm.PackageManager
@@ -212,6 +215,7 @@ class MainActivity : AppCompatActivity() {
     private var leftHandledOnDown = false
     private var upDownHandledOnDown = false
     private var activeSettingsDialog: SettingsDialog? = null
+    private var activeCustomDialog: Dialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -533,50 +537,272 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteAction(action: String) {
         resetOverlayTimer()
-        when (action) {
+        val isOverlayVisible = (binding.channelGuideOverlay.visibility == View.VISIBLE)
+        val activeDialog = if (activeSettingsDialog?.isShowing == true) activeSettingsDialog else activeCustomDialog?.takeIf { it.isShowing }
+
+        if (activeDialog != null && activeDialog.isShowing) {
+            when (action.lowercase()) {
+                "back" -> {
+                    activeDialog.dismiss()
+                    return
+                }
+                "center", "ok" -> {
+                    val focused = activeDialog.currentFocus
+                    if (focused != null) {
+                        focused.performClick()
+                    } else {
+                        activeDialog.window?.decorView?.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+                        activeDialog.window?.decorView?.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+                    }
+                    return
+                }
+                "up", "down", "left", "right" -> {
+                    val dir = when (action.lowercase()) {
+                        "up" -> View.FOCUS_UP
+                        "down" -> View.FOCUS_DOWN
+                        "left" -> View.FOCUS_LEFT
+                        else -> View.FOCUS_RIGHT
+                    }
+                    val focused = activeDialog.currentFocus
+                    val next = focused?.focusSearch(dir)
+                    if (next != null && next != focused) {
+                        next.requestFocus(dir)
+                    }
+                    return
+                }
+                "menu" -> {
+                    activeDialog.dismiss()
+                    return
+                }
+            }
+        }
+
+        when (action.lowercase()) {
+            "vol_up" -> {
+                val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                am?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+            }
+            "vol_down" -> {
+                val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                am?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+            }
+            "mute" -> {
+                val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    am?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI)
+                } else {
+                    am?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                }
+            }
+            "overlay", "guide" -> {
+                if (isOverlayVisible) hideOverlay() else showOverlay()
+            }
+            "menu" -> {
+                showSettingsDialog()
+            }
+            "ch_prev" -> {
+                switchChannel(next = false)
+            }
+            "ch_next" -> {
+                switchChannel(next = true)
+            }
+            "back" -> {
+                if (isOverlayVisible) {
+                    hideOverlay()
+                } else {
+                    handleRemoteBackFullscreen()
+                }
+            }
+            "center", "ok" -> {
+                if (isOverlayVisible) {
+                    val focused = currentFocus ?: binding.channelGuideOverlay.findFocus()
+                    if (focused != null && focused !== binding.channelGuideOverlay) {
+                        val chHolder = binding.rvChannels.findContainingViewHolder(focused)
+                        if (chHolder != null) {
+                            chHolder.itemView.performClick()
+                            return
+                        }
+                        val catHolder = binding.rvCategories.findContainingViewHolder(focused)
+                        if (catHolder != null) {
+                            catHolder.itemView.performClick()
+                            return
+                        }
+                        focused.performClick()
+                    } else {
+                        focusPlayingChannel()
+                        binding.rvChannels.postDelayed({
+                            val current = currentFocus ?: binding.rvChannels.findFocus()
+                            val target = if (current != null) binding.rvChannels.findContainingViewHolder(current) else null
+                            target?.itemView?.performClick() ?: current?.performClick()
+                        }, 50)
+                    }
+                } else {
+                    handleRemoteOkFullscreen()
+                }
+            }
             "up" -> {
-                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP))
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_UP))
+                if (isOverlayVisible) {
+                    navigateOverlay(View.FOCUS_UP)
                 } else {
                     switchChannel(next = false)
                 }
             }
             "down" -> {
-                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN))
+                if (isOverlayVisible) {
+                    navigateOverlay(View.FOCUS_DOWN)
                 } else {
                     switchChannel(next = true)
                 }
             }
             "left" -> {
-                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
-                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT))
+                if (isOverlayVisible) {
+                    navigateOverlay(View.FOCUS_LEFT)
+                } else {
+                    currentPlayingChannel?.let { showQuickChannelInfo(it) }
+                }
             }
             "right" -> {
-                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
-                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
-            }
-            "center", "ok" -> {
-                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+                if (isOverlayVisible) {
+                    navigateOverlay(View.FOCUS_RIGHT)
                 } else {
-                    showOverlay()
+                    handleRemoteRightFullscreen()
                 }
             }
-            "back" -> {
-                if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    hideOverlay()
-                }
-            }
-            "menu" -> {
-                showSettingsDialog()
-            }
-            "ch_prev" -> switchChannel(next = false)
-            "ch_next" -> switchChannel(next = true)
         }
+    }
+
+    private fun navigateOverlay(direction: Int) {
+        var focused = currentFocus ?: binding.channelGuideOverlay.findFocus()
+        if (focused == null || focused === binding.channelGuideOverlay) {
+            focusPlayingChannel()
+            focused = currentFocus ?: binding.rvChannels.findFocus()
+            if (focused == null) return
+        }
+
+        when (direction) {
+            View.FOCUS_UP, View.FOCUS_DOWN -> {
+                val isDown = (direction == View.FOCUS_DOWN)
+
+                // 1. Phím Lên/Xuống khi đang trong danh sách kênh rvChannels
+                val chHolder = binding.rvChannels.findContainingViewHolder(focused)
+                if (chHolder != null) {
+                    val currentPos = chHolder.adapterPosition
+                    if (currentPos != RecyclerView.NO_POSITION) {
+                        val targetPos = if (isDown) currentPos + 1 else currentPos - 1
+                        if (targetPos in 0 until channelAdapter.itemCount) {
+                            binding.rvChannels.scrollToPosition(targetPos)
+                            binding.rvChannels.post {
+                                val vh = binding.rvChannels.findViewHolderForAdapterPosition(targetPos)
+                                if (vh != null) {
+                                    vh.itemView.requestFocus()
+                                } else {
+                                    binding.rvChannels.layoutManager?.findViewByPosition(targetPos)?.requestFocus()
+                                }
+                            }
+                            return
+                        }
+                    }
+                }
+
+                // 2. Phím Lên/Xuống khi đang trong danh mục rvCategories
+                val catHolder = binding.rvCategories.findContainingViewHolder(focused)
+                if (catHolder != null) {
+                    val currentPos = catHolder.adapterPosition
+                    if (currentPos != RecyclerView.NO_POSITION) {
+                        val targetPos = if (isDown) currentPos + 1 else currentPos - 1
+                        if (targetPos in 0 until categoryAdapter.itemCount) {
+                            binding.rvCategories.scrollToPosition(targetPos)
+                            binding.rvCategories.post {
+                                val vh = binding.rvCategories.findViewHolderForAdapterPosition(targetPos)
+                                if (vh != null) {
+                                    vh.itemView.requestFocus()
+                                } else {
+                                    binding.rvCategories.layoutManager?.findViewByPosition(targetPos)?.requestFocus()
+                                }
+                            }
+                            return
+                        }
+                    }
+                }
+
+                // 3. Dự phòng focusSearch mặc định
+                val next = focused.focusSearch(direction)
+                if (next != null && next != focused) {
+                    next.requestFocus(direction)
+                }
+            }
+
+            View.FOCUS_LEFT -> {
+                // Từ rvChannels -> nhảy sang Danh mục tương ứng
+                if (binding.rvChannels.findContainingViewHolder(focused) != null || binding.rvChannels.hasFocus()) {
+                    val targetCat = findHorizontallyAlignedCategoryView(focused)
+                    if (targetCat != null) {
+                        targetCat.requestFocus()
+                        return
+                    } else {
+                        val catPos = categoryAdapter.getSelectedPosition()
+                        val vh = if (catPos != -1) binding.rvCategories.findViewHolderForAdapterPosition(catPos) else null
+                        if (vh != null) {
+                            vh.itemView.requestFocus()
+                            return
+                        } else {
+                            binding.rvCategories.getChildAt(0)?.requestFocus()
+                            return
+                        }
+                    }
+                }
+
+                // Từ rvCategories -> nhảy sang Sidebar menu
+                if (binding.rvCategories.findContainingViewHolder(focused) != null || binding.rvCategories.hasFocus()) {
+                    val targetNav = if (currentAppMode == AppMode.SPORTS) binding.navModeSports else binding.navModeTv
+                    targetNav.requestFocus()
+                    return
+                }
+
+                val next = focused.focusSearch(View.FOCUS_LEFT)
+                if (next != null && next != focused) {
+                    next.requestFocus(View.FOCUS_LEFT)
+                }
+            }
+
+            View.FOCUS_RIGHT -> {
+                // Từ Sidebar -> nhảy sang Danh mục đang chọn
+                if (binding.layoutSidebarNav.hasFocus() || isDescendantOf(focused, binding.layoutSidebarNav)) {
+                    val catPos = categoryAdapter.getSelectedPosition()
+                    val target = if (catPos != -1) {
+                        binding.rvCategories.findViewHolderForAdapterPosition(catPos)?.itemView
+                    } else null
+                    (target ?: binding.rvCategories.getChildAt(0))?.requestFocus()
+                    return
+                }
+
+                // Từ rvCategories -> nhảy sang Kênh đang hiển thị
+                if (binding.rvCategories.findContainingViewHolder(focused) != null || binding.rvCategories.hasFocus()) {
+                    val targetChan = findHorizontallyAlignedChannelView(focused)
+                    if (targetChan != null) {
+                        targetChan.requestFocus()
+                        return
+                    } else {
+                        focusFirstVisibleChannel()
+                        return
+                    }
+                }
+
+                val next = focused.focusSearch(View.FOCUS_RIGHT)
+                if (next != null && next != focused) {
+                    next.requestFocus(View.FOCUS_RIGHT)
+                }
+            }
+        }
+    }
+
+    private fun isDescendantOf(child: View?, parent: View): Boolean {
+        var p: ViewParent? = child?.parent
+        while (p != null) {
+            if (p === parent) return true
+            p = p.parent
+        }
+        return false
     }
 
     private fun initPlayer() {
@@ -2044,7 +2270,9 @@ class MainActivity : AppCompatActivity() {
         val dialog = ChannelActionDialog(this, channel) {
             refreshChannelsState()
         }
+        activeCustomDialog = dialog
         dialog.setOnDismissListener {
+            activeCustomDialog = null
             backPressedTime = 0L
             if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                 currentPlayingChannel?.let { showQuickChannelInfo(it) }
@@ -2700,7 +2928,9 @@ class MainActivity : AppCompatActivity() {
             playChannel(selectedChannel)
             hideHandler.postDelayed({ hideOverlay() }, 800)
         }
+        activeCustomDialog = dialog
         dialog.setOnDismissListener {
+            activeCustomDialog = null
             backPressedTime = 0L
         }
         dialog.show()
@@ -2719,7 +2949,9 @@ class MainActivity : AppCompatActivity() {
                 showSettingsDialog()
             }
         )
+        activeCustomDialog = dialog
         dialog.setOnDismissListener {
+            activeCustomDialog = null
             backPressedTime = 0L
             if (binding.channelGuideOverlay.visibility != View.VISIBLE) {
                 currentPlayingChannel?.let { showQuickChannelInfo(it) }

@@ -587,6 +587,10 @@ class SportsLiveManager(private val context: Context) {
     fun parseSportsCategoriesFromDataJson(root: JSONObject): List<Category> {
         val categories = mutableListOf<Category>()
 
+        matchGroupsMap.clear()
+        sourceIdToMatchMap.clear()
+        urlToMatchesMap.clear()
+
         // 1. Cập nhật lịch thi đấu ESPN và bảng xếp hạng
         parseSportsDataJson(root)
 
@@ -594,6 +598,7 @@ class SportsLiveManager(private val context: Context) {
         val liveEventsArr = root.optJSONArray("live_events")
         if (liveEventsArr != null && liveEventsArr.length() > 0) {
             val matchesWithRefresh = mutableListOf<Channel>()
+            val addedMatches = mutableListOf<MatchGroup>()
             val refreshItem = Channel(
                 id = ACTION_REFRESH_SPORTS,
                 name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
@@ -644,7 +649,7 @@ class SportsLiveManager(private val context: Context) {
                 // Khử trùng lặp trận đấu (loại bỏ triệt để 1 trận đấu hiển thị 2 thẻ)
                 val curH = canonicalizeTeam(homeTeam)
                 val curA = canonicalizeTeam(awayTeam)
-                val existingMg = matchGroupsMap.values.firstOrNull { existing ->
+                val existingMg = addedMatches.firstOrNull { existing ->
                     val eH = canonicalizeTeam(existing.homeTeam)
                     val eA = canonicalizeTeam(existing.awayTeam)
                     isMatchBetweenTeams(curH, curA, eH, eA) &&
@@ -674,6 +679,7 @@ class SportsLiveManager(private val context: Context) {
                     isCompleted = isCompleted,
                     isOngoing = isOngoing
                 )
+                addedMatches.add(mg)
                 matchGroupsMap[key] = mg
                 for (src in sourceChannels) {
                     sourceIdToMatchMap[src.id] = mg

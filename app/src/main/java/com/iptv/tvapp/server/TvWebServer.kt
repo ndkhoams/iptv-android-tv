@@ -72,6 +72,7 @@ class TvWebServer(
 
     private fun handleClient(socket: Socket) {
         try {
+            socket.soTimeout = 6000 // 6s timeout so abandoned connections never block threads
             socket.use { s ->
                 val reader = BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8))
                 val output = s.getOutputStream()
@@ -80,9 +81,10 @@ class TvWebServer(
                 val parts = requestLine.split(" ")
                 if (parts.size < 2) return
 
-                val method = parts[0]
+                val method = parts[0].uppercase()
                 val rawPath = parts[1]
                 val path = rawPath.substringBefore('?')
+                val queryString = if (rawPath.contains('?')) rawPath.substringAfter('?') else ""
 
                 // Đọc Headers để tìm Content-Length
                 var contentLength = 0
@@ -94,7 +96,7 @@ class TvWebServer(
                     headerLine = reader.readLine()
                 }
 
-                // Đọc Body nếu là POST
+                // Đọc Body nếu là POST hoặc có Content-Length
                 val body = if (contentLength > 0) {
                     val buffer = CharArray(contentLength)
                     var readTotal = 0
@@ -106,14 +108,19 @@ class TvWebServer(
                     String(buffer, 0, readTotal)
                 } else ""
 
-                routeRequest(method, path, body, output)
+                routeRequest(method, path, queryString, body, output)
             }
         } catch (e: Exception) {
             // Client connection closed
         }
     }
 
-    private fun routeRequest(method: String, path: String, body: String, output: OutputStream) {
+    private fun routeRequest(method: String, path: String, queryString: String, body: String, output: OutputStream) {
+        if (method == "OPTIONS") {
+            sendResponse(output, "text/plain; charset=utf-8", "OK")
+            return
+        }
+
         when {
             method == "GET" && (path == "/" || path.startsWith("/index")) -> {
                 sendResponse(output, "text/html; charset=utf-8", WebPageTemplate.getHtml())
@@ -243,23 +250,61 @@ class TvWebServer(
                 }
                 sendResponse(output, "application/json; charset=utf-8", json.toString())
             }
-            method == "POST" && path == "/api/key" -> {
-                val json = if (body.isNotBlank()) JSONObject(body) else JSONObject()
-                val action = json.optString("action", "")
-                mainHandler.post { onSendKey(action) }
+            (method == "POST" || method == "GET") && path == "/api/key" -> {
+                var action = ""
+                // 1. Nhận param từ Query String: /api/key?action=up hoặc /api/key?key=up
+                if (queryString.isNotBlank()) {
+                    val match = Regex("""(?:action|key)=([^&]+)""", RegexOption.IGNORE_CASE).find(queryString)
+                    if (match != null) {
+                        action = try { java.net.URLDecoder.decode(match.groupValues[1], "UTF-8") } catch (e: Exception) { match.groupValues[1] }
+                    }
+                }
+                // 2. Nhận param từ POST JSON hoặc URL-encoded body
+                if (action.isBlank() && body.isNotBlank()) {
+                    try {
+                        val json = JSONObject(body)
+                        action = json.optString("action", "").ifBlank { json.optString("key", "") }
+                    } catch (e: Exception) {
+                        val match = Regex("""(?:action|key)=([^&]+)""", RegexOption.IGNORE_CASE).find(body)
+                        if (match != null) {
+                            action = try { java.net.URLDecoder.decode(match.groupValues[1], "UTF-8") } catch (ex: Exception) { match.groupValues[1] }
+                        }
+                    }
+                }
+                if (action.isNotBlank()) {
+                    mainHandler.post { onSendKey(action.trim().lowercase()) }
+                }
                 val playing = currentPlayingProvider()
                 val resp = JSONObject().apply {
                     put("success", true)
+                    put("action", action)
                     put("nowPlaying", playing?.let { "[${String.format("%02d", it.number)}] ${it.name}" } ?: "")
                 }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
-            method == "POST" && path == "/api/play" -> {
-                val json = JSONObject(body)
-                val streamUrl = json.getString("streamUrl")
-                val name = json.optString("name", "Channel")
-                val groupTitle = json.optString("groupTitle", "")
-                val logoUrl = json.optString("logoUrl", "")
+            (method == "POST" || method == "GET") && path == "/api/play" -> {
+                var streamUrl = ""
+                var name = "Channel"
+                var groupTitle = ""
+                var logoUrl = ""
+
+                if (body.isNotBlank()) {
+                    try {
+                        val json = JSONObject(body)
+                        streamUrl = json.optString("streamUrl", "")
+                        name = json.optString("name", "Channel")
+                        groupTitle = json.optString("groupTitle", "")
+                        logoUrl = json.optString("logoUrl", "")
+                    } catch (e: Exception) {}
+                }
+                if (streamUrl.isBlank() && queryString.isNotBlank()) {
+                    val mUrl = Regex("""streamUrl=([^&]+)""", RegexOption.IGNORE_CASE).find(queryString)
+                    if (mUrl != null) streamUrl = try { java.net.URLDecoder.decode(mUrl.groupValues[1], "UTF-8") } catch (e: Exception) { mUrl.groupValues[1] }
+                    val mName = Regex("""name=([^&]+)""", RegexOption.IGNORE_CASE).find(queryString)
+                    if (mName != null) name = try { java.net.URLDecoder.decode(mName.groupValues[1], "UTF-8") } catch (e: Exception) { mName.groupValues[1] }
+                    val mGrp = Regex("""groupTitle=([^&]+)""", RegexOption.IGNORE_CASE).find(queryString)
+                    if (mGrp != null) groupTitle = try { java.net.URLDecoder.decode(mGrp.groupValues[1], "UTF-8") } catch (e: Exception) { mGrp.groupValues[1] }
+                }
 
                 var channel: Channel? = channelProvider().firstOrNull { it.streamUrl == streamUrl }
                 if (channel == null) {
@@ -491,8 +536,8 @@ class TvWebServer(
                 "Content-Type: $contentType\r\n" +
                 "Content-Length: ${bytes.size}\r\n" +
                 "Access-Control-Allow-Origin: *\r\n" +
-                "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
-                "Access-Control-Allow-Headers: Content-Type\r\n" +
+                "Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE\r\n" +
+                "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\r\n" +
                 "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
                 "Pragma: no-cache\r\n" +
                 "Expires: 0\r\n" +

@@ -30,6 +30,8 @@ class CategoryAdapter(
         }
     }
 
+    fun getSelectedPosition(): Int = selectedIndex
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CategoryViewHolder {
         val binding = ItemCategoryBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
