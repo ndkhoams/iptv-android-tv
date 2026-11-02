@@ -326,7 +326,11 @@ class MainActivity : AppCompatActivity() {
         )
         binding.rvChannels.apply {
             layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvChannels }) { focused, direction ->
-                if (direction == View.FOCUS_LEFT) findHorizontallyAlignedCategoryView(focused) else null
+                when (direction) {
+                    View.FOCUS_LEFT -> findHorizontallyAlignedCategoryView(focused)
+                    View.FOCUS_RIGHT -> focused // Khóa focus: Không cho focus nhảy sang cột Spotlight EPG/BXH bên phải
+                    else -> null
+                }
             }
             adapter = channelAdapter
             setHasFixedSize(true)
@@ -1209,7 +1213,7 @@ class MainActivity : AppCompatActivity() {
                 binding.layoutLeagueStandings.visibility = View.VISIBLE
                 binding.tvRightPanelTitle.text = "BẢNG XẾP HẠNG"
                 binding.tvEpgSourceTag.visibility = View.GONE
-                binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
+// binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
 
                 if (currentDisplayingLeague != targetLeague) {
                     currentDisplayingLeague = targetLeague
@@ -1253,14 +1257,14 @@ class MainActivity : AppCompatActivity() {
                 binding.rvSpotlightStandings.visibility = View.GONE
                 binding.tvStandingsEmpty.visibility = View.VISIBLE
                 binding.tvStandingsEmpty.text = "Nhấn OK trên điều khiển để chọn nguồn phát trực tiếp"
-                binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
+// binding.rvChannels.nextFocusRightId = R.id.rvSpotlightStandings
                 return
             }
         }
         currentDisplayingLeague = null
 
         // TV Channel mode:
-        binding.rvChannels.nextFocusRightId = R.id.rvSpotlightEpg
+// binding.rvChannels.nextFocusRightId = R.id.rvSpotlightEpg
         binding.layoutLeagueStandings.visibility = View.GONE
         binding.layoutEpgTimeline.visibility = View.VISIBLE
         binding.tvRightPanelTitle.text = "LỊCH PHÁT SÓNG (EPG)"
@@ -2220,6 +2224,10 @@ class MainActivity : AppCompatActivity() {
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                    if (binding.layoutSpotlightCol.hasFocus() || binding.rvSpotlightEpg.hasFocus() || binding.rvSpotlightStandings.hasFocus()) {
+                        focusFirstVisibleChannel()
+                        return true
+                    }
                     if (binding.rvChannels.hasFocus()) {
                         val focused = currentFocus ?: binding.rvChannels.findFocus()
                         if (focused != null) {
@@ -2398,14 +2406,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleBackInOverlay(): Boolean {
         val focused = currentFocus
-        val isStandingsFocused = focused != null && (focused.id == R.id.rvSpotlightStandings ||
-                focused.id == R.id.layoutStandingItem ||
-                (focused.parent != null && focused.parent == binding.rvSpotlightStandings))
-        val isEpgFocused = focused != null && (focused.id == R.id.rvSpotlightEpg ||
-                (focused.parent != null && focused.parent == binding.rvSpotlightEpg))
+        val isSpotlightFocused = focused != null && (
+            binding.layoutSpotlightCol.hasFocus() ||
+            focused.id == R.id.rvSpotlightStandings ||
+            focused.id == R.id.rvSpotlightEpg ||
+            focused.id == R.id.layoutStandingItem ||
+            (focused.parent != null && (focused.parent == binding.rvSpotlightStandings || focused.parent == binding.rvSpotlightEpg))
+        )
 
-        if (isStandingsFocused || isEpgFocused) {
-            focusPlayingChannel()
+        if (isSpotlightFocused) {
+            focusFirstVisibleChannel()
             backPressedTime = 0L
             return true
         }
@@ -2535,7 +2545,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (playing == null) {
-            binding.rvChannels.requestFocus()
+            focusFirstVisibleChannel()
             return
         }
         val playingIndex = currentCategoryChannels.indexOfFirst { it.streamUrl == playing.streamUrl || it.id == playing.id }
@@ -2558,7 +2568,27 @@ class MainActivity : AppCompatActivity() {
             }
             updateSpotlight(targetChannel)
         } else {
-            binding.rvChannels.requestFocus()
+            focusFirstVisibleChannel()
+        }
+    }
+
+    private fun focusFirstVisibleChannel() {
+        val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
+        val first = lm?.findFirstVisibleItemPosition() ?: 0
+        val targetPos = if (first != RecyclerView.NO_POSITION && first in currentCategoryChannels.indices) first else 0
+        binding.rvChannels.post {
+            val vh = binding.rvChannels.findViewHolderForAdapterPosition(targetPos)
+            if (vh != null) {
+                vh.itemView.requestFocus()
+            } else {
+                binding.rvChannels.layoutManager?.findViewByPosition(targetPos)?.requestFocus() ?: run {
+                    binding.rvChannels.postDelayed({
+                        binding.rvChannels.findViewHolderForAdapterPosition(targetPos)?.itemView?.requestFocus()
+                            ?: binding.rvChannels.layoutManager?.findViewByPosition(targetPos)?.requestFocus()
+                            ?: binding.rvChannels.getChildAt(0)?.requestFocus()
+                    }, 60)
+                }
+            }
         }
     }
 

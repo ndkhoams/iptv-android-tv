@@ -532,7 +532,7 @@
                     android:focusableInTouchMode="false"
                     android:descendantFocusability="afterDescendants"
                     android:nextFocusLeft="@+id/rvCategories"
-                    android:nextFocusRight="@+id/rvSpotlightEpg"
+                    
                     android:clipToPadding="false" />
             </LinearLayout>
 
@@ -683,10 +683,8 @@
                             android:clipChildren="true"
                             android:clipToPadding="true"
                             android:overScrollMode="never"
-                            android:focusable="true"
-                            android:focusableInTouchMode="true"
-                            android:descendantFocusability="afterDescendants"
-                            android:nextFocusLeft="@+id/rvChannels" />
+                            android:focusable="false"
+                            android:focusableInTouchMode="false" />
 
                         <TextView
                             android:id="@+id/tvEpgEmpty"
@@ -775,10 +773,8 @@
                             android:clipChildren="true"
                             android:clipToPadding="true"
                             android:overScrollMode="never"
-                            android:focusable="true"
-                            android:focusableInTouchMode="true"
-                            android:descendantFocusability="afterDescendants"
-                            android:nextFocusLeft="@+id/rvChannels" />
+                            android:focusable="false"
+                            android:focusableInTouchMode="false" />
 
                         <TextView
                             android:id="@+id/tvStandingsEmpty"

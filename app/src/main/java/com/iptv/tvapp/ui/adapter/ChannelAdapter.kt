@@ -28,19 +28,9 @@ class ChannelAdapter(
     }
 
     fun setPlayingChannel(channel: Channel?, matchKey: String? = null) {
-        val oldKey = playingMatchKey
-        val oldPos = channels.indexOfFirst {
-            it.streamUrl == playingChannel?.streamUrl || (oldKey != null && it.streamUrl == "match://$oldKey")
-        }
         playingChannel = channel
         playingMatchKey = matchKey
-
-        val newPos = channels.indexOfFirst {
-            it.streamUrl == channel?.streamUrl || (matchKey != null && it.streamUrl == "match://$matchKey")
-        }
-
-        if (oldPos != -1) notifyItemChanged(oldPos)
-        if (newPos != -1 && newPos != oldPos) notifyItemChanged(newPos)
+        notifyDataSetChanged()
     }
 
     fun updateChannelItem(channel: Channel) {
@@ -119,8 +109,18 @@ class ChannelAdapter(
             binding.tvChannelNumber.text = String.format("%02d", channel.number)
             binding.tvChannelName.text = channel.name
 
-            val isPlaying = (channel.streamUrl == playingChannel?.streamUrl) ||
-                (playingMatchKey != null && channel.streamUrl == "match://$playingMatchKey")
+            val isPlaying = when {
+                playingChannel == null -> false
+                channel.id == playingChannel?.id -> true
+                channel.streamUrl.startsWith("match://") -> {
+                    val key = channel.streamUrl.removePrefix("match://")
+                    key == playingMatchKey
+                }
+                channel.streamUrl == playingChannel?.streamUrl -> {
+                    channel.name == playingChannel?.name || channel.id == playingChannel?.id
+                }
+                else -> false
+            }
             binding.tvNowPlaying.visibility = if (isPlaying) View.VISIBLE else View.GONE
             binding.tvDefaultBadge.visibility = if (channel.isDefaultStartup) View.VISIBLE else View.GONE
             binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE
