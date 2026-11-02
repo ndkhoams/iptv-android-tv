@@ -22,6 +22,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
 class SportsLiveManager(private val context: Context) {
@@ -85,50 +86,58 @@ class SportsLiveManager(private val context: Context) {
 
     fun findMatchForChannel(channel: Channel?): MatchGroup? {
         if (channel == null) return null
+        if (channel.id == ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return null
+
+        // 0. Tra cứu trực tiếp theo sourceId O(1)
+        sourceIdToMatchMap[channel.id]?.let { return it }
+
+        // 1. match:// URI
         if (channel.streamUrl.startsWith("match://")) {
             val key = channel.streamUrl.removePrefix("match://")
             getMatch(key)?.let { return it }
         }
-        // 1. Tìm trực tiếp theo URL luồng trong bộ đệm O(1)
-        urlToMatchMap[channel.streamUrl]?.let { return it }
-        // 2. Tìm theo key hoặc tên trong matchGroupsMap
-        getMatch(channel.name)?.let { return it }
-        matchGroupsMap.values.firstOrNull { mg ->
-            mg.sources.any { s -> s.streamUrl == channel.streamUrl || s.id == channel.id }
-        }?.let { return it }
 
-        // 3. Fallback thông minh: Tách tên 2 đội từ tên kênh để nhận diện trận đấu
+        // 2. Tra cứu theo key hoặc tên trong matchGroupsMap
+        getMatch(channel.name)?.let { return it }
+
+        // 3. Tra cứu thông minh theo URL luồng (xử lý triệt để đài/BLV dùng chung 1 URL cho nhiều trận khác giờ)
+        findMatchByUrl(channel.streamUrl, channel.name)?.let { return it }
+
+        // Bỏ qua nếu là kênh TV thông thường không có vs hoặc ký hiệu thể thao
+        if (!isEligibleSportsMatch(channel.name, channel.groupTitle) && !channel.name.contains("vs", ignoreCase = true)) {
+            return null
+        }
+
+        // 4. Fallback thông minh: Tách tên 2 đội từ tên kênh để nhận diện trận đấu
         val (home, away, lg) = extractTeamsAndLeague(channel.name)
         val cHome = canonicalizeTeam(home)
         val cAway = canonicalizeTeam(away)
-        if (cHome.isNotBlank()) {
-            // 3.1. Tìm trong các MatchGroup đã có sẵn theo tên đội chuẩn hóa
+        if (cHome.length >= 3 && cAway.length >= 3) {
+            // 4.1. Tìm trong các MatchGroup đã có sẵn theo tên cả 2 đội chuẩn hóa (bắt buộc khớp cả 2 đội)
             for (mg in matchGroupsMap.values) {
                 val mgH = canonicalizeTeam(mg.homeTeam)
                 val mgA = canonicalizeTeam(mg.awayTeam)
-                val isHomeMatch = (cHome == mgH || (cHome.length >= 4 && mgH.length >= 4 && (cHome.contains(mgH) || mgH.contains(cHome))))
-                val isAwayMatch = if (cAway.isNotBlank() && mgA.isNotBlank()) {
-                    (cAway == mgA || (cAway.length >= 4 && mgA.length >= 4 && (cAway.contains(mgA) || mgA.contains(cAway))))
-                } else true
-                val isReversedMatch = if (cAway.isNotBlank() && mgA.isNotBlank()) {
-                    (cHome == mgA || (cHome.length >= 4 && mgA.length >= 4 && (cHome.contains(mgA) || mgA.contains(cHome)))) &&
-                    (cAway == mgH || (cAway.length >= 4 && mgH.length >= 4 && (cAway.contains(mgH) || mgH.contains(cAway))))
-                } else false
+                val isNormalMatch = (cHome == mgH || (cHome.length >= 4 && mgH.length >= 4 && (cHome.contains(mgH) || mgH.contains(cHome)))) &&
+                                    (cAway == mgA || (cAway.length >= 4 && mgA.length >= 4 && (cAway.contains(mgA) || mgA.contains(cAway))))
+                val isReversedMatch = (cHome == mgA || (cHome.length >= 4 && mgA.length >= 4 && (cHome.contains(mgA) || mgA.contains(cHome)))) &&
+                                      (cAway == mgH || (cAway.length >= 4 && mgH.length >= 4 && (cAway.contains(mgH) || mgH.contains(cAway))))
 
-                if ((isHomeMatch && isAwayMatch) || isReversedMatch) {
-                    urlToMatchMap[channel.streamUrl] = mg
+                if (isNormalMatch || isReversedMatch) {
+                    sourceIdToMatchMap[channel.id] = mg
+                    addUrlMapping(channel.streamUrl, mg)
                     if (mg.sources.none { it.streamUrl == channel.streamUrl }) {
                         val updatedSources = mg.sources.toMutableList().apply { add(channel) }
                         val updatedMg = mg.copy(sources = updatedSources)
                         matchGroupsMap[mg.key] = updatedMg
-                        urlToMatchMap[channel.streamUrl] = updatedMg
+                        sourceIdToMatchMap[channel.id] = updatedMg
+                        addUrlMapping(channel.streamUrl, updatedMg)
                         return updatedMg
                     }
                     return mg
                 }
             }
 
-            // 3.2. Trận đấu ngoài LIVE EVENTS -> Quét toàn bộ danh mục để gom nhóm động tất cả các nguồn phát của trận này
+            // 4.2. Trận đấu ngoài LIVE EVENTS -> Quét toàn bộ danh mục để gom nhóm động tất cả các nguồn phát của trận này
             val foundSources = mutableListOf<Channel>()
             val visitedUrls = mutableSetOf<String>()
             foundSources.add(channel)
@@ -141,16 +150,14 @@ class SportsLiveManager(private val context: Context) {
                         val (chH, chA, _) = extractTeamsAndLeague(ch.name)
                         val chHc = canonicalizeTeam(chH)
                         val chAc = canonicalizeTeam(chA)
-                        val match = if (cAway.isNotBlank() && chAc.isNotBlank()) {
-                            ((cHome == chHc || (cHome.length >= 4 && chHc.length >= 4 && (cHome.contains(chHc) || chHc.contains(cHome)))) &&
-                             (cAway == chAc || (cAway.length >= 4 && chAc.length >= 4 && (cAway.contains(chAc) || chAc.contains(cAway))))) ||
-                            ((cHome == chAc || (cHome.length >= 4 && chAc.length >= 4 && (cHome.contains(chAc) || chAc.contains(cHome)))) &&
-                             (cAway == chHc || (cAway.length >= 4 && chHc.length >= 4 && (cAway.contains(chHc) || chHc.contains(chHc)))))
-                        } else {
-                            cHome == chHc || (cHome.length >= 4 && chHc.length >= 4 && (cHome.contains(chHc) || chHc.contains(cHome)))
-                        }
-                        if (match) {
-                            foundSources.add(ch)
+                        if (chHc.length >= 3 && chAc.length >= 3) {
+                            val match = ((cHome == chHc || (cHome.length >= 4 && chHc.length >= 4 && (cHome.contains(chHc) || chHc.contains(cHome)))) &&
+                                         (cAway == chAc || (cAway.length >= 4 && chAc.length >= 4 && (cAway.contains(chAc) || chAc.contains(cAway))))) ||
+                                        ((cHome == chAc || (cHome.length >= 4 && chAc.length >= 4 && (cHome.contains(chAc) || chAc.contains(chAc)))) &&
+                                         (cAway == chHc || (cAway.length >= 4 && chHc.length >= 4 && (cAway.contains(chHc) || chHc.contains(chHc)))))
+                            if (match) {
+                                foundSources.add(ch)
+                            }
                         }
                     }
                 }
@@ -160,22 +167,30 @@ class SportsLiveManager(private val context: Context) {
                 val cal = parseMatchDateTime(channel.name) ?: java.util.Calendar.getInstance()
                 val timeStr = Regex("""\b(\d{1,2}:\d{2})\b""").find(channel.name)?.groupValues?.get(1) ?: "LIVE"
                 val dateStr = Regex("""\b(\d{1,2}[/-]\d{1,2})\b""").find(channel.name)?.groupValues?.get(1) ?: ""
-                val dynKey = if (cAway.isNotBlank()) "${dateStr}_${timeStr}_${listOf(cHome, cAway).sorted().joinToString("_")}" else "${dateStr}_${timeStr}_$cHome"
+                val dynKey = "${dateStr}_${timeStr}_${listOf(cHome, cAway).sorted().joinToString("_" )}"
+                val now = System.currentTimeMillis()
+                val matchTs = cal.timeInMillis
+                val isOngoing = if (channel.name.contains("LIVE", ignoreCase = true)) {
+                    true
+                } else {
+                    (now >= matchTs - 15 * 60 * 1000L) && (now - matchTs <= 140 * 60 * 1000L)
+                }
                 val dynMg = MatchGroup(
                     key = dynKey,
                     homeTeam = home.ifBlank { "Đội nhà" },
-                    awayTeam = away,
+                    awayTeam = away.ifBlank { "Đội khách" },
                     time = timeStr,
                     date = dateStr,
-                    timestamp = cal.timeInMillis,
+                    timestamp = matchTs,
                     league = lg,
                     leagueName = LEAGUE_LABELS[lg] ?: "🌐 Trực tiếp",
                     sources = foundSources,
-                    isOngoing = isMatchOngoing(channel)
+                    isOngoing = isOngoing
                 )
                 matchGroupsMap[dynKey] = dynMg
                 for (s in foundSources) {
-                    urlToMatchMap[s.streamUrl] = dynMg
+                    sourceIdToMatchMap[s.id] = dynMg
+                    addUrlMapping(s.streamUrl, dynMg)
                 }
                 return dynMg
             }
@@ -187,17 +202,21 @@ class SportsLiveManager(private val context: Context) {
     fun isMatchOngoing(channel: Channel?): Boolean {
         if (channel == null) return false
         if (channel.id == ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return false
-        val mg = findMatchForChannel(channel)
-        if (mg != null) {
-            return mg.isOngoing && !mg.isCompleted
+        if (channel.streamUrl.startsWith("match://")) {
+            val key = channel.streamUrl.removePrefix("match://")
+            matchGroupsMap[key]?.let { return it.isOngoing && !it.isCompleted }
         }
+        sourceIdToMatchMap[channel.id]?.let { return it.isOngoing && !it.isCompleted }
+        findMatchByUrl(channel.streamUrl, channel.name)?.let { return it.isOngoing && !it.isCompleted }
+
         val name = channel.name
+        if (name.contains("LIVE", ignoreCase = true)) return true
         val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(name)
         val timeStr = timeMatch?.groupValues?.get(1) ?: return false
         val matchCal = parseMatchDateTime(name) ?: return false
         val matchTimestamp = matchCal.timeInMillis
         val now = System.currentTimeMillis()
-        return (now >= matchTimestamp - 15 * 60 * 1000L) && (now - matchTimestamp <= 135 * 60 * 1000L)
+        return (now >= matchTimestamp - 15 * 60 * 1000L) && (now - matchTimestamp <= 140 * 60 * 1000L)
     }
 
     companion object {
@@ -205,7 +224,59 @@ class SportsLiveManager(private val context: Context) {
         const val CATEGORY_LIVE_EVENTS = "🔴 LIVE EVENTS"
         const val CATEGORY_SPORT_TV = "📺 SPORT 24/7 TV"
         private val matchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
-        private val urlToMatchMap = ConcurrentHashMap<String, MatchGroup>()
+        private val sourceIdToMatchMap = ConcurrentHashMap<String, MatchGroup>()
+        private val urlToMatchesMap = ConcurrentHashMap<String, CopyOnWriteArrayList<MatchGroup>>()
+
+        private fun addUrlMapping(url: String, mg: MatchGroup) {
+            if (url.isBlank()) return
+            val list = urlToMatchesMap.computeIfAbsent(url) { CopyOnWriteArrayList() }
+            if (list.none { it.key == mg.key }) {
+                list.add(mg)
+            }
+        }
+
+        fun findMatchByUrl(url: String, channelName: String = ""): MatchGroup? {
+            if (url.isBlank()) return null
+            val list = urlToMatchesMap[url] ?: return null
+            if (list.isEmpty()) return null
+            if (list.size == 1) {
+                val single = list[0]
+                if (channelName.isNotBlank()) {
+                    val (h, a, _) = extractTeamsAndLeague(channelName)
+                    val cH = canonicalizeTeam(h)
+                    val cA = canonicalizeTeam(a)
+                    if (cH.length >= 3 && cA.length >= 3) {
+                        val mgH = canonicalizeTeam(single.homeTeam)
+                        val mgA = canonicalizeTeam(single.awayTeam)
+                        val matches = (cH == mgH || cH == mgA || cA == mgH || cA == mgA)
+                        return if (matches) single else null
+                    }
+                }
+                return single
+            }
+
+            // Nhiều trận dùng chung URL (ví dụ cùng BLV Chuối Lá hay Gà Vàng)
+            // 1. Khớp theo tên đội nếu kênh có tên đội
+            if (channelName.isNotBlank()) {
+                val (h, a, _) = extractTeamsAndLeague(channelName)
+                val cH = canonicalizeTeam(h)
+                val cA = canonicalizeTeam(a)
+                if (cH.length >= 3) {
+                    list.firstOrNull { mg ->
+                        val mgH = canonicalizeTeam(mg.homeTeam)
+                        val mgA = canonicalizeTeam(mg.awayTeam)
+                        (cH == mgH || cH == mgA) && (cA.isBlank() || cA == mgH || cA == mgA)
+                    }?.let { return it }
+                }
+            }
+
+            // 2. Ưu tiên trận đang diễn ra (isOngoing)
+            list.firstOrNull { it.isOngoing && !it.isCompleted }?.let { return it }
+
+            // 3. Trận có thời gian thi đấu gần hiện tại nhất
+            val now = System.currentTimeMillis()
+            return list.minByOrNull { Math.abs(now - it.timestamp) }
+        }
         private val canonicalTeamCache = ConcurrentHashMap<String, String>()
         private val teamsAndLeagueCache = ConcurrentHashMap<String, Triple<String, String, String>>()
         private val espnFixturesCache = ConcurrentHashMap<String, List<EspnFixture>>()
@@ -413,7 +484,8 @@ class SportsLiveManager(private val context: Context) {
         cachedCategories = null
         lastFetchTimeMs = 0L
         matchGroupsMap.clear()
-        urlToMatchMap.clear()
+        sourceIdToMatchMap.clear()
+        urlToMatchesMap.clear()
         canonicalTeamCache.clear()
         teamsAndLeagueCache.clear()
         espnFixturesCache.clear()
@@ -539,7 +611,8 @@ class SportsLiveManager(private val context: Context) {
                 )
                 matchGroupsMap[key] = mg
                 for (src in sourceChannels) {
-                    urlToMatchMap[src.streamUrl] = mg
+                    sourceIdToMatchMap[src.id] = mg
+                    addUrlMapping(src.streamUrl, mg)
                 }
 
                 // Chỉ hiển thị những trận chưa kết thúc (Full-time)
@@ -631,6 +704,18 @@ class SportsLiveManager(private val context: Context) {
                 }
             } catch (e: Exception) {}
         }
+        // Fallback đọc assets thethao-data.json tích hợp sẵn trong APK nếu chưa có cache
+        try {
+            context.assets.open("thethao-data.json").use { input ->
+                val jsonStr = input.bufferedReader(Charsets.UTF_8).readText()
+                val root = JSONObject(jsonStr)
+                val list = parseSportsCategoriesFromDataJson(root)
+                if (list.isNotEmpty()) {
+                    cachedCategories = list
+                    return list
+                }
+            }
+        } catch (e: Exception) {}
         return emptyList()
     }
 
@@ -1176,6 +1261,10 @@ class SportsLiveManager(private val context: Context) {
                 // Lưu vào cache Map để MatchSourcesDialog và Web Remote truy xuất khi click
                 for (m in grouped.values) {
                     matchGroupsMap[m.key] = m
+                    for (src in m.sources) {
+                        sourceIdToMatchMap[src.id] = m
+                        addUrlMapping(src.streamUrl, m)
+                    }
                 }
 
                 val matchesWithRefresh = mutableListOf<Channel>()

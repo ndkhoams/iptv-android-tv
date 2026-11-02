@@ -31,7 +31,8 @@ class MatchSourcesDialog(
 
         binding.tvMatchTitle.text = "${matchGroup.homeTeam} vs ${matchGroup.awayTeam}"
         val leagueStr = if (matchGroup.leagueName.isNotBlank()) " • ${matchGroup.leagueName}" else ""
-        binding.tvMatchSubtitle.text = "${matchGroup.time} Hôm nay$leagueStr • ${matchGroup.sources.size} nguồn phát trực tiếp"
+        val timeStr = if (matchGroup.date.isNotBlank()) "${matchGroup.time} ${matchGroup.date}" else "${matchGroup.time} Hôm nay"
+        binding.tvMatchSubtitle.text = "$timeStr$leagueStr • ${matchGroup.sources.size} nguồn phát trực tiếp"
 
         val adapter = MatchSourcesAdapter(matchGroup.sources) { selectedChannel ->
             dismiss()

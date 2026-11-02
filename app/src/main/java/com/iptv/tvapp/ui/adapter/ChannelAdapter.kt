@@ -19,6 +19,7 @@ class ChannelAdapter(
 
     private val channels = mutableListOf<Channel>()
     private var playingChannel: Channel? = null
+    private var playingMatchKey: String? = null
 
     fun submitList(list: List<Channel>) {
         channels.clear()
@@ -26,13 +27,20 @@ class ChannelAdapter(
         notifyDataSetChanged()
     }
 
-    fun setPlayingChannel(channel: Channel?) {
-        val oldPos = channels.indexOfFirst { it.streamUrl == playingChannel?.streamUrl }
-        val newPos = channels.indexOfFirst { it.streamUrl == channel?.streamUrl }
+    fun setPlayingChannel(channel: Channel?, matchKey: String? = null) {
+        val oldKey = playingMatchKey
+        val oldPos = channels.indexOfFirst {
+            it.streamUrl == playingChannel?.streamUrl || (oldKey != null && it.streamUrl == "match://$oldKey")
+        }
         playingChannel = channel
+        playingMatchKey = matchKey
+
+        val newPos = channels.indexOfFirst {
+            it.streamUrl == channel?.streamUrl || (matchKey != null && it.streamUrl == "match://$matchKey")
+        }
 
         if (oldPos != -1) notifyItemChanged(oldPos)
-        if (newPos != -1) notifyItemChanged(newPos)
+        if (newPos != -1 && newPos != oldPos) notifyItemChanged(newPos)
     }
 
     fun updateChannelItem(channel: Channel) {
@@ -111,7 +119,8 @@ class ChannelAdapter(
             binding.tvChannelNumber.text = String.format("%02d", channel.number)
             binding.tvChannelName.text = channel.name
 
-            val isPlaying = channel.streamUrl == playingChannel?.streamUrl
+            val isPlaying = (channel.streamUrl == playingChannel?.streamUrl) ||
+                (playingMatchKey != null && channel.streamUrl == "match://$playingMatchKey")
             binding.tvNowPlaying.visibility = if (isPlaying) View.VISIBLE else View.GONE
             binding.tvDefaultBadge.visibility = if (channel.isDefaultStartup) View.VISIBLE else View.GONE
             binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE

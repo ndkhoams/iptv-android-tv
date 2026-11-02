@@ -666,7 +666,12 @@ class MainActivity : AppCompatActivity() {
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.layoutQuickBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.VISIBLE
-                                binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
+                                val mg = currentPlayingMatchGroup
+                                if (mg != null && mg.sources.size > 1) {
+                                    binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC.\nBấm ▶ (Phím Phải) để đổi nguồn khác (còn ${mg.sources.size - 1} nguồn)"
+                                } else {
+                                    binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
+                                }
                             }
                         }
                     }
@@ -767,7 +772,12 @@ class MainActivity : AppCompatActivity() {
                         binding.layoutBuffering.visibility = View.GONE
                         binding.layoutQuickBuffering.visibility = View.GONE
                         binding.tvErrorMessage.visibility = View.VISIBLE
-                        binding.tvErrorDetail.text = "Lỗi phát kênh: ${error.errorCodeName}\nBấm ▲ ▼ để đổi kênh khác"
+                        val mg = currentPlayingMatchGroup
+                        if (mg != null && mg.sources.size > 1) {
+                            binding.tvErrorDetail.text = "Lỗi kết nối luồng phát này.\nBấm ▶ (Phím Phải) để đổi nguồn khác (còn ${mg.sources.size - 1} nguồn)"
+                        } else {
+                            binding.tvErrorDetail.text = "Lỗi phát kênh: ${error.errorCodeName}\nBấm ▲ ▼ để đổi kênh khác"
+                        }
                     }
                 })
             }
@@ -930,7 +940,12 @@ class MainActivity : AppCompatActivity() {
             currentSelectedCategory = catToSelect
             categoryAdapter.setSelectedCategory(catToSelect)
             val channelToFocus = if (mode == AppMode.SPORTS && currentPlayingMatchGroup != null) {
-                catToSelect.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" } ?: playing
+                catToSelect.channels.firstOrNull { it.streamUrl == "match://${currentPlayingMatchGroup?.key}" }
+                    ?: catToSelect.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS }
+                    ?: catToSelect.channels.firstOrNull()
+            } else if (mode == AppMode.SPORTS) {
+                catToSelect.channels.firstOrNull { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS }
+                    ?: catToSelect.channels.firstOrNull()
             } else if (catToSelect == targetCategory) {
                 playing
             } else null
@@ -1312,12 +1327,27 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        currentPlayingChannel = channel
-        prefs.lastChannelUrl = channel.streamUrl
+        // Nếu là kênh ảo của trận đấu (match://), tự động phát nguồn đầu tiên thay vì gửi link ảo cho player
+        val targetChannel = if (channel.streamUrl.startsWith("match://")) {
+            val key = channel.streamUrl.removePrefix("match://")
+            val mg = playlistManager.sportsLiveManager.getMatch(key)
+            if (mg != null && mg.sources.isNotEmpty()) {
+                currentPlayingMatchGroup = mg
+                mg.sources.first()
+            } else {
+                showBottomNotification("Chưa có nguồn phát trực tiếp cho trận đấu này")
+                return
+            }
+        } else {
+            channel
+        }
+
+        currentPlayingChannel = targetChannel
+        prefs.lastChannelUrl = targetChannel.streamUrl
         if (currentAppMode == AppMode.TV) {
             currentPlayingMatchGroup = null
-        } else {
-            currentPlayingMatchGroup = playlistManager.sportsLiveManager.findMatchForChannel(channel)
+        } else if (currentPlayingMatchGroup == null || currentPlayingMatchGroup?.sources?.none { it.streamUrl == targetChannel.streamUrl || it.id == targetChannel.id } == true) {
+            currentPlayingMatchGroup = playlistManager.sportsLiveManager.findMatchForChannel(targetChannel)
         }
 
         currentMeasuredBitrateMbps = 0f
@@ -1328,10 +1358,10 @@ class MainActivity : AppCompatActivity() {
         lastRxTime = System.currentTimeMillis()
         startTelemetryUpdates()
 
-        channelAdapter.setPlayingChannel(channel)
-        updateSpotlight(channel)
+        channelAdapter.setPlayingChannel(targetChannel, currentPlayingMatchGroup?.key)
+        updateSpotlight(targetChannel)
 
-        showQuickChannelInfo(channel)
+        showQuickChannelInfo(targetChannel)
 
         binding.tvErrorMessage.visibility = View.GONE
         binding.tvQuickBufferingText.text = "Đang tải luồng..."
@@ -1340,14 +1370,14 @@ class MainActivity : AppCompatActivity() {
         val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
 
         // Nếu là trận đấu thể thao trực tiếp từ web (Xôi Lạc, Cà Khịa, StreamFree), giải mã link m3u8 động
-        if (channel.streamUrl.contains("/truc-tiep/") || channel.streamUrl.startsWith("streamfree://")) {
+        if (targetChannel.streamUrl.contains("/truc-tiep/") || targetChannel.streamUrl.startsWith("streamfree://")) {
             binding.tvQuickBufferingText.text = "Đang kết nối luồng trực tiếp..."
             binding.layoutQuickBuffering.visibility = View.VISIBLE
             lifecycleScope.launch(Dispatchers.Main) {
                 val resolved = withContext(Dispatchers.IO) {
-                    playlistManager.sportsLiveManager.resolveLiveStreamUrl(channel.streamUrl)
+                    playlistManager.sportsLiveManager.resolveLiveStreamUrl(targetChannel.streamUrl)
                 }
-                if (currentPlayingChannel?.id == channel.id) {
+                if (currentPlayingChannel?.id == targetChannel.id) {
                     val streamUriString = normalizeStreamUrl(resolved, isVlc)
                     if (isVlc) {
                         playWithVlc(streamUriString)
@@ -1359,7 +1389,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val streamUriString = normalizeStreamUrl(channel.streamUrl, isVlc)
+        val streamUriString = normalizeStreamUrl(targetChannel.streamUrl, isVlc)
 
         if (isVlc) {
             playWithVlc(streamUriString)
@@ -1819,7 +1849,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickName.text = channel.name
 
         // Lấy tên chương trình EPG đang phát thời gian thực (hiển thị xong rồi tự tắt đi)
-        val isSports = isSportsLiveMatch(channel) || (currentAppMode == AppMode.SPORTS) || channel.streamUrl.startsWith("match://") || (currentPlayingMatchGroup != null)
+        val isSports = isSportsLiveMatch(channel) || (currentAppMode == AppMode.SPORTS) || channel.streamUrl.startsWith("match://")
         val currentProg = if (isSports) {
             val sportsTimeline = buildSportsTimeline(channel)
             val now = System.currentTimeMillis()
@@ -1906,6 +1936,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showChannelActionDialog(channel: Channel) {
+        if (isFinishing || isDestroyed) return
         resetOverlayTimer()
         val dialog = ChannelActionDialog(this, channel) {
             refreshChannelsState()
@@ -2200,7 +2231,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    handleRemoteRightFullscreen()
+                    currentPlayingChannel?.let { showQuickChannelInfo(it) }
                     return true
                 }
             }
@@ -2248,7 +2279,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteOkFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        val isSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
         if (isSports) {
             // Mục Thể Thao: Nhấn OK mở LIVE EVENTS với Highlight trận đấu đó
             if (currentAppMode != AppMode.SPORTS) {
@@ -2258,7 +2289,8 @@ class MainActivity : AppCompatActivity() {
             if (liveCat != null) {
                 currentSelectedCategory = liveCat
                 categoryAdapter.setSelectedCategory(liveCat)
-                val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: currentPlayingMatchGroup
+                val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                    ?: if (currentPlayingMatchGroup?.sources?.any { it.streamUrl == playing?.streamUrl || it.id == playing?.id } == true) currentPlayingMatchGroup else null
                 if (mg != null) {
                     currentPlayingMatchGroup = mg
                 }
@@ -2291,7 +2323,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteBackFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        val isSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
         if (isSports) {
             // Mục Thể Thao: Nhấn BACK/Dpad Trái mở danh mục Nguồn phát chứa link đó kèm highlight kênh đang phát
             if (currentAppMode != AppMode.SPORTS) {
@@ -2345,17 +2377,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteRightFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        val isSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
         if (isSports) {
             // Mục Thể Thao: Nhấn Dpad Phải mở hộp thoại chọn nguồn phát trực tiếp của trận đấu
-            // Luôn ưu tiên tìm trận theo kênh ĐANG PHÁT để tránh bị nhớ nhầm trận cũ
+            // Chỉ hiển thị nguồn phát nếu kênh đang phát thuộc về một trận đấu thực sự
             val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing)
-                ?: currentPlayingMatchGroup
+                ?: if (currentPlayingMatchGroup?.sources?.any { it.streamUrl == playing?.streamUrl || it.id == playing?.id } == true) currentPlayingMatchGroup else null
+
             if (mg != null) {
                 currentPlayingMatchGroup = mg
                 showMatchSourcesDialog(mg)
             } else {
-                showBottomNotification("Không có danh sách nguồn phát khác cho trận đấu này")
+                showBottomNotification("Không có danh sách nguồn phát khác cho kênh này")
             }
         } else {
             // Mục Xem TV: Nhấn Dpad Phải mở hộp thoại chọn danh sách phát .m3u
@@ -2414,7 +2447,7 @@ class MainActivity : AppCompatActivity() {
         startTelemetryUpdates()
 
         val playing = currentPlayingChannel
-        val shouldBeSports = (currentAppMode == AppMode.SPORTS) || (currentPlayingMatchGroup != null) || isSportsLiveMatch(playing)
+        val shouldBeSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
         val targetMode = if (shouldBeSports) AppMode.SPORTS else AppMode.TV
 
         if (currentAppMode != targetMode) {
@@ -2472,7 +2505,8 @@ class MainActivity : AppCompatActivity() {
     private fun focusPlayingChannel() {
         val playing = currentPlayingChannel
         if (currentAppMode == AppMode.SPORTS) {
-            val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: currentPlayingMatchGroup
+            val mg = playlistManager.sportsLiveManager.findMatchForChannel(playing)
+                ?: if (currentPlayingMatchGroup?.sources?.any { it.streamUrl == playing?.streamUrl || it.id == playing?.id } == true) currentPlayingMatchGroup else null
             if (mg != null) {
                 currentPlayingMatchGroup = mg
                 val matchUrl = "match://${mg.key}"
@@ -2529,6 +2563,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showMatchSourcesDialog(matchGroup: SportsLiveManager.MatchGroup) {
+        if (isFinishing || isDestroyed) return
         resetOverlayTimer()
         val dialog = MatchSourcesDialog(this, matchGroup) { selectedChannel ->
             currentPlayingMatchGroup = matchGroup
@@ -2542,6 +2577,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showQuickPlaylistDialog() {
+        if (isFinishing || isDestroyed) return
         resetOverlayTimer()
         val dialog = QuickPlaylistDialog(
             context = this,
@@ -2585,6 +2621,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettingsDialog() {
+        if (isFinishing || isDestroyed) return
         if (activeSettingsDialog?.isShowing == true) {
             activeSettingsDialog?.dismiss()
             backPressedTime = 0L
