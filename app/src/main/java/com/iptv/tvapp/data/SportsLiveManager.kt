@@ -369,6 +369,9 @@ class SportsLiveManager(private val context: Context) {
             "alaves" to listOf("deportivo alaves", "alaves"),
             "valladolid" to listOf("real valladolid", "valladolid"),
             "santander" to listOf("racing santander", "santander"),
+            "brest" to listOf("stade brestois 29", "stade brestois", "brestois", "brest"),
+            "osasuna" to listOf("ca osasuna", "osasuna", "club atletico osasuna"),
+            "deportivo" to listOf("deportivo la coruña", "deportivo la coruna", "rc deportivo", "deportivo coruna", "deportivo"),
             "bayern" to listOf("bayern munich", "bayern munchen", "bayern"),
             "dortmund" to listOf("borussia dortmund", "dortmund"),
             "leverkusen" to listOf("bayer leverkusen", "leverkusen"),
@@ -636,6 +639,26 @@ class SportsLiveManager(private val context: Context) {
                             )
                         )
                     }
+                }
+
+                // Khử trùng lặp trận đấu (loại bỏ triệt để 1 trận đấu hiển thị 2 thẻ)
+                val curH = canonicalizeTeam(homeTeam)
+                val curA = canonicalizeTeam(awayTeam)
+                val existingMg = matchGroupsMap.values.firstOrNull { existing ->
+                    val eH = canonicalizeTeam(existing.homeTeam)
+                    val eA = canonicalizeTeam(existing.awayTeam)
+                    isMatchBetweenTeams(curH, curA, eH, eA) &&
+                        (time == "LIVE" || existing.time == "LIVE" || Math.abs(timestamp - existing.timestamp) <= 120 * 60 * 1000L)
+                }
+                if (existingMg != null) {
+                    for (src in sourceChannels) {
+                        if (existingMg.sources.none { it.streamUrl == src.streamUrl }) {
+                            existingMg.sources.add(src)
+                        }
+                        sourceIdToMatchMap[src.id] = existingMg
+                        addUrlMapping(src.streamUrl, existingMg)
+                    }
+                    continue
                 }
 
                 val mg = MatchGroup(
@@ -1011,7 +1034,7 @@ class SportsLiveManager(private val context: Context) {
         // 6. Xóa tên nhà cung cấp / website (có hoặc không có dấu gạch ngang, có hoặc không có chữ TV)
         s = s.replace(Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm)(?:\s+TV)?\b"""), "")
         // 7. Xóa các từ phụ trợ kỹ thuật và tiền tố CLB
-        s = s.replace(Regex("""(?i)\b(CLB|FC|CF|S\.S\.|AC|AS|FK|RC|Olympique|Calcio|hls|geo|hd|fhd|sd|4k|live)\b\.?"""), "")
+        s = s.replace(Regex("""(?i)\b(CLB|FC|CF|S\.S\.|AC|AS|FK|RC|CA|Stade|Olympique|Calcio|hls|geo|hd|fhd|sd|4k|live)\b\.?"""), "")
         // 8. Cắt các ký tự phân cách ở đầu và cuối chuỗi
         s = s.replace(Regex("""^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$"""), "")
         return s.replace(Regex("""\s+"""), " ").trim()
@@ -1219,9 +1242,16 @@ class SportsLiveManager(private val context: Context) {
                         "${dateStr}_${timeStr}_$cHome"
                     }
 
-                    val existing = grouped[normKey]
+                    val existing = grouped[normKey] ?: grouped.values.firstOrNull { gm ->
+                        val gmH = canonicalizeTeam(gm.homeTeam)
+                        val gmA = canonicalizeTeam(gm.awayTeam)
+                        isMatchBetweenTeams(cHome, cAway, gmH, gmA) &&
+                            (timeStr == "LIVE" || gm.time == "LIVE" || Math.abs(matchTimestamp - gm.timestamp) <= 120 * 60 * 1000L)
+                    }
                     if (existing != null) {
-                        existing.sources.add(ch)
+                        if (existing.sources.none { it.streamUrl == ch.streamUrl }) {
+                            existing.sources.add(ch)
+                        }
                         val newOngoing = existing.isOngoing || isOngoing
                         val newCompleted = existing.isCompleted || isCompleted
                         var updated = existing.copy(isOngoing = newOngoing, isCompleted = newCompleted)

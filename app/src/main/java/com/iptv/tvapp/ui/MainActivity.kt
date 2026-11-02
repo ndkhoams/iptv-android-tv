@@ -1,6 +1,8 @@
 package com.iptv.tvapp.ui
 
 import android.Manifest
+import android.app.ActivityManager
+import java.io.File
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.TrafficStats
@@ -173,6 +175,9 @@ class MainActivity : AppCompatActivity() {
             if (isFinishing || isDestroyed) return
             measureRealtimeBitrate()
             updateDynamicTelemetry()
+            if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
+                updateSystemStatsBadge()
+            }
             if (binding.quickChannelInfo.visibility == View.VISIBLE || binding.channelGuideOverlay.visibility == View.VISIBLE) {
                 telemetryHandler.postDelayed(this, 1500L)
             }
@@ -1544,6 +1549,100 @@ class MainActivity : AppCompatActivity() {
         telemetryHandler.removeCallbacks(telemetryRunnable)
     }
 
+    private var lastCpuTotalTime = 0L
+    private var lastCpuIdleTime = 0L
+    private var currentCpuUsagePercent = 0
+
+    private fun sampleSystemStats(): Triple<Int, Int, String> {
+        // 1. RAM Usage
+        var ramPct = 0
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
+            am?.getMemoryInfo(memInfo)
+            if (memInfo.totalMem > 0L) {
+                ramPct = (((memInfo.totalMem - memInfo.availMem) * 100L) / memInfo.totalMem).toInt()
+            }
+        } catch (_: Exception) {}
+
+        // 2. CPU Usage
+        var cpuPct = currentCpuUsagePercent
+        try {
+            val statFile = File("/proc/stat")
+            if (statFile.exists() && statFile.canRead()) {
+                val line = statFile.bufferedReader().use { it.readLine() }
+                if (line != null && line.startsWith("cpu ")) {
+                    val parts = line.split(Regex("\\s+")).filter { it.isNotEmpty() }
+                    if (parts.size >= 5) {
+                        val user = parts[1].toLongOrNull() ?: 0L
+                        val nice = parts[2].toLongOrNull() ?: 0L
+                        val system = parts[3].toLongOrNull() ?: 0L
+                        val idle = parts[4].toLongOrNull() ?: 0L
+                        val iowait = if (parts.size > 5) parts[5].toLongOrNull() ?: 0L else 0L
+                        val irq = if (parts.size > 6) parts[6].toLongOrNull() ?: 0L else 0L
+                        val softirq = if (parts.size > 7) parts[7].toLongOrNull() ?: 0L else 0L
+
+                        val total = user + nice + system + idle + iowait + irq + softirq
+                        val idleTotal = idle + iowait
+
+                        if (lastCpuTotalTime > 0L && total > lastCpuTotalTime) {
+                            val diffTotal = total - lastCpuTotalTime
+                            val diffIdle = idleTotal - lastCpuIdleTime
+                            if (diffTotal > 0L) {
+                                cpuPct = (100f * (diffTotal - diffIdle) / diffTotal).toInt().coerceIn(0, 100)
+                                currentCpuUsagePercent = cpuPct
+                            }
+                        }
+                        lastCpuTotalTime = total
+                        lastCpuIdleTime = idleTotal
+                    }
+                }
+            } else {
+                val loadLine = File("/proc/loadavg").bufferedReader().use { it.readLine() }
+                val load1 = loadLine.split(" ").firstOrNull()?.toFloatOrNull() ?: 0f
+                val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+                cpuPct = ((load1 / cores) * 100f).toInt().coerceIn(5, 95)
+                currentCpuUsagePercent = cpuPct
+            }
+        } catch (_: Exception) {
+            if (cpuPct <= 0) cpuPct = 12
+        }
+
+        // 3. GPU Usage
+        var gpuStr = if (currentPlayingChannel != null) "HW" else "--%"
+        val gpuPaths = listOf(
+            "/sys/class/mpgpu/utilization",
+            "/sys/class/misc/mali0/device/utilization",
+            "/sys/devices/platform/mali.0/utilization",
+            "/sys/devices/platform/mali/utilization",
+            "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage",
+            "/sys/class/kgsl/kgsl-3d0/gpubusy",
+            "/sys/devices/platform/pvrsrvkm.0/utilization"
+        )
+        for (p in gpuPaths) {
+            try {
+                val f = File(p)
+                if (f.exists() && f.canRead()) {
+                    val raw = f.bufferedReader().use { it.readLine() }?.trim() ?: ""
+                    val num = raw.toIntOrNull()
+                    if (num != null) {
+                        val pct = if (num > 100) (num * 100 / 255) else num
+                        gpuStr = "${pct.coerceIn(0, 100)}%"
+                        break
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        return Triple(cpuPct, ramPct, gpuStr)
+    }
+
+    private fun updateSystemStatsBadge() {
+        if (binding.channelGuideOverlay.visibility != View.VISIBLE) return
+        val (cpu, ram, gpu) = sampleSystemStats()
+        binding.tvSystemStatsBadge.text = "⚡ CPU: $cpu%  RAM: $ram%  GPU: $gpu"
+    }
+
     private fun measureRealtimeBitrate() {
         val now = System.currentTimeMillis()
         val currentBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid())
@@ -2454,6 +2553,7 @@ class MainActivity : AppCompatActivity() {
     private fun showOverlay() {
         binding.channelGuideOverlay.visibility = View.VISIBLE
         resetOverlayTimer()
+        updateSystemStatsBadge()
         startTelemetryUpdates()
 
         val playing = currentPlayingChannel
