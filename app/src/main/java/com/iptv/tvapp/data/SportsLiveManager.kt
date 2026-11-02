@@ -219,6 +219,62 @@ class SportsLiveManager(private val context: Context) {
         return (now >= matchTimestamp - 15 * 60 * 1000L) && (now - matchTimestamp <= 140 * 60 * 1000L)
     }
 
+    private fun addUrlMapping(url: String, mg: MatchGroup) {
+        if (url.isBlank()) return
+        var list = urlToMatchesMap[url]
+        if (list == null) {
+            val newList = CopyOnWriteArrayList<MatchGroup>()
+            val existing = urlToMatchesMap.putIfAbsent(url, newList)
+            list = existing ?: newList
+        }
+        if (list.none { it.key == mg.key }) {
+            list.add(mg)
+        }
+    }
+
+    fun findMatchByUrl(url: String, channelName: String = ""): MatchGroup? {
+        if (url.isBlank()) return null
+        val list = urlToMatchesMap[url] ?: return null
+        if (list.isEmpty()) return null
+        if (list.size == 1) {
+            val single = list[0]
+            if (channelName.isNotBlank()) {
+                val (h, a, _) = extractTeamsAndLeague(channelName)
+                val cH = canonicalizeTeam(h)
+                val cA = canonicalizeTeam(a)
+                if (cH.length >= 3 && cA.length >= 3) {
+                    val mgH = canonicalizeTeam(single.homeTeam)
+                    val mgA = canonicalizeTeam(single.awayTeam)
+                    val matches = (cH == mgH || cH == mgA || cA == mgH || cA == mgA)
+                    return if (matches) single else null
+                }
+            }
+            return single
+        }
+
+        // Nhiều trận dùng chung URL (ví dụ cùng BLV Chuối Lá hay Gà Vàng)
+        // 1. Khớp theo tên đội nếu kênh có tên đội
+        if (channelName.isNotBlank()) {
+            val (h, a, _) = extractTeamsAndLeague(channelName)
+            val cH = canonicalizeTeam(h)
+            val cA = canonicalizeTeam(a)
+            if (cH.length >= 3) {
+                list.firstOrNull { mg ->
+                    val mgH = canonicalizeTeam(mg.homeTeam)
+                    val mgA = canonicalizeTeam(mg.awayTeam)
+                    (cH == mgH || cH == mgA) && (cA.isBlank() || cA == mgH || cA == mgA)
+                }?.let { return it }
+            }
+        }
+
+        // 2. Ưu tiên trận đang diễn ra (isOngoing)
+        list.firstOrNull { it.isOngoing && !it.isCompleted }?.let { return it }
+
+        // 3. Trận có thời gian thi đấu gần hiện tại nhất
+        val now = System.currentTimeMillis()
+        return list.minByOrNull { Math.abs(now - it.timestamp) }
+    }
+
     companion object {
         const val ACTION_REFRESH_SPORTS = "action_refresh_sports"
         const val CATEGORY_LIVE_EVENTS = "🔴 LIVE EVENTS"
@@ -226,57 +282,6 @@ class SportsLiveManager(private val context: Context) {
         private val matchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
         private val sourceIdToMatchMap = ConcurrentHashMap<String, MatchGroup>()
         private val urlToMatchesMap = ConcurrentHashMap<String, CopyOnWriteArrayList<MatchGroup>>()
-
-        private fun addUrlMapping(url: String, mg: MatchGroup) {
-            if (url.isBlank()) return
-            val list = urlToMatchesMap.computeIfAbsent(url) { CopyOnWriteArrayList() }
-            if (list.none { it.key == mg.key }) {
-                list.add(mg)
-            }
-        }
-
-        fun findMatchByUrl(url: String, channelName: String = ""): MatchGroup? {
-            if (url.isBlank()) return null
-            val list = urlToMatchesMap[url] ?: return null
-            if (list.isEmpty()) return null
-            if (list.size == 1) {
-                val single = list[0]
-                if (channelName.isNotBlank()) {
-                    val (h, a, _) = extractTeamsAndLeague(channelName)
-                    val cH = canonicalizeTeam(h)
-                    val cA = canonicalizeTeam(a)
-                    if (cH.length >= 3 && cA.length >= 3) {
-                        val mgH = canonicalizeTeam(single.homeTeam)
-                        val mgA = canonicalizeTeam(single.awayTeam)
-                        val matches = (cH == mgH || cH == mgA || cA == mgH || cA == mgA)
-                        return if (matches) single else null
-                    }
-                }
-                return single
-            }
-
-            // Nhiều trận dùng chung URL (ví dụ cùng BLV Chuối Lá hay Gà Vàng)
-            // 1. Khớp theo tên đội nếu kênh có tên đội
-            if (channelName.isNotBlank()) {
-                val (h, a, _) = extractTeamsAndLeague(channelName)
-                val cH = canonicalizeTeam(h)
-                val cA = canonicalizeTeam(a)
-                if (cH.length >= 3) {
-                    list.firstOrNull { mg ->
-                        val mgH = canonicalizeTeam(mg.homeTeam)
-                        val mgA = canonicalizeTeam(mg.awayTeam)
-                        (cH == mgH || cH == mgA) && (cA.isBlank() || cA == mgH || cA == mgA)
-                    }?.let { return it }
-                }
-            }
-
-            // 2. Ưu tiên trận đang diễn ra (isOngoing)
-            list.firstOrNull { it.isOngoing && !it.isCompleted }?.let { return it }
-
-            // 3. Trận có thời gian thi đấu gần hiện tại nhất
-            val now = System.currentTimeMillis()
-            return list.minByOrNull { Math.abs(now - it.timestamp) }
-        }
         private val canonicalTeamCache = ConcurrentHashMap<String, String>()
         private val teamsAndLeagueCache = ConcurrentHashMap<String, Triple<String, String, String>>()
         private val espnFixturesCache = ConcurrentHashMap<String, List<EspnFixture>>()
