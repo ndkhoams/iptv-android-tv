@@ -3,6 +3,8 @@ package com.iptv.tvapp.data
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.iptv.tvapp.util.NetworkUtils
+import com.iptv.tvapp.util.GitHubCdnHelper
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -14,10 +16,11 @@ import javax.crypto.spec.SecretKeySpec
 
 class GetOutManager(private val context: Context) {
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
+    private val client = NetworkUtils.configureTrustAllSsl(
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+    ).build()
 
     companion object {
         const val MASTER_KEY = "sHqvxUbI3HRHqHNdluQ5thFw5e8DCglJ"
@@ -42,22 +45,25 @@ class GetOutManager(private val context: Context) {
     suspend fun fetchDynamicDomains(): Map<String, List<String>> = withContext(Dispatchers.IO) {
         val result = mutableMapOf<String, List<String>>()
         for (provider in SPORT_PROVIDERS) {
-            try {
-                val url = "$GITHUB_TXT_BASE$provider"
-                val req = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", PreferencesHelper.DEFAULT_USER_AGENT)
-                    .build()
-                val resp = client.newCall(req).execute()
-                if (resp.isSuccessful) {
-                    val body = resp.body?.string()?.trim()
-                    if (!body.isNullOrBlank()) {
-                        val domains = body.split("|", "\n", "\r").map { it.trim() }.filter { it.isNotBlank() }
-                        result[provider] = domains
+            val candidateUrls = GitHubCdnHelper.buildFallbackUrls("$GITHUB_TXT_BASE$provider")
+            for (url in candidateUrls) {
+                try {
+                    val req = Request.Builder()
+                        .url(url)
+                        .header("User-Agent", PreferencesHelper.DEFAULT_USER_AGENT)
+                        .build()
+                    val resp = client.newCall(req).execute()
+                    if (resp.isSuccessful) {
+                        val body = resp.body?.string()?.trim()
+                        if (!body.isNullOrBlank()) {
+                            val domains = body.split("|", "\n", "\r").map { it.trim() }.filter { it.isNotBlank() }
+                            result[provider] = domains
+                            break
+                        }
                     }
+                } catch (e: Exception) {
+                    // Thử CDN tiếp theo
                 }
-            } catch (e: Exception) {
-                // Bỏ qua lỗi mạng từng provider
             }
         }
         result

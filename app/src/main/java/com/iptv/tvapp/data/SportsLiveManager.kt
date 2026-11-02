@@ -5,6 +5,8 @@ import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.parser.M3UParser
 import com.iptv.tvapp.data.PreferencesHelper
+import com.iptv.tvapp.util.NetworkUtils
+import com.iptv.tvapp.util.GitHubCdnHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -25,13 +27,15 @@ import java.util.concurrent.TimeUnit
 class SportsLiveManager(private val context: Context) {
 
     private val prefs = PreferencesHelper(context)
-    private val httpClient = OkHttpClient.Builder().apply {
-        connectTimeout(8, TimeUnit.SECONDS)
-        readTimeout(10, TimeUnit.SECONDS)
-        writeTimeout(10, TimeUnit.SECONDS)
-        followRedirects(true)
-        followSslRedirects(true)
-    }.build()
+    private val httpClient = NetworkUtils.configureTrustAllSsl(
+        OkHttpClient.Builder().apply {
+            connectTimeout(8, TimeUnit.SECONDS)
+            readTimeout(10, TimeUnit.SECONDS)
+            writeTimeout(10, TimeUnit.SECONDS)
+            followRedirects(true)
+            followSslRedirects(true)
+        }
+    ).build()
 
     data class MatchGroup(
         val key: String,
@@ -857,12 +861,8 @@ class SportsLiveManager(private val context: Context) {
             .build()
 
         // 1. Tải thethao-data.json (chứa sẵn live_events, source_groups, fixtures, standings do Armbian tính toán)
-        // Ưu tiên CDN jsDelivr/Fastly lên hàng đầu để tránh bị bóp băng thông / timeout DNS tại Việt Nam
-        val dataUrls = listOf(
-            "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now",
-            "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now",
-            "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now"
-        )
+        // Tự động phân giải danh sách CDN dự phòng (Fastly -> jsDelivr -> Statically -> URL gốc)
+        val dataUrls = GitHubCdnHelper.buildFallbackUrls("https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now")
 
         val dataTempFile = File(context.cacheDir, "thethao_data_cache.tmp")
         for (u in dataUrls) {
@@ -892,11 +892,8 @@ class SportsLiveManager(private val context: Context) {
         }
 
         // 2. Nếu không tải được thethao-data.json, mới fallback tải thethao.m3u
-        val m3uUrls = listOf(
-            "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u?_ts=$now",
-            "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao.m3u?_ts=$now",
-            if (baseSportsUrl.contains("?")) "$baseSportsUrl&_ts=$now" else "$baseSportsUrl?_ts=$now"
-        )
+        val timestampedBaseUrl = if (baseSportsUrl.contains("?")) "$baseSportsUrl&_ts=$now" else "$baseSportsUrl?_ts=$now"
+        val m3uUrls = GitHubCdnHelper.buildFallbackUrls(timestampedBaseUrl)
         val m3uTempFile = File(context.cacheDir, "thethao_sports_cache.tmp")
         for (u in m3uUrls) {
             try {

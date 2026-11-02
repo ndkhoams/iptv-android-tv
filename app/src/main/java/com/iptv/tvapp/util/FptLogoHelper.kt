@@ -6,7 +6,6 @@ object FptLogoHelper {
 
     // Kho logo chính hãng CDN của FPT Play & IPTV HD
     private val FPT_CDN_BASE = "https://images.fptplay53.net/media/channels/OTT_ECS/2026/07/10/"
-    private val GITHUB_VN_BASE = "https://raw.githubusercontent.com/iptv-org/iptv/master/logos/"
 
     private val CHANNEL_SLUG_MAP = mapOf(
         "vtv1" to "vtv1-hd",
@@ -51,11 +50,13 @@ object FptLogoHelper {
     )
 
     /**
-     * Tự động lấy Logo sắc nét từ CDN FPT Play nếu kênh chưa có logo hoặc logo lỗi
+     * Tự động lấy Logo sắc nét:
+     * - Tối ưu CDN Fastly nếu logo gốc từ GitHub
+     * - Tự động ánh xạ logo chính hãng FPT Play nếu kênh chưa có logo hoặc logo trống
      */
     fun getResolvedLogoUrl(channelName: String, originalLogoUrl: String?): String {
         if (!originalLogoUrl.isNullOrBlank() && (originalLogoUrl.startsWith("http") || originalLogoUrl.startsWith("android.resource"))) {
-            return originalLogoUrl
+            return GitHubCdnHelper.getOptimalCdnUrl(originalLogoUrl)
         }
 
         val normalized = channelName.lowercase(Locale.ROOT)

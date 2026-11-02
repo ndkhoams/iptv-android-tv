@@ -3,6 +3,8 @@ package com.iptv.tvapp.data
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.iptv.tvapp.util.NetworkUtils
+import com.iptv.tvapp.util.GitHubCdnHelper
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -31,10 +33,11 @@ class SportsStandingsManager(private val context: Context) {
         private val cache = ConcurrentHashMap<String, List<StandingEntry>>()
         private val lastFetchTime = ConcurrentHashMap<String, Long>()
 
-        private val httpClient = OkHttpClient.Builder()
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(6, TimeUnit.SECONDS)
-            .build()
+        private val httpClient = NetworkUtils.configureTrustAllSsl(
+            OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(6, TimeUnit.SECONDS)
+        ).build()
 
         fun clearCache() {
             cache.clear()
@@ -94,9 +97,8 @@ class SportsStandingsManager(private val context: Context) {
 
         // 2. Nếu chưa có trên đĩa, tải thethao-data.json từ GitHub / CDN
         try {
-            val dataUrl = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now"
-            val cdnUrl = "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json?_ts=$now"
-            for (u in listOf(dataUrl, cdnUrl)) {
+            val dataUrls = GitHubCdnHelper.buildFallbackUrls("https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now")
+            for (u in dataUrls) {
                 try {
                     val req = Request.Builder()
                         .url(u)

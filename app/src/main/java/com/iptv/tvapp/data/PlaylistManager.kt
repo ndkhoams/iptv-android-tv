@@ -3,6 +3,7 @@ package com.iptv.tvapp.data
 import android.content.Context
 import com.iptv.tvapp.model.Category
 import com.iptv.tvapp.util.NetworkUtils
+import com.iptv.tvapp.util.GitHubCdnHelper
 import com.iptv.tvapp.model.Channel
 import com.iptv.tvapp.parser.M3UParser
 import kotlinx.coroutines.Dispatchers
@@ -186,71 +187,80 @@ class PlaylistManager(private val context: Context) {
         var lastException: Exception? = null
         var downloadedBytes: ByteArray? = null
 
-        for (ua in USER_AGENTS) {
-            try {
-                val requestBuilder = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", ua)
-                    .header("Accept", "text/plain, audio/x-mpegurl, application/x-mpegurl, text/html, */*")
-                    .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
+        // Tự động phân giải CDN dự phòng nếu là link GitHub (Fastly -> jsDelivr -> Statically -> URL gốc)
+        val candidateUrls = GitHubCdnHelper.buildFallbackUrls(url)
 
-                if (ua.contains("Mobile") || ua.contains("Android")) {
-                    requestBuilder.header("sec-ch-ua-mobile", "?1")
-                    requestBuilder.header("sec-ch-ua-platform", "\"Android\"")
-                    requestBuilder.header("Sec-Fetch-Mode", "navigate")
-                    requestBuilder.header("Sec-Fetch-Dest", "document")
-                }
+        urlLoop@ for (candidateUrl in candidateUrls) {
+            for (ua in USER_AGENTS) {
+                try {
+                    val requestBuilder = Request.Builder()
+                        .url(candidateUrl)
+                        .header("User-Agent", ua)
+                        .header("Accept", "text/plain, audio/x-mpegurl, application/x-mpegurl, text/html, */*")
+                        .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
 
-                val response = httpClient.newCall(requestBuilder.build()).execute()
-                if (response.isSuccessful) {
-                    val bodyBytes = response.body?.bytes()
-                    if (bodyBytes != null && bodyBytes.isNotEmpty()) {
-                        // Kiểm tra xem dữ liệu có phải là HTML hay không
-                        val preview = String(bodyBytes.take(512).toByteArray(), Charsets.UTF_8).trim().lowercase()
-                        val isHtml = preview.startsWith("<!doctype html") || preview.startsWith("<html")
-
-                        if (!isHtml) {
-                            // Dữ liệu M3U hoặc text danh sách hợp lệ!
-                            downloadedBytes = bodyBytes
-                            break
-                        } else {
-                            // Nội dung trả về là HTML -> Thử tìm kiếm link .m3u / .m3u8 bên trong HTML
-                            val fullHtml = String(bodyBytes, Charsets.UTF_8)
-                            val extractedM3uUrl = findM3uLinkInHtml(fullHtml, url)
-                            if (extractedM3uUrl != null && extractedM3uUrl != url) {
-                                try {
-                                    val redirectReq = Request.Builder()
-                                        .url(extractedM3uUrl)
-                                        .header("User-Agent", ua)
-                                        .build()
-                                    val redResp = httpClient.newCall(redirectReq).execute()
-                                    if (redResp.isSuccessful) {
-                                        val redBytes = redResp.body?.bytes()
-                                        if (redBytes != null && redBytes.isNotEmpty()) {
-                                            downloadedBytes = redBytes
-                                            break
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    // Bỏ qua lỗi để thử UA tiếp theo
-                                }
-                            }
-
-                            // Thử kiểm tra xem trong HTML có nội dung #EXTM3U/EXTINF dạng pre/code hay không
-                            val extractedContent = extractM3uContentFromHtml(fullHtml)
-                            if (extractedContent != null) {
-                                downloadedBytes = extractedContent.toByteArray(Charsets.UTF_8)
-                                break
-                            }
-
-                            lastException = Exception("Nguồn online trả về trang HTML thay vì danh sách M3U. Bạn có thể tải file về điện thoại và truyền lên TV qua Web Remote.")
-                        }
+                    if (ua.contains("Mobile") || ua.contains("Android")) {
+                        requestBuilder.header("sec-ch-ua-mobile", "?1")
+                        requestBuilder.header("sec-ch-ua-platform", "\"Android\"")
+                        requestBuilder.header("Sec-Fetch-Mode", "navigate")
+                        requestBuilder.header("Sec-Fetch-Dest", "document")
                     }
-                } else {
-                    lastException = Exception("HTTP ${response.code}: Không thể tải danh sách kênh")
+
+                    val response = httpClient.newCall(requestBuilder.build()).execute()
+                    if (response.isSuccessful) {
+                        val bodyBytes = response.body?.bytes()
+                        if (bodyBytes != null && bodyBytes.isNotEmpty()) {
+                            // Kiểm tra xem dữ liệu có phải là HTML hay không
+                            val preview = String(bodyBytes.take(512).toByteArray(), Charsets.UTF_8).trim().lowercase()
+                            val isHtml = preview.startsWith("<!doctype html") || preview.startsWith("<html")
+
+                            if (!isHtml) {
+                                // Dữ liệu M3U hoặc text danh sách hợp lệ!
+                                downloadedBytes = bodyBytes
+                                break@urlLoop
+                            } else {
+                                // Nội dung trả về là HTML -> Thử tìm kiếm link .m3u / .m3u8 bên trong HTML
+                                val fullHtml = String(bodyBytes, Charsets.UTF_8)
+                                val extractedM3uUrl = findM3uLinkInHtml(fullHtml, candidateUrl)
+                                if (extractedM3uUrl != null && extractedM3uUrl != candidateUrl) {
+                                    try {
+                                        val redirectReq = Request.Builder()
+                                            .url(extractedM3uUrl)
+                                            .header("User-Agent", ua)
+                                            .build()
+                                        val redResp = httpClient.newCall(redirectReq).execute()
+                                        if (redResp.isSuccessful) {
+                                            val redBytes = redResp.body?.bytes()
+                                            if (redBytes != null && redBytes.isNotEmpty()) {
+                                                downloadedBytes = redBytes
+                                                break@urlLoop
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        // Bỏ qua lỗi để thử tiếp
+                                    }
+                                }
+
+                                // Thử kiểm tra xem trong HTML có nội dung #EXTM3U/EXTINF dạng pre/code hay không
+                                val extractedContent = extractM3uContentFromHtml(fullHtml)
+                                if (extractedContent != null) {
+                                    downloadedBytes = extractedContent.toByteArray(Charsets.UTF_8)
+                                    break@urlLoop
+                                }
+
+                                lastException = Exception("Nguồn online trả về trang HTML thay vì danh sách M3U. Bạn có thể tải file về điện thoại và truyền lên TV qua Web Remote.")
+                            }
+                        }
+                    } else {
+                        lastException = Exception("HTTP ${response.code}: Không thể tải danh sách kênh ($candidateUrl)")
+                    }
+                } catch (e: Exception) {
+                    lastException = e
+                    // Nếu lỗi mạng / không phân giải được DNS, chuyển ngay sang CDN tiếp theo
+                    if (e is java.net.UnknownHostException || e is java.net.SocketTimeoutException) {
+                        break
+                    }
                 }
-            } catch (e: Exception) {
-                lastException = e
             }
         }
 
