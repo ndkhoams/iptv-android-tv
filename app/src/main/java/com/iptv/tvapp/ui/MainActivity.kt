@@ -767,7 +767,7 @@ class MainActivity : AppCompatActivity() {
 
             View.FOCUS_RIGHT -> {
                 // Từ Sidebar -> nhảy sang Danh mục đang chọn
-                if (binding.layoutSidebarNav.hasFocus() || isDescendantOf(focused, binding.layoutSidebarNav)) {
+                if (binding.layoutSidebar.hasFocus() || isDescendantOf(focused, binding.layoutSidebar)) {
                     val catPos = categoryAdapter.getSelectedPosition()
                     val target = if (catPos != -1) {
                         binding.rvCategories.findViewHolderForAdapterPosition(catPos)?.itemView
