@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -93,7 +94,11 @@
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* ========== 2. QUICK INFO BANNER (Khi xem toàn màn hình đổi kênh) ========== */
         .quick-channel-banner {
@@ -561,6 +566,17 @@
             animation: pulse 1.5s infinite;
         }
 
+        .badge-sources {
+            background: rgba(255, 101, 0, 0.15);
+            border: 1px solid var(--fpt-orange);
+            color: var(--fpt-orange);
+            font-size: 9px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
         /* 4. CỘT 3: SPOTLIGHT / BẢNG XẾP HẠNG & LỊCH THI ĐẤU (280dp) */
         .panel-spotlight {
             width: 280px;
@@ -616,30 +632,32 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
             margin-bottom: 6px;
         }
 
         .sources-label {
-            font-size: 10.5px;
-            font-weight: 700;
-            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--fpt-orange);
             text-align: left;
+            text-transform: uppercase;
         }
 
         .sources-buttons-row {
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
             gap: 6px;
-            overflow-x: auto;
-            padding-bottom: 4px;
+            max-height: 90px;
+            overflow-y: auto;
+            padding: 2px 0;
         }
 
         .src-btn {
             background: #1e1e1e;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1.5px solid rgba(255, 255, 255, 0.12);
             color: #e2e8f0;
-            padding: 5px 10px;
+            padding: 5px 9px;
             border-radius: 6px;
             font-size: 11px;
             font-weight: 700;
@@ -650,16 +668,171 @@
         }
 
         .src-btn.active {
-            background: rgba(255, 101, 0, 0.2);
+            background: rgba(255, 101, 0, 0.25);
             border-color: var(--fpt-orange);
             color: var(--fpt-orange);
         }
 
-        .src-btn.focused {
+        .src-btn.focused, .src-btn:hover {
             background: var(--fpt-orange) !important;
             color: #fff !important;
             border-color: #fff !important;
             transform: scale(1.05);
+        }
+
+        /* ========== POPUP MODAL CHỌN NGUỒN PHÁT (MATCH SOURCES DIALOG) ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.hidden {
+            display: none !important;
+        }
+
+        .modal-card {
+            width: 520px;
+            max-width: 90vw;
+            background: rgba(28, 28, 28, 0.98);
+            border: 1.5px solid var(--fpt-orange);
+            border-radius: 14px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            animation: popIn 0.15s ease-out;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--fpt-border);
+            padding-bottom: 10px;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .modal-subtitle {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--fpt-orange);
+            margin-top: 3px;
+        }
+
+        .modal-close-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: var(--text-secondary);
+            font-size: 18px;
+            font-weight: 800;
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        .modal-close-btn:hover {
+            background: var(--fpt-orange);
+            color: #fff;
+        }
+
+        .modal-sources-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 340px;
+            overflow-y: auto;
+        }
+
+        .modal-src-item {
+            height: 48px;
+            background: #1e1e1e;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            cursor: pointer;
+            transition: all 0.12s ease;
+        }
+
+        .modal-src-item.active {
+            border-color: var(--fpt-orange);
+            background: #2C2C2C;
+        }
+
+        .modal-src-item:hover, .modal-src-item.focused {
+            background: var(--fpt-item-focused-bg) !important;
+            color: var(--fpt-item-focused-text) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+            transform: scale(1.01);
+        }
+
+        .modal-src-item:hover .modal-src-name,
+        .modal-src-item.focused .modal-src-name {
+            color: var(--fpt-item-focused-text) !important;
+        }
+
+        .modal-src-num {
+            width: 26px;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--fpt-orange);
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .modal-src-logo {
+            width: 32px;
+            height: 24px;
+            object-fit: contain;
+            margin-left: 6px;
+            flex-shrink: 0;
+        }
+
+        .modal-src-name {
+            flex: 1;
+            margin-left: 10px;
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modal-src-btn {
+            background: var(--fpt-orange);
+            color: #fff;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 800;
         }
 
         /* Bảng xếp hạng Standings */
@@ -709,11 +882,41 @@
             font-weight: 700;
         }
 
-        .st-rank { width: 20px; font-weight: 800; color: var(--text-muted); text-align: center; }
-        .st-logo { width: 16px; height: 16px; object-fit: contain; margin-left: 4px; }
-        .st-team { flex: 1; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-        .st-played { width: 26px; text-align: center; color: var(--text-secondary); }
-        .st-points { width: 28px; text-align: center; font-weight: 800; color: var(--fpt-orange); }
+        .st-rank {
+            width: 20px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .st-logo {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            margin-left: 4px;
+        }
+
+        .st-team {
+            flex: 1;
+            margin-left: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 600;
+        }
+
+        .st-played {
+            width: 26px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .st-points {
+            width: 28px;
+            text-align: center;
+            font-weight: 800;
+            color: var(--fpt-orange);
+        }
 
         .spotlight-stream-info {
             font-size: 9.5px;
@@ -737,11 +940,22 @@
         }
 
         /* Tùy chỉnh thanh cuộn siêu mỏng */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+        }
     </style>
 </head>
+
 <body>
 
     <!-- 1. VIDEO PLAYER NẰM TRỌN NỀN PHÍA SAU -->
@@ -757,7 +971,8 @@
     <div class="quick-channel-banner" id="quickChannelBanner">
         <div class="quick-row-1">
             <span class="quick-num" id="quickNum">01</span>
-            <img class="quick-logo" id="quickLogo" src="https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png" alt="">
+            <img class="quick-logo" id="quickLogo"
+                src="https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png" alt="">
             <span class="quick-name" id="quickTitle">Tên trận đấu</span>
         </div>
         <div class="quick-row-2" id="quickProgram">● Đang phát trực tiếp</div>
@@ -766,7 +981,7 @@
 
     <!-- 3. GIAO DIỆN CHÍNH 3 CỘT (OVERLAY CHUẨN ANDROID TV) -->
     <div id="channelGuideOverlay">
-        
+
         <!-- HEADER BAR -->
         <div class="fpt-header">
             <div class="header-left">
@@ -788,13 +1003,14 @@
             <div class="header-right">
                 <span class="clock-display" id="txtClock">12:00</span>
                 <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶ Toàn màn hình</button>
-                <button class="btn-fullscreen" style="background:var(--fpt-orange); border-color:var(--fpt-orange);" onclick="hideMenuOverlay()">✕ Ẩn Menu (OK)</button>
+                <button class="btn-fullscreen" style="background:var(--fpt-orange); border-color:var(--fpt-orange);"
+                    onclick="hideMenuOverlay()">✕ Ẩn Menu (OK)</button>
             </div>
         </div>
 
         <!-- BODY 3 CỘT + SIDEBAR -->
         <div class="fpt-body-container">
-            
+
             <!-- THANH SIDEBAR BÊN TRÁI -->
             <div class="fpt-sidebar" id="sidebarNav">
                 <button class="sidebar-btn" title="Kênh yêu thích" onclick="handleSidebarClick(0)">⭐</button>
@@ -831,11 +1047,11 @@
             <!-- CỘT 3: SPOTLIGHT / BẢNG XẾP HẠNG & NGUỒN PHÁT (280dp) -->
             <div class="panel-spotlight">
                 <div class="spotlight-top">
-                    <img class="spotlight-crest" id="spotlightLogo" src="https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png" alt="">
-                    <div class="spotlight-title" id="spotlightTitle">Deportivo vs Osasuna</div>
+                    <img class="spotlight-crest" id="spotlightLogo" src="assets/ic_app_logo.png" onerror="this.src='assets/ic_app_logo.png'" alt="">
+                    <div class="spotlight-title" id="spotlightTitle">Trận đấu</div>
                     <div class="spotlight-tags">
                         <span class="badge-fhd">FHD 1080</span>
-                        <span class="fpt-badge" style="color:var(--fpt-orange); padding:2px 6px;" id="spotlightLeagueBadge">🇪🇸 La Liga</span>
+                        <span class="fpt-badge" style="color:var(--fpt-orange); padding:2px 6px;" id="spotlightLeagueBadge">🌐 Trực tiếp</span>
                     </div>
 
                     <!-- Khu vực chọn nguồn phát (BLV) -->
@@ -873,9 +1089,25 @@
 
         <!-- FOOTER HƯỚNG DẪN D-PAD -->
         <div class="fpt-footer">
-            ▲▼ Đổi kênh &nbsp;•&nbsp; ◄► Chuyển danh mục &nbsp;•&nbsp; OK: Phát &nbsp;•&nbsp; F: Toàn màn hình &nbsp;•&nbsp; Back: Ẩn/Hiện Menu &nbsp;•&nbsp; 📱 Web: port 8080
+            ▲▼ Đổi kênh &nbsp;•&nbsp; ◄► Chuyển danh mục &nbsp;•&nbsp; OK: Phát / Chọn nguồn &nbsp;•&nbsp; F: Toàn màn hình &nbsp;•&nbsp; Back: Ẩn/Hiện Menu &nbsp;•&nbsp; 📱 Web: port 8080
         </div>
 
+    </div>
+
+    <!-- 4. MODAL DIALOG CHỌN NGUỒN PHÁT TRỰC TIẾP (MATCH SOURCES POPUP) -->
+    <div id="matchSourcesModal" class="modal-overlay hidden" onclick="if(event.target === this) closeSourcesModal();">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" id="modalMatchTitle">Tên trận đấu</div>
+                    <div class="modal-subtitle" id="modalMatchSubtitle">00:30 • Giải đấu • 3 nguồn phát trực tiếp</div>
+                </div>
+                <button class="modal-close-btn" onclick="closeSourcesModal()">✕</button>
+            </div>
+            <div class="modal-sources-list" id="modalSourcesList">
+                <!-- Render các nguồn phát -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -889,7 +1121,7 @@
         var activeSourceIndex = 0;
 
         // Vùng điều khiển D-Pad:
-        // 0: SIDEBAR, 1: CATEGORIES, 2: CHANNELS, 3: SOURCES, 4: STANDINGS
+        // 0: SIDEBAR, 1: CATEGORIES, 2: CHANNELS, 3: SOURCES
         var currentZone = 2;
         var focusedSidebarIndex = 2;
         var focusedCategoryIndex = 0;
@@ -904,17 +1136,85 @@
         var hlsInstance = null;
         var quickBannerTimeout = null;
 
-        // Logo mặc định cho các giải đấu
+        // Quản lý Modal nguồn phát
+        var currentModalMatch = null;
+        var modalSources = [];
+        var modalFocusedIndex = 0;
+
+        // Logo giải đấu (Ưu tiên file PNG cục bộ trong assets/ để load 100% không lỗi)
         var LEAGUE_LOGOS = {
-            "EPL": "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
-            "LALIGA": "https://a.espncdn.com/i/leaguelogos/soccer/500/15.png",
-            "SERIE_A": "https://a.espncdn.com/i/leaguelogos/soccer/500/12.png",
-            "BUNDESLIGA": "https://a.espncdn.com/i/leaguelogos/soccer/500/10.png",
-            "LIGUE1": "https://a.espncdn.com/i/leaguelogos/soccer/500/9.png",
-            "UCL": "https://a.espncdn.com/i/leaguelogos/soccer/500/2.png",
-            "NBA": "https://a.espncdn.com/i/teamlogos/leagues/500/nba.png",
-            "VLEAGUE": "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png"
+            "EPL": "assets/ic_league_epl.png",
+            "LALIGA": "assets/ic_league_laliga.png",
+            "SERIE_A": "assets/ic_league_seriea.png",
+            "BUNDESLIGA": "assets/ic_league_bundesliga.png",
+            "LIGUE1": "assets/ic_league_ligue1.png",
+            "UCL": "assets/ic_league_ucl.png",
+            "F1": "assets/ic_league_f1.png",
+            "TENNIS": "assets/ic_league_tennis.png",
+            "NBA": "assets/ic_league_nba.png",
+            "VLEAGUE": "assets/ic_league_vleague.png"
         };
+
+        function getLeagueLogo(ch) {
+            if (!ch) return "assets/ic_app_logo.png";
+            var lg = (ch.league || "").toUpperCase();
+            if (LEAGUE_LOGOS[lg]) return LEAGUE_LOGOS[lg];
+
+            var raw = ch.logo || "";
+            if (raw.includes("ic_league_")) {
+                for (var k in LEAGUE_LOGOS) {
+                    var filename = LEAGUE_LOGOS[k].replace("assets/", "").replace(".png", "");
+                    if (raw.includes(filename)) return LEAGUE_LOGOS[k];
+                }
+            }
+
+            if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("assets/")) {
+                return raw;
+            }
+
+            var text = ((ch.displayTitle || "") + " " + (ch.leagueName || "") + " " + (ch.group || "")).toUpperCase();
+            if (text.includes("LALIGA") || text.includes("LA LIGA") || text.includes("TÂY BAN NHA")) return LEAGUE_LOGOS["LALIGA"];
+            if (text.includes("PREMIER") || text.includes("NGOẠI HẠNG") || text.includes("EPL")) return LEAGUE_LOGOS["EPL"];
+            if (text.includes("SERIE") || text.includes("Ý") || text.includes("ITALIA")) return LEAGUE_LOGOS["SERIE_A"];
+            if (text.includes("BUNDESLIGA") || text.includes("ĐỨC")) return LEAGUE_LOGOS["BUNDESLIGA"];
+            if (text.includes("LIGUE") || text.includes("PHÁP")) return LEAGUE_LOGOS["LIGUE1"];
+            if (text.includes("CHAMPIONS") || text.includes("C1") || text.includes("UCL")) return LEAGUE_LOGOS["UCL"];
+            if (text.includes("F1") || text.includes("RACING")) return LEAGUE_LOGOS["F1"];
+            if (text.includes("TENNIS")) return LEAGUE_LOGOS["TENNIS"];
+            if (text.includes("NBA") || text.includes("BÓNG RỔ")) return LEAGUE_LOGOS["NBA"];
+            if (text.includes("V-LEAGUE") || text.includes("VLEAGUE") || text.includes("VIỆT NAM")) return LEAGUE_LOGOS["VLEAGUE"];
+
+            return "assets/ic_app_logo.png";
+        }
+
+        function cleanSourceName(rawName, idx) {
+            if (!rawName) return 'Nguồn ' + (idx + 1);
+            var name = rawName;
+            var m = name.match(/\(([^)]+)\)/);
+            var blv = m ? m[1].trim() : '';
+
+            var bracketMatch = name.match(/\[([^\]]+)\]/g);
+            var tag = '';
+            if (bracketMatch) {
+                bracketMatch.forEach(function(b) {
+                    if (/hls\s*2/i.test(b) || /link\s*2/i.test(b) || /dự phòng/i.test(b)) tag = ' (Link 2)';
+                    else if (/hls\s*3/i.test(b) || /link\s*3/i.test(b)) tag = ' (Link 3)';
+                });
+            }
+
+            if (blv) {
+                if (!blv.toLowerCase().startsWith('blv') && !blv.toLowerCase().startsWith('tiếng')) {
+                    blv = 'BLV ' + blv;
+                }
+                return '🎤 ' + blv + tag;
+            }
+
+            var cleaned = name.replace(/^[\d:/\s]+/, '').replace(/^[⚽🔴🏎️🎾🏀\s]+/, '').trim();
+            if (cleaned.length > 20) {
+                return 'Nguồn ' + (idx + 1);
+            }
+            return cleaned + tag;
+        }
 
         /* ================= ĐỒNG HỒ & DỮ LIỆU ================= */
         function updateClock() {
@@ -1038,24 +1338,38 @@
                 card.className = 'ch-card-g2' + (idx === activeChannelIndex ? ' active' : '') + (currentZone === 2 && idx === focusedChannelIndex ? ' focused' : '');
 
                 var numStr = String(idx + 1).padStart(2, '0');
-                var logoUrl = ch.logo || getLeagueLogo(ch.league) || 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png';
+                var logoUrl = getLeagueLogo(ch);
                 var title = ch.displayTitle || ch.name || '';
+                var sourceBadge = (ch.sources && ch.sources.length > 1) 
+                    ? ('<span class="badge-sources">' + ch.sources.length + ' NGUỒN</span>') 
+                    : '';
 
                 card.innerHTML = 
                     '<div class="ch-num">' + numStr + '</div>' +
                     '<div class="ch-icon-box">' +
-                        '<img class="ch-icon-img" src="' + logoUrl + '" onerror="this.src=\'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png\'">' +
+                        '<img class="ch-icon-img" src="' + logoUrl + '" onerror="this.src=\'assets/ic_app_logo.png\'">' +
                     '</div>' +
                     '<div class="ch-info-box">' +
                         '<div class="ch-name-text">' + title + '</div>' +
                     '</div>' +
                     '<div class="ch-badges-box">' +
+                        sourceBadge +
                         '<span class="badge-fhd">FHD</span>' +
                         (idx === activeChannelIndex ? '<span class="badge-now-playing">ĐANG PHÁT</span>' : '') +
                     '</div>';
 
                 card.onclick = function() {
-                    selectChannel(idx, true);
+                    activeChannelIndex = idx;
+                    focusedChannelIndex = idx;
+                    updateChannelHighlight();
+                    renderSpotlight(ch, idx);
+
+                    if (ch.sources && ch.sources.length > 1) {
+                        openSourcesModal(ch);
+                    } else {
+                        selectChannel(idx, true);
+                        hideMenuOverlay();
+                    }
                 };
                 container.appendChild(card);
             });
@@ -1083,14 +1397,10 @@
             }
         }
 
-        function getLeagueLogo(league) {
-            return LEAGUE_LOGOS[league] || null;
-        }
-
         function renderSpotlight(ch, idx) {
             var title = ch.displayTitle || ch.name || '';
-            var logoUrl = ch.logo || getLeagueLogo(ch.league) || 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png';
-            
+            var logoUrl = getLeagueLogo(ch);
+
             document.getElementById('spotlightLogo').src = logoUrl;
             document.getElementById('spotlightTitle').textContent = ch.homeTeam ? (ch.homeTeam + ' vs ' + ch.awayTeam) : title;
             document.getElementById('spotlightLeagueBadge').textContent = ch.leagueName || '🌐 Trực tiếp';
@@ -1114,12 +1424,14 @@
         function renderSources(ch) {
             var container = document.getElementById('sourcesButtonsRow');
             container.innerHTML = '';
-            var sources = ch.sources || [{ name: "Nguồn chính", url: ch.url }];
+            var sources = (ch && ch.sources && ch.sources.length > 0) ? ch.sources : [{ name: "Nguồn chính", url: ch ? ch.url : '' }];
 
             sources.forEach(function(s, sIdx) {
                 var btn = document.createElement('button');
                 btn.className = 'src-btn' + (sIdx === activeSourceIndex ? ' active' : '') + (currentZone === 3 && sIdx === focusedSourceIndex ? ' focused' : '');
-                btn.textContent = s.name || ('Nguồn ' + (sIdx + 1));
+                var label = cleanSourceName(s.name, sIdx);
+                btn.textContent = label;
+                btn.title = s.name || '';
                 btn.onclick = function() {
                     activeSourceIndex = sIdx;
                     focusedSourceIndex = sIdx;
@@ -1128,6 +1440,62 @@
                 };
                 container.appendChild(btn);
             });
+        }
+
+        /* ================= POPUP MODAL CHỌN NGUỒN PHÁT (MATCH SOURCES POPUP) ================= */
+        function openSourcesModal(ch) {
+            if (!ch || !ch.sources || ch.sources.length === 0) return;
+            currentModalMatch = ch;
+            modalSources = ch.sources;
+            modalFocusedIndex = activeSourceIndex;
+
+            document.getElementById('modalMatchTitle').textContent = ch.homeTeam ? (ch.homeTeam + ' vs ' + ch.awayTeam) : (ch.displayTitle || ch.name);
+            var lgName = ch.leagueName || 'Trực tiếp Thể Thao';
+            var timeStr = ch.time ? (ch.time + (ch.date ? ' ' + ch.date : '')) : '';
+            document.getElementById('modalMatchSubtitle').textContent = timeStr + ' • ' + lgName + ' • ' + ch.sources.length + ' nguồn phát trực tiếp';
+
+            var container = document.getElementById('modalSourcesList');
+            container.innerHTML = '';
+            var logoUrl = getLeagueLogo(ch);
+
+            ch.sources.forEach(function(s, idx) {
+                var item = document.createElement('div');
+                item.className = 'modal-src-item' + (idx === activeSourceIndex ? ' active' : '') + (idx === modalFocusedIndex ? ' focused' : '');
+                var numStr = String(idx + 1).padStart(2, '0');
+                var label = cleanSourceName(s.name, idx);
+
+                item.innerHTML = 
+                    '<div class="modal-src-num">' + numStr + '</div>' +
+                    '<img class="modal-src-logo" src="' + logoUrl + '" onerror="this.src=\'assets/ic_app_logo.png\'">' +
+                    '<div class="modal-src-name">' + label + '</div>' +
+                    '<button class="modal-src-btn">PHÁT</button>';
+
+                item.onclick = function() {
+                    activeSourceIndex = idx;
+                    updateSourceHighlight();
+                    playCurrentSource(ch);
+                    closeSourcesModal();
+                    hideMenuOverlay();
+                };
+                container.appendChild(item);
+            });
+
+            document.getElementById('matchSourcesModal').classList.remove('hidden');
+        }
+
+        function closeSourcesModal() {
+            document.getElementById('matchSourcesModal').classList.add('hidden');
+            currentModalMatch = null;
+        }
+
+        function updateModalSourceHighlight() {
+            var items = document.querySelectorAll('#modalSourcesList .modal-src-item');
+            items.forEach(function(item, idx) {
+                if (idx === modalFocusedIndex) item.classList.add('focused');
+                else item.classList.remove('focused');
+            });
+            var focused = document.querySelector('#modalSourcesList .modal-src-item.focused');
+            if (focused) focused.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
 
         function renderStandings(league, homeTeam, awayTeam) {
@@ -1171,7 +1539,8 @@
             if (!s || !s.url) return;
 
             var playUrl = s.url;
-            showQuickBanner(ch, s.name);
+            var cleanLabel = cleanSourceName(s.name, activeSourceIndex);
+            showQuickBanner(ch, cleanLabel);
 
             playerLoader.style.display = 'flex';
             document.getElementById('txtLoaderStatus').textContent = 'Đang tải luồng...';
@@ -1230,7 +1599,7 @@
 
         function showQuickBanner(ch, sourceName) {
             var num = String(activeChannelIndex + 1).padStart(2, '0');
-            var logoUrl = ch.logo || getLeagueLogo(ch.league) || 'https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png';
+            var logoUrl = getLeagueLogo(ch);
             document.getElementById('quickNum').textContent = num;
             document.getElementById('quickLogo').src = logoUrl;
             document.getElementById('quickTitle').textContent = ch.displayTitle || ch.name;
@@ -1306,6 +1675,44 @@
 
         window.addEventListener('keydown', function(e) {
             var keyCode = e.keyCode || e.which;
+
+            // Xử lý khi popup modal nguồn phát đang mở:
+            var modalEl = document.getElementById('matchSourcesModal');
+            if (modalEl && !modalEl.classList.contains('hidden')) {
+                if (keyCode === 27 || keyCode === 8 || keyCode === 10009) { // Escape / Return / Back
+                    closeSourcesModal();
+                    e.preventDefault();
+                    return;
+                }
+                if (keyCode === 38) { // Up
+                    if (modalFocusedIndex > 0) {
+                        modalFocusedIndex--;
+                        updateModalSourceHighlight();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                if (keyCode === 40) { // Down
+                    if (modalFocusedIndex < modalSources.length - 1) {
+                        modalFocusedIndex++;
+                        updateModalSourceHighlight();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                if (keyCode === 13) { // Enter / OK
+                    if (currentModalMatch && modalSources[modalFocusedIndex]) {
+                        activeSourceIndex = modalFocusedIndex;
+                        updateSourceHighlight();
+                        playCurrentSource(currentModalMatch);
+                        closeSourcesModal();
+                        hideMenuOverlay();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                return;
+            }
 
             // Khi Menu đang ẩn:
             if (menuOverlay.classList.contains('hidden')) {
@@ -1469,9 +1876,21 @@
                 switchCategory(focusedCategoryIndex);
                 currentZone = 2;
             } else if (currentZone === 2) {
-                // Nhấn OK vào kênh -> Phát và ẩn Menu để xem toàn màn hình
-                selectChannel(focusedChannelIndex, true);
-                hideMenuOverlay();
+                var curCat = categories[activeCategoryIndex];
+                if (curCat && curCat.channels) {
+                    var ch = curCat.channels[focusedChannelIndex];
+                    activeChannelIndex = focusedChannelIndex;
+                    updateChannelHighlight();
+                    renderSpotlight(ch, focusedChannelIndex);
+
+                    // Nếu trận đấu có nhiều nguồn -> mở popup MatchSourcesDialog
+                    if (ch && ch.sources && ch.sources.length > 1) {
+                        openSourcesModal(ch);
+                    } else {
+                        selectChannel(focusedChannelIndex, true);
+                        hideMenuOverlay();
+                    }
+                }
             } else if (currentZone === 3) {
                 var curCat = categories[activeCategoryIndex];
                 if (curCat && curCat.channels) {
