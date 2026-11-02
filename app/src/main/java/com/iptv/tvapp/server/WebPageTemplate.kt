@@ -256,20 +256,7 @@ object WebPageTemplate {
         </div>
 
         <div class="form-card">
-            <h3>🌐 3. HTTP User Agent Tùy Chỉnh</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Danh tính nhận diện gửi tới máy chủ phát IPTV.</p>
-            <div class="form-group">
-                <label>User Agent Chuỗi:</label>
-                <textarea id="txtHttpUserAgent" class="form-input" style="height:60px; font-size:11px; resize:none;"></textarea>
-            </div>
-            <div style="display:flex; gap:8px;">
-                <button class="submit-btn" style="flex:1;" onclick="updateUserAgentSettings()">Lưu User Agent</button>
-                <button class="submit-btn" style="flex:1; background:#475569;" onclick="resetDefaultUserAgent()">Khôi Phục Mặc Định</button>
-            </div>
-        </div>
-
-        <div class="form-card">
-            <h3>📡 4. Cấu Hình Máy Chủ udpxy</h3>
+            <h3>📡 3. Cấu Hình Máy Chủ udpxy</h3>
             <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Tự động chuyển đổi luồng multicast (UDP/RTP) sang HTTP proxy.</p>
             <div class="form-group">
                 <label>Máy chủ udpxy (IP:Port):</label>
@@ -279,7 +266,7 @@ object WebPageTemplate {
         </div>
 
         <div class="form-card">
-            <h3>🚀 5. Cài Đặt Khởi Động &amp; Mở Kênh</h3>
+            <h3>🚀 4. Cài Đặt Khởi Động &amp; Mở Kênh</h3>
             <div style="margin-bottom:12px;">
                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
                     <input type="checkbox" id="chkAutoStartBoot" onchange="updateBootSettings()">
@@ -304,8 +291,8 @@ object WebPageTemplate {
         </div>
 
         <div class="form-card">
-            <h3>💾 6. Sao Lưu &amp; Khôi Phục Toàn Bộ Cấu Hình</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, bộ giải mã, khử răng cưa, User Agent, udpxy về máy.</p>
+            <h3>💾 5. Sao Lưu &amp; Khôi Phục Toàn Bộ Cấu Hình</h3>
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lưu toàn bộ danh sách M3U, bộ giải mã, khử răng cưa, udpxy về máy.</p>
             <div style="display:flex; gap:10px; margin-bottom:10px;">
                 <button class="submit-btn" style="flex:1; background:#38BDF8;" onclick="downloadBackup()">📥 Tải File Sao Lưu (.json)</button>
             </div>
@@ -910,7 +897,6 @@ object WebPageTemplate {
         }
 
         /* ========== TAB CÀI ĐẶT ========== */
-        var DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
         function loadSettings() {
             fetch('/api/settings?t=' + Date.now(), { cache: 'no-store' }).then(function(res) { return res.json(); })
@@ -931,7 +917,6 @@ object WebPageTemplate {
                     document.getElementById('deintYadif').checked = true;
                 }
 
-                document.getElementById('txtHttpUserAgent').value = data.httpUserAgent || DEFAULT_USER_AGENT;
                 document.getElementById('chkAutoStartBoot').checked = !!data.autoStartOnBoot;
                 if (data.startupMode === 'FIXED_CHANNEL') {
                     document.getElementById('optFixedChannel').checked = true;
@@ -975,29 +960,6 @@ object WebPageTemplate {
             }).catch(function() {
                 showToast('Lỗi lưu thuật toán Deinterlace!');
             });
-        }
-
-        function updateUserAgentSettings() {
-            var ua = document.getElementById('txtHttpUserAgent').value.trim();
-            if (!ua) ua = DEFAULT_USER_AGENT;
-            fetch('/api/settings/useragent', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ httpUserAgent: ua })
-            }).then(function(res) { return res.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    showToast('Đã lưu User Agent mới trên TV!');
-                    document.getElementById('txtHttpUserAgent').value = data.httpUserAgent;
-                }
-            }).catch(function() {
-                showToast('Lỗi lưu User Agent!');
-            });
-        }
-
-        function resetDefaultUserAgent() {
-            document.getElementById('txtHttpUserAgent').value = DEFAULT_USER_AGENT;
-            updateUserAgentSettings();
         }
 
         function updateBootSettings() {
