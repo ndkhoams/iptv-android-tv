@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>TV Play - Samsung Tizen</title>
-    <link rel="stylesheet" href="css/style.css?v=2.2.4">
-    <script defer src="js/hls.light.min.js?v=2.2.4"></script>
-    <script defer src="js/mpegts.min.js?v=2.2.4"></script>
+    <link rel="stylesheet" href="css/style.css?v=2.2.5">
+    <script defer src="js/hls.light.min.js?v=2.2.5"></script>
+    <script defer src="js/mpegts.min.js?v=2.2.5"></script>
 </head>
 
 <body>
@@ -62,7 +62,7 @@
                     <span id="header-stats-badge" class="badge-chip badge-cyan">⚡ CPU: 12% RAM: 38%</span>
                 </div>
                 <div class="header-right">
-                    <span id="app-version-badge" class="badge-chip">v2.2.4</span>
+                    <span id="app-version-badge" class="badge-chip">v2.2.5</span>
                     <span id="digital-clock" class="digital-clock">12:00</span>
                 </div>
             </div>
@@ -141,8 +141,29 @@
                         <span id="spotlight-playing-tag" class="tag-now-playing hidden">● Đang phát</span>
                     </div>
 
+                    <!-- Nguồn phát thể thao / BLV chips -->
+                    <div id="spotlight-sources-container" class="spotlight-sources-container hidden">
+                        <div class="sources-label">NGUỒN PHÁT (BÌNH LUẬN):</div>
+                        <div id="spotlight-sources-row" class="spotlight-sources-row"></div>
+                    </div>
+
+                    <!-- Bảng xếp hạng thể thao Standings -->
+                    <div id="spotlight-standings-box" class="spotlight-standings-box hidden">
+                        <div class="epg-box-header">
+                            <span id="standings-box-title" class="epg-title">BẢNG XẾP HẠNG</span>
+                            <span class="epg-source">FotMob / ESPN</span>
+                        </div>
+                        <div class="standings-table-header">
+                            <span class="st-col-rank">#</span>
+                            <span class="st-col-team">CÂU LẠC BỘ</span>
+                            <span class="st-col-played">TR</span>
+                            <span class="st-col-pts">ĐIỂM</span>
+                        </div>
+                        <div id="spotlight-standings-content" class="standings-list-scroll"></div>
+                    </div>
+
                     <!-- Panel EPG / Chi tiết chương trình hoặc Bảng trận đấu -->
-                    <div class="spotlight-epg-box">
+                    <div id="spotlight-epg-box" class="spotlight-epg-box">
                         <div class="epg-box-header">
                             <span id="epg-box-title" class="epg-title">LỊCH PHÁT SÓNG (EPG)</span>
                             <span class="epg-source">TV Play</span>
@@ -250,7 +271,7 @@
                         <div class="update-info-row">
                             <div>
                                 <div>Phiên bản hiện tại: <span id="current-ota-version"
-                                        class="text-highlight">v2.2.4</span></div>
+                                        class="text-highlight">v2.2.5</span></div>
                                 <div id="ota-status-text" class="text-muted">Nhấn kiểm tra để tải bản mới nhất</div>
                             </div>
                             <div class="btn-group">
@@ -271,7 +292,7 @@
         <div id="toast-message" class="toast hidden"></div>
     </div>
 
-    <script src="js/app.js?v=2.2.4"></script>
+    <script src="js/app.js?v=2.2.5"></script>
 </body>
 
 </html>

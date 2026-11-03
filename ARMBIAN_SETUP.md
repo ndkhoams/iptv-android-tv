@@ -168,3 +168,4 @@ Khi sửa đổi các file kịch bản dịch vụ trên máy chủ:
 ## 6. QUY TẮC BẮT BUỘC (CRITICAL CONSTRAINTS)
 1. **TUYỆT ĐỐI KHÔNG** tự ý kích hoạt GitHub Release hoặc tự ý build APK của Android TV trừ khi người dùng ra lệnh cụ thể bằng lời (ví dụ: "build apk", "tạo release").
 2. Mọi thay đổi mã nguồn phải được kiểm tra cú pháp và đẩy lên nhánh `main` của GitHub repo `ndkhoams/iptv-android-tv`.
+

@@ -6,7 +6,7 @@ import threading
 import subprocess
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
-PORT = 8090
+PORT = 8150
 DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tizen_tvplay")
 
 def get_real_lan_ip():
@@ -49,13 +49,18 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
 
-def is_port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('127.0.0.1', port)) == 0
+def is_port_bindable(port, host='0.0.0.0'):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+            return True
+    except (OSError, PermissionError):
+        return False
 
-def find_available_port(start=8090):
+def find_available_port(start=8150, host='0.0.0.0'):
     p = start
-    while is_port_in_use(p):
+    while not is_port_bindable(p, host):
         p += 1
     return p
 
@@ -84,8 +89,14 @@ def get_browser_cmd(url):
         return ["start", url]
 
 def main():
-    port = find_available_port(8090)
-    server = HTTPServer(('0.0.0.0', port), CORSRequestHandler)
+    host = '0.0.0.0'
+    port = find_available_port(8150, host)
+    try:
+        server = HTTPServer((host, port), CORSRequestHandler)
+    except (OSError, PermissionError):
+        host = '127.0.0.1'
+        port = find_available_port(8150, host)
+        server = HTTPServer((host, port), CORSRequestHandler)
     
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()

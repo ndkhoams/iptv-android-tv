@@ -1688,3 +1688,135 @@ body, html {
         padding: 0 24px;
     }
 }
+/* ==========================================
+   BẢNG XẾP HẠNG STANDINGS & CHIP NGUỒN PHÁT
+   ========================================== */
+.spotlight-sources-container {
+    margin-top: 8px;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sources-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #FF6500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.spotlight-sources-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 85px;
+    overflow-y: auto;
+}
+
+.src-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #F8FAFC;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.src-chip-btn:hover, .src-chip-btn.focused {
+    background: #F1F3F5 !important;
+    color: #111827 !important;
+    border-color: #FF6500 !important;
+    box-shadow: 0 2px 8px rgba(255, 101, 0, 0.4);
+}
+
+.src-chip-btn.active {
+    background: rgba(255, 101, 0, 0.2);
+    border-color: #FF6500;
+    color: #FF8533;
+}
+
+.spotlight-standings-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin-top: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.standings-table-header {
+    display: flex;
+    align-items: center;
+    padding: 4px 2px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #94A3B8;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-transform: uppercase;
+}
+
+.st-col-rank {
+    width: 20px;
+    text-align: center;
+}
+
+.st-col-team {
+    flex: 1;
+    margin-left: 6px;
+}
+
+.st-col-played {
+    width: 26px;
+    text-align: center;
+}
+
+.st-col-pts {
+    width: 28px;
+    text-align: center;
+    color: #FF6500;
+}
+
+.standings-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 4px;
+}
+
+.standing-row {
+    height: 25px;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    font-size: 11px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.1s ease;
+}
+
+.standing-row.highlight {
+    background: rgba(255, 101, 0, 0.18);
+    border: 1px solid #FF6500;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.standing-row .st-logo {
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+    margin-left: 4px;
+}

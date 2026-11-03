@@ -22,5 +22,6 @@ __pycache__/
 *.pyc
 
 scratch/
+.antigravity_chat_sync/
 
 *.bat
