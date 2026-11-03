@@ -235,24 +235,89 @@ class SportsLiveManager(private val context: Context) {
         return null
     }
 
+    fun isMatchGroupCompleted(mg: MatchGroup?): Boolean {
+        if (mg == null) return false
+        if (mg.isCompleted) return true
+        val espnFix = findEspnFixture(mg.homeTeam, mg.awayTeam)
+        if (espnFix != null) {
+            val detail = espnFix.detail.uppercase()
+            if (espnFix.isCompleted || espnFix.state == "post" || detail.contains("FT") || detail.contains("FINAL") || detail.contains("AET") || detail.contains("AP")) {
+                return true
+            }
+            if (espnFix.state == "in" || detail.contains("'") || detail.contains("HT")) {
+                return false
+            }
+        } else if (mg.timestamp > 0) {
+            val now = System.currentTimeMillis()
+            if (now - mg.timestamp > 140 * 60 * 1000L) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun isMatchGroupOngoing(mg: MatchGroup?): Boolean {
+        if (mg == null) return false
+        if (isMatchGroupCompleted(mg)) return false
+        val now = System.currentTimeMillis()
+        val espnFix = findEspnFixture(mg.homeTeam, mg.awayTeam)
+        if (espnFix != null) {
+            val detail = espnFix.detail.uppercase()
+            if (espnFix.state == "in" || detail.contains("'") || detail.contains("HT")) {
+                return true
+            }
+            if (espnFix.state == "pre") {
+                return mg.timestamp > 0 && (now >= mg.timestamp - 15 * 60 * 1000L)
+            }
+        }
+        if (mg.time == "LIVE") return true
+        if (mg.timestamp > 0) {
+            return (now >= mg.timestamp - 15 * 60 * 1000L) && (now - mg.timestamp <= 140 * 60 * 1000L)
+        }
+        return mg.isOngoing
+    }
+
     fun isMatchOngoing(channel: Channel?): Boolean {
         if (channel == null) return false
         if (channel.id == ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return false
-        if (channel.streamUrl.startsWith("match://")) {
+        val mg = if (channel.streamUrl.startsWith("match://")) {
             val key = channel.streamUrl.removePrefix("match://")
-            matchGroupsMap[key]?.let { return it.isOngoing && !it.isCompleted }
+            matchGroupsMap[key]
+        } else {
+            sourceIdToMatchMap[channel.id] ?: findMatchByUrl(channel.streamUrl, channel.name)
         }
-        sourceIdToMatchMap[channel.id]?.let { return it.isOngoing && !it.isCompleted }
-        findMatchByUrl(channel.streamUrl, channel.name)?.let { return it.isOngoing && !it.isCompleted }
+        if (mg != null) {
+            return isMatchGroupOngoing(mg)
+        }
 
         val name = channel.name
-        if (name.contains("LIVE", ignoreCase = true)) return true
-        val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(name)
-        val timeStr = timeMatch?.groupValues?.get(1) ?: return false
-        val matchCal = parseMatchDateTime(name) ?: return false
-        val matchTimestamp = matchCal.timeInMillis
+        val isExplicitFt = Regex("""\b(FT|FINAL|KẾT THÚC)\b""", RegexOption.IGNORE_CASE).containsMatchIn(name)
+        if (isExplicitFt) return false
+
+        val (h, a, _) = extractTeamsAndLeague(name)
+        val espnFix = if (h.isNotBlank() && a.isNotBlank()) findEspnFixture(h, a) else null
+        val matchCal = parseMatchDateTime(name)
+        val matchTimestamp = matchCal?.timeInMillis ?: 0L
         val now = System.currentTimeMillis()
-        return (now >= matchTimestamp - 15 * 60 * 1000L) && (now - matchTimestamp <= 140 * 60 * 1000L)
+
+        if (espnFix != null) {
+            val detail = espnFix.detail.uppercase()
+            if (espnFix.isCompleted || espnFix.state == "post" || detail.contains("FT") || detail.contains("FINAL") || detail.contains("AET") || detail.contains("AP")) {
+                return false
+            }
+            if (espnFix.state == "in" || detail.contains("'") || detail.contains("HT")) {
+                return true
+            }
+            if (espnFix.state == "pre") {
+                return matchTimestamp > 0 && (now >= matchTimestamp - 15 * 60 * 1000L)
+            }
+        }
+
+        if (name.contains("LIVE", ignoreCase = true)) return true
+        if (matchTimestamp > 0) {
+            return (now >= matchTimestamp - 15 * 60 * 1000L) && (now - matchTimestamp <= 140 * 60 * 1000L)
+        }
+        return false
     }
 
     private fun addUrlMapping(url: String, mg: MatchGroup) {
@@ -666,6 +731,38 @@ class SportsLiveManager(private val context: Context) {
                     continue
                 }
 
+                // Xác định động trạng thái isCompleted và isOngoing theo API và thời gian thực
+                val espnFix = findEspnFixture(homeTeam, awayTeam)
+                val nowTimestamp = System.currentTimeMillis()
+                var resolvedCompleted = isCompleted
+                var resolvedOngoing = isOngoing
+
+                if (espnFix != null) {
+                    val detail = espnFix.detail.uppercase()
+                    val isEspnFt = espnFix.isCompleted || espnFix.state == "post" || detail.contains("FT") || detail.contains("FINAL") || detail.contains("AET") || detail.contains("AP")
+                    if (isEspnFt) {
+                        resolvedCompleted = true
+                        resolvedOngoing = false
+                    } else if (espnFix.state == "in" || detail.contains("'") || detail.contains("HT")) {
+                        resolvedCompleted = false
+                        resolvedOngoing = true
+                    } else if (espnFix.state == "pre") {
+                        resolvedCompleted = false
+                        resolvedOngoing = (timestamp > 0 && (nowTimestamp >= timestamp - 15 * 60 * 1000L))
+                    }
+                } else if (timestamp > 0) {
+                    // Không có trên API tỉ số: Dùng mốc fallback 140 phút
+                    if (nowTimestamp - timestamp > 140 * 60 * 1000L) {
+                        resolvedCompleted = true
+                        resolvedOngoing = false
+                    } else if (nowTimestamp >= timestamp - 15 * 60 * 1000L) {
+                        resolvedOngoing = true
+                    }
+                }
+                if (time == "LIVE" && !resolvedCompleted) {
+                    resolvedOngoing = true
+                }
+
                 val mg = MatchGroup(
                     key = key,
                     homeTeam = homeTeam.ifBlank { "Đội nhà" },
@@ -676,8 +773,8 @@ class SportsLiveManager(private val context: Context) {
                     league = league,
                     leagueName = leagueName,
                     sources = sourceChannels,
-                    isCompleted = isCompleted,
-                    isOngoing = isOngoing
+                    isCompleted = resolvedCompleted,
+                    isOngoing = resolvedOngoing
                 )
                 addedMatches.add(mg)
                 matchGroupsMap[key] = mg
@@ -687,7 +784,7 @@ class SportsLiveManager(private val context: Context) {
                 }
 
                 // Chỉ hiển thị những trận chưa kết thúc (Full-time)
-                if (!isCompleted) {
+                if (!resolvedCompleted) {
                     val matchName = if (displayTitle.isNotBlank()) {
                         displayTitle
                     } else {
@@ -695,7 +792,7 @@ class SportsLiveManager(private val context: Context) {
                             "F1" -> "🏎️"
                             "TENNIS" -> "🎾"
                             "NBA" -> "🏀"
-                            else -> if (isOngoing) "🔴" else "⚽"
+                            else -> if (resolvedOngoing) "🔴" else "⚽"
                         }
                         val timePart = if (date.isNotBlank()) "[$time $date]" else "[$time]"
                         if (awayTeam.isNotBlank()) "$sportIcon $timePart $homeTeam vs $awayTeam" else "$sportIcon $timePart $homeTeam"
@@ -1228,17 +1325,43 @@ class SportsLiveManager(private val context: Context) {
                         continue
                     }
 
+                    val isExplicitFt = Regex("""\b(FT|FINAL|KẾT THÚC)\b""", RegexOption.IGNORE_CASE).containsMatchIn(rawName)
                     val espnFix = findEspnFixture(homeTeam, awayTeam)
-                    val isEspnCompleted = espnFix?.isCompleted == true
-                    val isEspnOngoing = espnFix?.state == "in" || espnFix?.detail?.contains("'") == true
                     val nowTimestamp = System.currentTimeMillis()
 
-                    val isCompleted = isEspnCompleted || (matchTimestamp > 0 && (nowTimestamp - matchTimestamp > 210 * 60 * 1000L))
-                    val isOngoing = !isCompleted && (
-                        isEspnOngoing ||
-                        timeStr == "LIVE" ||
-                        (matchTimestamp > 0 && (nowTimestamp >= matchTimestamp - 15 * 60 * 1000L) && (nowTimestamp - matchTimestamp <= 140 * 60 * 1000L))
-                    )
+                    var isCompleted = false
+                    var isOngoing = false
+
+                    if (isExplicitFt) {
+                        isCompleted = true
+                        isOngoing = false
+                    } else if (espnFix != null) {
+                        val detail = espnFix.detail.uppercase()
+                        val isEspnFt = espnFix.isCompleted || espnFix.state == "post" || detail.contains("FT") || detail.contains("FINAL") || detail.contains("AET") || detail.contains("AP")
+                        if (isEspnFt) {
+                            isCompleted = true
+                            isOngoing = false
+                        } else if (espnFix.state == "in" || detail.contains("'") || detail.contains("HT")) {
+                            isCompleted = false
+                            isOngoing = true
+                        } else if (espnFix.state == "pre") {
+                            isCompleted = false
+                            isOngoing = matchTimestamp > 0 && (nowTimestamp >= matchTimestamp - 15 * 60 * 1000L)
+                        }
+                    } else {
+                        // Không có trên API tỉ số: Dùng mốc fallback 140 phút
+                        if (matchTimestamp > 0) {
+                            if (nowTimestamp - matchTimestamp > 140 * 60 * 1000L) {
+                                isCompleted = true
+                                isOngoing = false
+                            } else if (nowTimestamp >= matchTimestamp - 15 * 60 * 1000L) {
+                                isOngoing = true
+                            }
+                        }
+                    }
+                    if (timeStr == "LIVE" && !isCompleted) {
+                        isOngoing = true
+                    }
 
                     val cHome = canonicalizeTeam(homeTeam)
                     val cAway = canonicalizeTeam(awayTeam)

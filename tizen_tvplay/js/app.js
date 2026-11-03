@@ -140,6 +140,7 @@
     // Dữ liệu thể thao (Sports)
     var sportsLiveMatches = [];
     var sportsCategories = [];
+    var sportsFixtures = [];
     var currentSelectedMatch = null;
 
     // Kênh yêu thích
@@ -688,32 +689,104 @@
         return new Date(curYear, curMonth, curDay, curHours, curMinutes, 0, 0).getTime();
     }
 
+    function canonicalizeTeamName(name) {
+        if (!name) return "";
+        return name.toLowerCase()
+            .replace(/\b(fc|cf|sc|clb|club|united|utd|city|athletic|atletico|real|sporting|inter|ac)\b/gi, " ")
+            .replace(/[^a-z0-9\u00C0-\u1EF9]/gi, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function extractTeamsFromText(text) {
+        if (!text) return { home: "", away: "" };
+        var clean = text
+            .replace(/\[\d{1,2}:\d{2}(\s+\d{1,2}\/\d{1,2})?\]/g, "")
+            .replace(/\(\s*blv[^\)]*\)/gi, "")
+            .replace(/\[\s*blv[^\]]*\]/gi, "")
+            .replace(/\b(blv\s+[^\-\–\|]+)/gi, "")
+            .replace(/\b(hls|sd|hd|fhd|4k|raw)\b/gi, "")
+            .replace(/[\(\[\{][^\)\]\}]*[\)\]\}]/g, "")
+            .replace(/•.*$/g, "")
+            .replace(/[-|].*$/g, "")
+            .trim();
+        var parts = clean.split(/\s+(?:vs|Vs|VS|-)\s+/);
+        if (parts.length >= 2) {
+            return { home: parts[0].trim(), away: parts[1].trim() };
+        }
+        return { home: clean, away: "" };
+    }
+
+    function findFixtureForMatch(ev) {
+        if (!sportsFixtures || sportsFixtures.length === 0 || !ev) return null;
+        var home = ev.homeTeam || "";
+        var away = ev.awayTeam || "";
+        if (!home && (ev.name || ev.displayTitle)) {
+            var extracted = extractTeamsFromText(ev.displayTitle || ev.name);
+            home = extracted.home;
+            away = extracted.away;
+        }
+        if (!home) return null;
+
+        var hLow = home.toLowerCase();
+        var aLow = (away || "").toLowerCase();
+        var cH = canonicalizeTeamName(home);
+        var cA = canonicalizeTeamName(away);
+
+        for (var i = 0; i < sportsFixtures.length; i++) {
+            var fx = sportsFixtures[i];
+            var f1 = (fx.home_team || "").toLowerCase();
+            var f2 = (fx.away_team || "").toLowerCase();
+            var cf1 = canonicalizeTeamName(fx.home_team);
+            var cf2 = canonicalizeTeamName(fx.away_team);
+
+            var m1 = (hLow.indexOf(f1) >= 0 || f1.indexOf(hLow) >= 0 || (cH.length >= 3 && cf1.length >= 3 && (cH.indexOf(cf1) >= 0 || cf1.indexOf(cH) >= 0))) &&
+                     (!aLow || aLow.indexOf(f2) >= 0 || f2.indexOf(aLow) >= 0 || (cA.length >= 3 && cf2.length >= 3 && (cA.indexOf(cf2) >= 0 || cf2.indexOf(cA) >= 0)));
+            var m2 = (hLow.indexOf(f2) >= 0 || f2.indexOf(hLow) >= 0 || (cH.length >= 3 && cf2.length >= 3 && (cH.indexOf(cf2) >= 0 || cf2.indexOf(cH) >= 0))) &&
+                     (!aLow || aLow.indexOf(f1) >= 0 || f1.indexOf(aLow) >= 0 || (cA.length >= 3 && cf1.length >= 3 && (cA.indexOf(cf1) >= 0 || cf1.indexOf(cA) >= 0)));
+            if (m1 || m2) return fx;
+        }
+        return null;
+    }
+
     function isMatchFinished(ev) {
         if (!ev) return false;
-        if (ev.isCompleted === true) return true;
 
+        // 1. Kiểm tra từ khóa FT trực tiếp trên tiêu đề
         var title = ((ev.name || "") + " " + (ev.displayTitle || "")).toUpperCase();
         if (title.indexOf(" FT") >= 0 || title.indexOf("(FT)") >= 0 || title.indexOf("[FT]") >= 0 ||
             title.indexOf("FINAL") >= 0 || title.indexOf("KẾT THÚC") >= 0) {
             return true;
         }
-
         var timeStr = (ev.time || "").toUpperCase();
         if (timeStr === "FT" || timeStr === "FINAL" || timeStr === "KẾT THÚC") {
             return true;
         }
-        if (timeStr === "LIVE") return false;
 
-        var ts = getMatchTimestamp(ev);
-        if (ts > 0) {
-            var now = Date.now();
-            // Nếu đã qua hơn 140 phút kể từ giờ bắt đầu, trận đấu coi như đã kết thúc (FT) giống ATV
-            var elapsed = now - ts;
-            if (elapsed > 140 * 60 * 1000) {
+        // 2. Kiểm tra trên API các nguồn xem tỉ số (sportsFixtures)
+        var fx = findFixtureForMatch(ev);
+        if (fx) {
+            var detail = (fx.detail || "").toUpperCase();
+            if (fx.is_completed === true || fx.state === "post" ||
+                detail.indexOf("FT") >= 0 || detail.indexOf("FINAL") >= 0 || detail.indexOf("AET") >= 0 || detail.indexOf("AP") >= 0) {
                 return true;
             }
+            if (fx.state === "in" || detail.indexOf("'") >= 0 || detail.indexOf("HT") >= 0) {
+                return false;
+            }
+        } else {
+            // Không có trên API tỉ số: Dùng mốc fallback 140 phút sau khi bắt đầu
+            if (ev.isCompleted === true) return true;
+            var ts = getMatchTimestamp(ev);
+            if (ts > 0) {
+                var now = Date.now();
+                if (now - ts > 140 * 60 * 1000) {
+                    return true;
+                }
+            }
         }
-        return false;
+
+        return ev.isCompleted === true;
     }
 
     function isMatchOngoing(ev) {
@@ -721,22 +794,38 @@
         if (isMatchFinished(ev)) return false;
 
         var timeStr = (ev.time || "").toUpperCase();
-        if (timeStr === "LIVE") return true;
-
         var title = ((ev.name || "") + " " + (ev.displayTitle || "")).toUpperCase();
         if (title.indexOf(" TRỰC TIẾP") >= 0 || title.indexOf("LIVE NOW") >= 0) return true;
 
         var ts = getMatchTimestamp(ev);
+        var now = Date.now();
+
+        // Kiểm tra trên API tỉ số
+        var fx = findFixtureForMatch(ev);
+        if (fx) {
+            var detail = (fx.detail || "").toUpperCase();
+            if (fx.state === "in" || detail.indexOf("'") >= 0 || detail.indexOf("HT") >= 0) {
+                return true;
+            }
+            if (fx.state === "pre") {
+                // Trận đấu diễn ra trong khoảng từ 15 phút trước giờ thi đấu
+                return ts > 0 && (now >= ts - 15 * 60 * 1000);
+            }
+        }
+
+        if (timeStr === "LIVE") return true;
+
+        // Không có trên API tỉ số: bắt đầu từ 15 phút trước giờ thi đấu, kết thúc sau 140 phút
         if (ts > 0) {
-            var now = Date.now();
-            // Trận đấu đang diễn ra nếu trong khoảng: từ 15 phút trước giờ thi đấu đến 140 phút sau khi bắt đầu
             return (now >= ts - 15 * 60 * 1000) && (now - ts <= 140 * 60 * 1000);
         }
-        return false;
+
+        return ev.isOngoing === true;
     }
 
     function parseSportsData(sportsData) {
         if (!sportsData) return;
+        sportsFixtures = sportsData.fixtures || [];
         sportsLiveMatches = [];
         sportsCategories = [];
 

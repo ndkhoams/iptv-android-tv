@@ -1331,7 +1331,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvSpotlightStatus.visibility = View.GONE
 
             // Yêu cầu 6: Chỉ hiện nhãn TRỰC TIẾP phía trên logo khi trận đấu đang diễn ra
-            val isOngoing = matchGroup?.isOngoing ?: playlistManager.sportsLiveManager.isMatchOngoing(channel)
+            val isOngoing = if (matchGroup != null) playlistManager.sportsLiveManager.isMatchGroupOngoing(matchGroup) else playlistManager.sportsLiveManager.isMatchOngoing(channel)
             binding.tvSpotlightLiveTag.visibility = if (isOngoing) View.VISIBLE else View.GONE
 
             spotlightHandler.removeCallbacks(spotlightRunnable)
@@ -1351,7 +1351,7 @@ class MainActivity : AppCompatActivity() {
             if (mg != null) {
                 binding.tvSpotlightName.text = if (mg.awayTeam.isNotBlank()) "${mg.homeTeam} vs ${mg.awayTeam}" else mg.homeTeam
                 binding.tvSpotlightCategory.text = mg.leagueName
-                binding.tvSpotlightLiveTag.visibility = if (mg.isOngoing) View.VISIBLE else View.GONE
+                binding.tvSpotlightLiveTag.visibility = if (playlistManager.sportsLiveManager.isMatchGroupOngoing(mg)) View.VISIBLE else View.GONE
             } else {
                 val (home, away, _) = playlistManager.sportsLiveManager.extractTeamsAndLeague(channel.name)
                 if (home.isNotBlank() && away.isNotBlank()) {
