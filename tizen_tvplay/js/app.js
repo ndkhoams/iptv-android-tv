@@ -75,7 +75,7 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.1";
+    var APP_VERSION = "2.2.2";
     var DEFAULT_M3U_URL = "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
@@ -958,7 +958,7 @@
 
         if (mode === APP_MODE_TV) {
             categories = tvCategories;
-            if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "DANH MỤC TRUYỀN HÌNH";
+            if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "DANH MỤC TV";
         } else if (mode === APP_MODE_SPORTS) {
             categories = sportsCategories;
             if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "DANH MỤC THỂ THAO";

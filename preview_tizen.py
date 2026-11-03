@@ -40,6 +40,9 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', '*')
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -63,6 +66,9 @@ def get_browser_cmd(url):
 
     flags = [
         "--disable-web-security",
+        "--disable-cache",
+        "--disk-cache-size=1",
+        "--media-cache-size=1",
         "--test-type",
         f"--user-data-dir={temp_profile}",
         f"--app={url}",
