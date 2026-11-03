@@ -1836,6 +1836,10 @@
     // ==========================================
     function openSettingsModal() {
         isSettingsModalOpen = true;
+        var curVerEl = document.getElementById('current-ota-version');
+        if (curVerEl) curVerEl.textContent = "v" + APP_VERSION;
+        var badgeVerEl = document.getElementById('app-version-badge');
+        if (badgeVerEl) badgeVerEl.textContent = "v" + APP_VERSION;
         if (udpxyInputEl) udpxyInputEl.value = udpxyServer;
         renderPlaylistsManageList();
         if (settingsModalEl) settingsModalEl.classList.remove('hidden');
@@ -3149,6 +3153,72 @@
         else openOverlay();
     }
 
+    function formatSportsOsdLine(channel) {
+        if (!channel) return "Trực tiếp Thể Thao";
+        var raw = (channel.sourceName || channel.name || "");
+        var matchObj = channel.match || currentPlayingMatch || findMatchForPlayingChannel(channel);
+
+        // 1. Tên giải đấu
+        var league = channel.matchLeague ||
+                     (matchObj && matchObj.matchData && (matchObj.matchData.leagueName || matchObj.matchData.league)) ||
+                     (channel.matchData && (channel.matchData.leagueName || channel.matchData.league)) ||
+                     "";
+        league = league.replace(/^[^\w\s\u00C0-\u1EF9]+/u, '').trim();
+        if (league.toUpperCase() === "TRỰC TIẾP") league = "";
+
+        // 2. Tên BLV
+        var blv = "";
+        var blvMatch = raw.match(/\((?:BLV\s+)?([^\)]+)\)/i);
+        if (blvMatch) {
+            blv = blvMatch[1].trim().replace(/\b(hls|fhd|hd|sd|geo)\b/gi, '').trim();
+        }
+        var isNhaDai = blv.toLowerCase() === "nhà đài" || raw.toLowerCase().indexOf("nhà đài") >= 0 || (channel.group && channel.group.toLowerCase().indexOf("nhà đài") >= 0);
+        if (isNhaDai) {
+            blv = "";
+        } else if (blv && blv.toLowerCase().indexOf("blv") !== 0) {
+            blv = "BLV " + blv;
+        }
+
+        // 3. Tên Nguồn
+        var sourceName = "";
+        var sourceMap = ["Chuối Chiên", "Gà Vàng", "Xôi Lạc", "Cà Khịa", "Bia Ôm", "S8 TV", "Cola TV", "Phá Làng", "Vua Sân Cỏ", "Khô Gà", "Giờ Vàng", "Sao Kê", "Xôi Gấc"];
+        for (var i = 0; i < sourceMap.length; i++) {
+            var sm = sourceMap[i];
+            if (raw.indexOf(sm) >= 0 || (channel.group && channel.group.indexOf(sm) >= 0)) {
+                sourceName = sm;
+                break;
+            }
+        }
+        if (isNhaDai) {
+            sourceName = "Nguồn Nhà Đài";
+        } else if (!sourceName) {
+            var dashMatch = raw.match(/-\s*([^\(\[\-]+)$/);
+            if (dashMatch && dashMatch[1].trim()) {
+                sourceName = dashMatch[1].trim();
+            } else if (channel.group && channel.group.indexOf("LIVE") < 0 && channel.group.indexOf("Truyền Hình") < 0) {
+                sourceName = channel.group;
+            }
+        }
+
+        var blvSourcePart = "";
+        if (blv && sourceName) {
+            blvSourcePart = blv + " - " + sourceName;
+        } else if (blv) {
+            blvSourcePart = blv;
+        } else if (sourceName) {
+            blvSourcePart = sourceName;
+        }
+
+        if (league && blvSourcePart) {
+            return league + " • " + blvSourcePart;
+        } else if (league) {
+            return league;
+        } else if (blvSourcePart) {
+            return blvSourcePart;
+        }
+        return "Trực tiếp Thể Thao";
+    }
+
     function showQuickInfo(channel) {
         if (!quickInfoEl) return;
         var isSports = isSportsPlayback(channel);
@@ -3170,9 +3240,13 @@
             }
         }
         if (quickProgramEl) {
-            var curProg = getCurrentEpgProgram(channel);
-            var activeName = curProg ? curProg.title : (channel.sourceName || (channel.isMatch ? (channel.matchLeague || "Trực tiếp") : (channel.group || channel.name)));
-            quickProgramEl.textContent = "● Đang phát: " + activeName;
+            if (isSports || channel.isMatch) {
+                quickProgramEl.textContent = "● Đang phát: " + formatSportsOsdLine(channel);
+            } else {
+                var curProg = getCurrentEpgProgram(channel);
+                var activeName = curProg ? curProg.title : (channel.group || channel.name);
+                quickProgramEl.textContent = "● Đang phát: " + activeName;
+            }
         }
         if (quickTechEl) {
             var url = resolveStreamUrl(channel.url);

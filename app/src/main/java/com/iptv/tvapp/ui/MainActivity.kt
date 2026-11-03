@@ -2166,6 +2166,67 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun formatSportsOsdLine(channel: Channel): String {
+        val raw = channel.name
+
+        // 1. Tên giải đấu
+        val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(channel)
+        var league = mg?.leagueName?.ifBlank { mg.league } ?: ""
+        if (league.isBlank()) {
+            val lgMatch = Regex("""\b(Champions League|Cúp C1|EPL|Ngoại Hạng Anh|La Liga|Serie A|Bundesliga|Ligue 1|V-League|VLeague|Shopee Cup|AFC|NBA|F1|Tennis)\b""", RegexOption.IGNORE_CASE).find(raw)
+            if (lgMatch != null) {
+                league = lgMatch.value
+            }
+        }
+        league = league.replace(Regex("""^[^\w\s\u00C0-\u1EF9]+"""), "").trim()
+        if (league.equals("TRỰC TIẾP", ignoreCase = true)) league = ""
+
+        // 2. Tên BLV
+        val blvMatch = Regex("""\((?:BLV\s+)?([^\)]+)\)""", RegexOption.IGNORE_CASE).find(raw)
+        var blv = blvMatch?.groupValues?.get(1)?.trim()
+            ?.replace(Regex("""(?i)\b(hls|fhd|hd|sd|geo)\b"""), "")?.trim() ?: ""
+        val isNhaDai = blv.equals("Nhà đài", ignoreCase = true) || raw.contains("Nhà đài", ignoreCase = true) || channel.groupTitle.contains("Nhà đài", ignoreCase = true)
+        if (isNhaDai) {
+            blv = ""
+        } else if (blv.isNotBlank() && !blv.startsWith("BLV", ignoreCase = true)) {
+            blv = "BLV $blv"
+        }
+
+        // 3. Tên Nguồn
+        var sourceName = ""
+        val sourceList = listOf("Chuối Chiên", "Gà Vàng", "Xôi Lạc", "Cà Khịa", "Bia Ôm", "S8 TV", "Cola TV", "Phá Làng", "Vua Sân Cỏ", "Khô Gà", "Giờ Vàng", "Sao Kê", "Xôi Gấc")
+        for (sm in sourceList) {
+            if (raw.contains(sm, ignoreCase = true) || channel.groupTitle.contains(sm, ignoreCase = true)) {
+                sourceName = sm
+                break
+            }
+        }
+        if (isNhaDai) {
+            sourceName = "Nguồn Nhà Đài"
+        } else if (sourceName.isBlank()) {
+            val dashMatch = Regex("""-\s*([^\(\[\-]+)$""").find(raw)
+            if (dashMatch != null && dashMatch.groupValues[1].isNotBlank()) {
+                sourceName = dashMatch.groupValues[1].trim()
+            } else if (channel.groupTitle.isNotBlank() && !channel.groupTitle.contains("LIVE", ignoreCase = true)) {
+                sourceName = channel.groupTitle
+            }
+        }
+
+        val blvSourcePart = when {
+            blv.isNotBlank() && sourceName.isNotBlank() -> "$blv - $sourceName"
+            blv.isNotBlank() -> blv
+            sourceName.isNotBlank() -> sourceName
+            else -> ""
+        }
+
+        return when {
+            league.isNotBlank() && blvSourcePart.isNotBlank() -> "$league • $blvSourcePart"
+            league.isNotBlank() -> league
+            blvSourcePart.isNotBlank() -> blvSourcePart
+            else -> "Trực tiếp Thể Thao"
+        }
+    }
+
     private fun showQuickChannelInfo(channel: Channel) {
         // Ẩn thông báo cạnh dưới nếu đang mở để tránh hai bảng đè lên nhau
         bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
@@ -2176,25 +2237,20 @@ class MainActivity : AppCompatActivity() {
 
         // Lấy tên chương trình EPG đang phát thời gian thực (hiển thị xong rồi tự tắt đi)
         val isSports = isSportsLiveMatch(channel) || (currentAppMode == AppMode.SPORTS) || channel.streamUrl.startsWith("match://")
-        val currentProg = if (isSports) {
-            val sportsTimeline = buildSportsTimeline(channel)
-            val now = System.currentTimeMillis()
-            sportsTimeline.firstOrNull { it.isCurrent(now) } ?: sportsTimeline.getOrNull(1)
+        if (isSports) {
+            val sportsLine = formatSportsOsdLine(channel)
+            binding.tvQuickProgramTitle.text = "● Đang phát: $sportsLine"
+            binding.tvQuickProgramTitle.visibility = View.VISIBLE
         } else {
-            epgManager.getCurrentProgram(channel.id, channel.name)
-        }
-        if (currentProg != null) {
-            if (isSports) {
-                binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title}"
-            } else {
+            val currentProg = epgManager.getCurrentProgram(channel.id, channel.name)
+            if (currentProg != null) {
                 val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
                 val startStr = timeFormat.format(Date(currentProg.startTime))
                 val endStr = timeFormat.format(Date(currentProg.endTime))
                 binding.tvQuickProgramTitle.text = "● Đang phát: ${currentProg.title} ($startStr - $endStr)"
+            } else {
+                binding.tvQuickProgramTitle.text = "● Đang phát: Chương trình trực tiếp"
             }
-            binding.tvQuickProgramTitle.visibility = View.VISIBLE
-        } else {
-            binding.tvQuickProgramTitle.text = "● Đang phát: Chương trình trực tiếp"
             binding.tvQuickProgramTitle.visibility = View.VISIBLE
         }
 
