@@ -75,7 +75,7 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.0";
+    var APP_VERSION = "2.2.1";
     var DEFAULT_M3U_URL = "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
@@ -142,6 +142,15 @@
     var sportsCategories = [];
     var sportsFixtures = [];
     var currentSelectedMatch = null;
+
+    // Dữ liệu Lịch phát sóng (EPG)
+    var epgMap = {};
+    var isEpgLoading = false;
+    var isEpgLoaded = false;
+    var EPG_URLS = [
+        "https://lichphatsong.io.vn/epg.xml",
+        "https://epg.io.vn/epgc.xml"
+    ];
 
     // Kênh yêu thích
     var favoriteUrls = [];
@@ -482,6 +491,7 @@
 
     function loadAllData() {
         showSpinner("Đang tải dữ liệu...");
+        loadEpgData();
         loadTvPlaylist(function () {
             loadSportsData(function () {
                 hideSpinner();
@@ -587,6 +597,10 @@
                 currentGroup = "Tất cả";
                 currentLogo = "icon.png";
                 currentName = "";
+                var currentTvgId = "";
+
+                var idMatch = line.match(/tvg-id="([^"]*)"/i);
+                if (idMatch && idMatch[1].trim()) currentTvgId = idMatch[1].trim();
 
                 var gMatch = line.match(/group-title="([^"]*)"/i);
                 if (gMatch && gMatch[1].trim()) currentGroup = gMatch[1].trim();
@@ -613,6 +627,7 @@
                         group: currentGroup,
                         logo: currentLogo,
                         url: streamUrl,
+                        tvgId: currentTvgId || "",
                         isMatch: false
                     });
                     channelNum++;
@@ -1319,6 +1334,146 @@
         return result.trim();
     }
 
+    // ==========================================
+    // XỬ LÝ LỊCH PHÁT SÓNG (EPG)
+    // ==========================================
+    function parseEpgTime(s) {
+        if (!s || s.length < 14) return 0;
+        var y = parseInt(s.substr(0, 4), 10);
+        var m = parseInt(s.substr(4, 2), 10) - 1;
+        var d = parseInt(s.substr(6, 2), 10);
+        var h = parseInt(s.substr(8, 2), 10);
+        var min = parseInt(s.substr(10, 2), 10);
+        var sec = parseInt(s.substr(12, 2), 10);
+        var tzMatch = s.match(/([+-])(\d{2}):?(\d{2})?/);
+        if (tzMatch) {
+            var sign = tzMatch[1] === '-' ? -1 : 1;
+            var tzH = parseInt(tzMatch[2], 10) * sign;
+            var tzM = (tzMatch[3] ? parseInt(tzMatch[3], 10) : 0) * sign;
+            var totalOffsetMins = tzH * 60 + tzM;
+            return Date.UTC(y, m, d, h, min, sec) - totalOffsetMins * 60 * 1000;
+        }
+        return new Date(y, m, d, h, min, sec).getTime();
+    }
+
+    function parseEpgXml(xmlText) {
+        if (!xmlText) return;
+        var progRegex = /<programme\s+start="([^"]+)"\s+stop="([^"]+)"\s+channel="([^"]+)"[^>]*>([\s\S]*?)<\/programme>/g;
+        var match;
+        var temp = {};
+        while ((match = progRegex.exec(xmlText)) !== null) {
+            var startStr = match[1];
+            var stopStr = match[2];
+            var channelId = match[3].toLowerCase();
+            var inner = match[4];
+            var titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/.exec(inner);
+            var title = titleMatch ? titleMatch[1].trim() : '';
+
+            var startTs = parseEpgTime(startStr);
+            var stopTs = parseEpgTime(stopStr);
+
+            if (!temp[channelId]) temp[channelId] = [];
+            temp[channelId].push({
+                startTime: startTs,
+                endTime: stopTs,
+                title: title
+            });
+        }
+        epgMap = temp;
+    }
+
+    function loadEpgData(force) {
+        if (!force && (isEpgLoading || isEpgLoaded)) return;
+        isEpgLoading = true;
+
+        function tryFetch(idx) {
+            if (idx >= EPG_URLS.length) {
+                isEpgLoading = false;
+                return;
+            }
+            var url = EPG_URLS[idx];
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.timeout = 15000;
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    try {
+                        parseEpgXml(xhr.responseText);
+                        isEpgLoaded = true;
+                    } catch (e) {
+                        console.error("Lỗi phân tích EPG XML:", e);
+                    }
+                    isEpgLoading = false;
+                    if (isOverlayOpen) {
+                        updateSpotlight();
+                    }
+                    if (currentPlayingChannel && !currentPlayingChannel.isMatch) {
+                        updateQuickInfoBar(currentPlayingChannel);
+                    }
+                } else {
+                    tryFetch(idx + 1);
+                }
+            };
+            xhr.onerror = function () { tryFetch(idx + 1); };
+            xhr.ontimeout = function () { tryFetch(idx + 1); };
+            xhr.send();
+        }
+
+        tryFetch(0);
+    }
+
+    function normalizeChannelNameForEpg(name) {
+        if (!name) return '';
+        return name.toLowerCase()
+            .replace(/[\s\-\_\(\)\[\]]/g, '')
+            .replace(/8\.5mbps|8mbps|4mbps|fhd|4k|sd/gi, '')
+            .replace(/hd/gi, '')
+            .trim();
+    }
+
+    function getTimelineForChannel(ch) {
+        if (!ch) return [];
+        var tvgId = (ch.tvgId || "").toLowerCase().trim();
+        if (tvgId) {
+            if (epgMap[tvgId]) return epgMap[tvgId];
+            if (epgMap[tvgId + "hd"]) return epgMap[tvgId + "hd"];
+            if (tvgId.endsWith("hd") && epgMap[tvgId.replace(/hd$/, "")]) return epgMap[tvgId.replace(/hd$/, "")];
+        }
+
+        var norm = normalizeChannelNameForEpg(ch.name);
+        if (!norm) return [];
+
+        if (epgMap[norm]) return epgMap[norm];
+        if (epgMap[norm + "hd"]) return epgMap[norm + "hd"];
+
+        for (var k in epgMap) {
+            var normK = normalizeChannelNameForEpg(k);
+            if (normK === norm) {
+                return epgMap[k];
+            }
+        }
+        return [];
+    }
+
+    function getCurrentEpgProgram(ch) {
+        if (!ch || ch.isMatch) return null;
+        var list = getTimelineForChannel(ch);
+        if (!list || list.length === 0) return null;
+        var now = Date.now();
+        for (var i = 0; i < list.length; i++) {
+            if (now >= list[i].startTime && now < list[i].endTime) {
+                return list[i];
+            }
+        }
+        return null;
+    }
+
+    function formatEpgTime(ts) {
+        if (!ts) return "--:--";
+        var d = new Date(ts);
+        return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+    }
+
     function updateSpotlight() {
         var currentCat = categories[selectedCatIdx];
         if (!currentCat || !currentCat.channels || currentCat.channels.length === 0) return;
@@ -1403,32 +1558,46 @@
                 spotlightEpgContentEl.appendChild(card);
             } else {
                 if (titleHeader) titleHeader.textContent = "LỊCH PHÁT SÓNG (EPG)";
-                var now = new Date();
-                var curH = now.getHours();
+                var now = Date.now();
+                var epgList = getTimelineForChannel(ch);
 
-                var sampleEpg = [
-                    { time: pad2((curH - 1 + 24) % 24) + ":00", name: "Chương trình Tin tức & Thời sự", current: false },
-                    { time: pad2(curH) + ":00", name: "● Đang phát: " + ch.name + " Trực tiếp", current: true },
-                    { time: pad2((curH + 1) % 24) + ":00", name: "Phim truyện đặc sắc / Tạp chí thể thao", current: false },
-                    { time: pad2((curH + 2) % 24) + ":00", name: "Bản tin dự báo thời tiết & Đời sống", current: false }
-                ];
+                if (epgList && epgList.length > 0) {
+                    var activeProgs = epgList.filter(function (p) {
+                        return p.endTime >= now - 15 * 60 * 1000;
+                    }).slice(0, 10);
 
-                sampleEpg.forEach(function (prog) {
-                    var item = document.createElement('div');
-                    item.className = 'epg-item' + (prog.current ? ' current' : '');
+                    if (activeProgs.length > 0) {
+                        activeProgs.forEach(function (prog) {
+                            var item = document.createElement('div');
+                            var isCurrent = (now >= prog.startTime && now < prog.endTime);
+                            item.className = 'epg-item' + (isCurrent ? ' current' : '');
 
-                    var timeSpan = document.createElement('div');
-                    timeSpan.className = 'epg-time';
-                    timeSpan.textContent = prog.time;
+                            var timeSpan = document.createElement('div');
+                            timeSpan.className = 'epg-time';
+                            var timeStr = formatEpgTime(prog.startTime);
+                            if (prog.endTime) {
+                                timeStr += " - " + formatEpgTime(prog.endTime);
+                            }
+                            timeSpan.textContent = timeStr;
 
-                    var nameSpan = document.createElement('div');
-                    nameSpan.className = 'epg-name';
-                    nameSpan.textContent = prog.name;
+                            var nameSpan = document.createElement('div');
+                            nameSpan.className = 'epg-name';
+                            nameSpan.textContent = (isCurrent ? "● Đang phát: " : "") + prog.title;
 
-                    item.appendChild(timeSpan);
-                    item.appendChild(nameSpan);
-                    spotlightEpgContentEl.appendChild(item);
-                });
+                            item.appendChild(timeSpan);
+                            item.appendChild(nameSpan);
+                            spotlightEpgContentEl.appendChild(item);
+                        });
+                        return;
+                    }
+                }
+
+                var emptyDiv = document.createElement('div');
+                emptyDiv.className = 'epg-item';
+                emptyDiv.style.color = '#888';
+                emptyDiv.style.fontStyle = 'italic';
+                emptyDiv.textContent = 'Chưa có thông tin lịch phát sóng cho kênh này';
+                spotlightEpgContentEl.appendChild(emptyDiv);
             }
         }
     }
@@ -2885,7 +3054,8 @@
             }
         }
         if (quickProgramEl) {
-            var activeName = channel.sourceName || (channel.isMatch ? (channel.matchLeague || "Trực tiếp") : (channel.group || channel.name));
+            var curProg = getCurrentEpgProgram(channel);
+            var activeName = curProg ? curProg.title : (channel.sourceName || (channel.isMatch ? (channel.matchLeague || "Trực tiếp") : (channel.group || channel.name)));
             quickProgramEl.textContent = "● Đang phát: " + activeName;
         }
         if (quickTechEl) {
