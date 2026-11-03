@@ -19,8 +19,9 @@
   - Dịch vụ `iptv-web-remote`:
     - Thư mục chạy trên Armbian: `/opt/iptv-sports/web_remote.py`
     - Dịch vụ systemd: `iptv-web-remote.service` (cổng 8080)
-    - Cung cấp: Web Remote điều khiển TV qua web, EventSource SSE `/api/remote_events`, và LAN Hub cache M3U/thể thao.
-    - Khi file `web_remote.py` được cập nhật, đẩy file lên `/opt/iptv-sports/web_remote.py` và chạy `systemctl restart iptv-web-remote.service`.
+    - Cung cấp: Web Remote điều khiển TV qua web di động, EventSource SSE `/events`, LAN Hub cache M3U/thể thao, và Quản lý danh sách phát (Playlist Management).
+    - Lưu trữ dữ liệu: `/opt/iptv-sports/data/playlists.json` và các tệp M3U tải lên tại `/opt/iptv-sports/data/custom_<id>.m3u`.
+    - Khi file `web_remote.py` được cập nhật, tự động đẩy file lên `/opt/iptv-sports/web_remote.py` và chạy `systemctl restart iptv-web-remote.service`.
 
 - **Cấu hình triển khai Samsung Tizen TV (10.0.0.9):**
   - TV: Samsung 8 Series 55" (2020), Tizen 5.5, IP: `10.0.0.9`, DUID: `7XCGUU3YN4RCE`.
@@ -28,10 +29,16 @@
   - Thư mục chứa gói wgt: `/opt/samsung/TVplay.wgt`
   - Khi người dùng yêu cầu cài đặt lên TV:
     1. Đóng gói `TVplay.wgt` (zip từ thư mục `tizen_tvplay/`).
-    2. Dùng Python `paramiko` upload `TVplay.wgt` lên `10.0.0.222` tại `/opt/samsung/TVplay.wgt`.
+    2. Dùng `pscp.exe` hoặc Python `paramiko` upload `TVplay.wgt` lên `10.0.0.222` tại `/opt/samsung/TVplay.wgt`.
     3. Chạy lệnh cài đặt qua SSH:
        ```bash
        /opt/samsung/apps2samsung-cli install /opt/samsung/TVplay.wgt --tv 10.0.0.9 --yes
        /opt/samsung/apps2samsung-cli launch TVPlay0001.TVPlay --tv 10.0.0.9
        ```
-  - Xem chi tiết đầy đủ tại file `ARMBIAN_SETUP.md`.
+    - Lưu ý: Lệnh `install` chạy ngầm hoàn toàn không ảnh hưởng tới người đang xem YouTube trên TV. Chỉ lệnh `launch` mới chuyển màn hình sang TV Play.
+
+- **Xem trước giao diện Tizen trên Windows:**
+  - Chạy `python preview_tizen.py` (cổng tự động `8150` trở lên, tránh dải `8041-8140` bị Windows Hyper-V/NAT chiếm quyền).
+
+- **Hồ sơ ngữ cảnh dự án:**
+  - Xem chi tiết đầy đủ tại file `ARMBIAN_SETUP.md` và `PROJECT_CONTEXT.md`.
