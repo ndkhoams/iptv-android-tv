@@ -75,11 +75,12 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.3";
-    var DEFAULT_M3U_URL = "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u";
+    var APP_VERSION = "2.2.4";
+    var DEFAULT_M3U_URL = "http://10.0.0.222:8080/data/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
     var SPORTS_DATA_URLS = [
+        "http://10.0.0.222:8080/data/thethao-data.json",
         "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json",
         "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json",
         "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json"
@@ -210,6 +211,7 @@
         initClock();
         loadSettings();
         initEventListeners();
+        initWebRemoteListener();
         updateWebRemoteIp();
         loadAllData();
     });
@@ -490,25 +492,99 @@
     }
 
     function loadAllData() {
-        showSpinner("Đang tải dữ liệu...");
-        loadEpgData();
-        loadTvPlaylist(function () {
-            loadSportsData(function () {
-                hideSpinner();
-                switchAppMode(currentAppMode);
+        // 1. Tối ưu khởi động tức thì <50ms với bộ nhớ đệm Offline-First
+        var cachedChStr = localStorage.getItem('tvplay_cached_channels');
+        var hasCache = false;
+        if (cachedChStr) {
+            try {
+                var cached = JSON.parse(cachedChStr);
+                if (cached && cached.length > 0) {
+                    tvChannels = cached;
+                    buildTvCategories();
+                    hasCache = true;
+                }
+            } catch (e) {}
+        }
 
-                var lastChannelUrl = localStorage.getItem('tvplay_last_url');
-                var startCh = null;
-                if (lastChannelUrl) {
-                    startCh = tvChannels.find(function (c) { return c.url === lastChannelUrl; });
+        var cachedSportsStr = localStorage.getItem('tvplay_cached_sports');
+        if (cachedSportsStr) {
+            try {
+                var spJson = JSON.parse(cachedSportsStr);
+                if (spJson) parseSportsData(spJson);
+            } catch (e) {}
+        }
+
+        if (hasCache) {
+            hideSpinner();
+            switchAppMode(currentAppMode);
+
+            var lastChannelUrl = localStorage.getItem('tvplay_last_url');
+            var startCh = null;
+            if (lastChannelUrl) {
+                startCh = tvChannels.find(function (c) { return c.url === lastChannelUrl; });
+            }
+            if (!startCh && tvChannels.length > 0) {
+                startCh = tvChannels[0];
+            }
+            if (startCh) {
+                playChannel(startCh);
+            }
+        } else {
+            showSpinner("Đang tải dữ liệu...");
+        }
+
+        // 2. Tải ngầm bất đồng bộ song song (LAN Armbian 10ms -> CDN)
+        refreshDataParallel(!hasCache);
+
+        // 3. Trì hoãn nạp EPG 5s để CPU Samsung TV 2020 phát mượt mà ngay
+        setTimeout(function () {
+            loadEpgData();
+        }, 5000);
+    }
+
+    function refreshDataParallel(isInitial) {
+        var m3uDone = false;
+        var sportsDone = false;
+
+        function checkComplete() {
+            if (m3uDone && sportsDone) {
+                if (isInitial) {
+                    hideSpinner();
+                    switchAppMode(currentAppMode);
+                    var lastChannelUrl = localStorage.getItem('tvplay_last_url');
+                    var startCh = null;
+                    if (lastChannelUrl) {
+                        startCh = tvChannels.find(function (c) { return c.url === lastChannelUrl; });
+                    }
+                    if (!startCh && tvChannels.length > 0) {
+                        startCh = tvChannels[0];
+                    }
+                    if (startCh && !currentPlayingChannel) {
+                        playChannel(startCh);
+                    }
                 }
-                if (!startCh && tvChannels.length > 0) {
-                    startCh = tvChannels[0];
-                }
-                if (startCh) {
-                    playChannel(startCh);
-                }
-            });
+            }
+        }
+
+        loadTvPlaylist(function () {
+            m3uDone = true;
+            try {
+                localStorage.setItem('tvplay_cached_channels', JSON.stringify(tvChannels));
+            } catch (e) {}
+            if (isOverlayOpen && currentAppMode === APP_MODE_TV) {
+                renderCategories();
+                renderChannels();
+            }
+            checkComplete();
+        });
+
+        loadSportsData(function () {
+            sportsDone = true;
+            if (isOverlayOpen && currentAppMode === APP_MODE_SPORTS) {
+                renderCategories();
+                renderChannels();
+            }
+            checkComplete();
         });
     }
 
@@ -519,16 +595,18 @@
 
     function loadTvPlaylist(callback) {
         var activeUrl = getActivePlaylistUrl();
-        var urlsToTry = [];
-        if (activeUrl) {
+        var urlsToTry = [
+            "http://10.0.0.222:8080/data/ktv.m3u"
+        ];
+        if (activeUrl && activeUrl !== "http://10.0.0.222:8080/data/ktv.m3u") {
             urlsToTry.push(activeUrl);
             if (activeUrl.indexOf('raw.githubusercontent.com') >= 0) {
                 urlsToTry.push(activeUrl.replace('https://raw.githubusercontent.com/', 'https://ghproxy.net/https://raw.githubusercontent.com/'));
                 urlsToTry.push(activeUrl.replace('https://raw.githubusercontent.com/', 'https://ghfast.top/https://raw.githubusercontent.com/'));
-                urlsToTry.push(activeUrl.replace('https://raw.githubusercontent.com/', 'https://raw.gitmirror.com/'));
             }
         }
         urlsToTry.push("https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u");
+        urlsToTry.push("https://raw.githubusercontent.com/ndkhoams/iptv/main/ktv.m3u");
 
         function tryFetch(idx) {
             if (idx >= urlsToTry.length) {
@@ -537,11 +615,14 @@
             }
             var xhr = new XMLHttpRequest();
             xhr.open('GET', urlsToTry[idx], true);
-            xhr.timeout = 10000;
+            xhr.timeout = (urlsToTry[idx].indexOf('10.0.0.222') >= 0) ? 2000 : 8000;
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText.length > 50) {
                     tvChannels = parseM3U(xhr.responseText);
                     buildTvCategories();
+                    try {
+                        localStorage.setItem('tvplay_cached_channels', JSON.stringify(tvChannels));
+                    } catch (e) {}
                     if (callback) callback();
                 } else {
                     tryFetch(idx + 1);
@@ -562,12 +643,15 @@
             }
             var xhr = new XMLHttpRequest();
             xhr.open('GET', SPORTS_DATA_URLS[idx], true);
-            xhr.timeout = 8000;
+            xhr.timeout = (SPORTS_DATA_URLS[idx].indexOf('10.0.0.222') >= 0) ? 2000 : 7000;
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         var json = JSON.parse(xhr.responseText);
                         parseSportsData(json);
+                        try {
+                            localStorage.setItem('tvplay_cached_sports', xhr.responseText);
+                        } catch (e) {}
                     } catch (e) {}
                     if (callback) callback();
                 } else {
@@ -1361,16 +1445,25 @@
         var progRegex = /<programme\s+start="([^"]+)"\s+stop="([^"]+)"\s+channel="([^"]+)"[^>]*>([\s\S]*?)<\/programme>/g;
         var match;
         var temp = {};
+        var now = Date.now();
+        var minTs = now - 6 * 3600 * 1000;
+        var maxTs = now + 18 * 3600 * 1000;
+        var count = 0;
+
         while ((match = progRegex.exec(xmlText)) !== null) {
             var startStr = match[1];
             var stopStr = match[2];
             var channelId = match[3].toLowerCase();
-            var inner = match[4];
-            var titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/.exec(inner);
-            var title = titleMatch ? titleMatch[1].trim() : '';
 
             var startTs = parseEpgTime(startStr);
             var stopTs = parseEpgTime(stopStr);
+
+            // Bỏ qua các chương trình ngoài khung giờ để giải phóng CPU TV 2020
+            if (stopTs < minTs || startTs > maxTs) continue;
+
+            var inner = match[4];
+            var titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/.exec(inner);
+            var title = titleMatch ? titleMatch[1].trim() : '';
 
             if (!temp[channelId]) temp[channelId] = [];
             temp[channelId].push({
@@ -1378,6 +1471,9 @@
                 endTime: stopTs,
                 title: title
             });
+
+            count++;
+            if (count > 8000) break;
         }
         epgMap = temp;
     }
@@ -2428,7 +2524,9 @@
                 webapis.avplay.setDisplayRect(0, 0, 1920, 1080);
 
                 try {
-                    webapis.avplay.setStreamingProperty("INITIAL_BUFFERING_TIME", "2000");
+                    var isLocal = (avplayUrl.indexOf('10.0.0.') >= 0 || avplayUrl.indexOf('192.168.') >= 0);
+                    var buf = isLocal ? "500" : "1000";
+                    webapis.avplay.setStreamingProperty("INITIAL_BUFFERING_TIME", buf);
                 } catch (e) {}
 
                 webapis.avplay.setListener({
@@ -2466,6 +2564,7 @@
         if (isOverlayOpen) {
             renderChannels();
         }
+        reportTvState();
     }
 
     // ==========================================
@@ -3109,6 +3208,154 @@
 
     // Expose for external controls / debug / tests
     window.resolveStreamUrl = resolveStreamUrl;
+
+    // ==========================================
+    // 12. TÍCH HỢP WEB REMOTE ARMBIAN (10.0.0.222:8080)
+    // ==========================================
+    var webRemoteEventSource = null;
+
+    function initWebRemoteListener() {
+        var remoteHubUrl = "http://10.0.0.222:8080/events";
+        try {
+            if (window.EventSource) {
+                if (webRemoteEventSource) {
+                    try { webRemoteEventSource.close(); } catch (e) {}
+                }
+                webRemoteEventSource = new EventSource(remoteHubUrl);
+
+                webRemoteEventSource.addEventListener('welcome', function (e) {
+                    console.log("[Remote] Connected to Armbian Web Remote Hub");
+                    updateRemoteBadge(true);
+                    reportTvState();
+                });
+
+                webRemoteEventSource.addEventListener('key', function (e) {
+                    try {
+                        var d = JSON.parse(e.data);
+                        handleRemoteCommand(d.key);
+                    } catch (err) {}
+                });
+
+                webRemoteEventSource.addEventListener('play_channel', function (e) {
+                    try {
+                        var ch = JSON.parse(e.data);
+                        var target = tvChannels.find(function (c) {
+                            return c.url === ch.streamUrl || c.name === ch.name;
+                        });
+                        if (target) {
+                            playChannel(target);
+                        } else if (ch.streamUrl) {
+                            playChannel({
+                                number: ch.number || 1,
+                                name: ch.name || "Kênh Web Remote",
+                                url: ch.streamUrl,
+                                group: ch.groupTitle || "TV",
+                                logo: ch.logoUrl || "icon.png"
+                            });
+                        }
+                    } catch (err) {}
+                });
+
+                webRemoteEventSource.addEventListener('play_match', function (e) {
+                    try {
+                        var mData = JSON.parse(e.data);
+                        if (mData.streamUrl) {
+                            playChannel({
+                                name: (mData.matchTitle || "Thể Thao") + " (" + (mData.sourceName || "Live") + ")",
+                                url: mData.streamUrl,
+                                group: "Trực tiếp Thể Thao",
+                                logo: "assets/leagues/ic_nav_sports.png",
+                                isMatch: true
+                            });
+                        }
+                    } catch (err) {}
+                });
+
+                webRemoteEventSource.onerror = function () {
+                    updateRemoteBadge(false);
+                };
+            }
+        } catch (e) {
+            console.warn("[Remote] EventSource error:", e);
+        }
+    }
+
+    function reportTvState() {
+        try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://10.0.0.222:8080/api/tv_state', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            var chName = currentPlayingChannel ? currentPlayingChannel.name : 'Chưa có luồng phát';
+            var chNum = currentPlayingChannel ? (currentPlayingChannel.number || 1) : 1;
+            var payload = {
+                nowPlaying: "[" + (chNum < 10 ? "0" + chNum : chNum) + "] " + chName,
+                channelNumber: chNum,
+                currentMode: currentAppMode,
+                clientType: (window.tizen ? "Samsung Smart TV (Tizen 5.5)" : "Preview Web")
+            };
+            xhr.send(JSON.stringify(payload));
+        } catch (e) {}
+    }
+
+    function updateRemoteBadge(isConnected) {
+        var badge = document.getElementById('header-remote-badge');
+        if (!badge) return;
+        if (isConnected) {
+            badge.className = "badge-chip badge-green";
+            badge.textContent = "📱 Web Remote: 10.0.0.222:8080 (Đã kết nối)";
+        } else {
+            badge.className = "badge-chip";
+            badge.textContent = "📱 Web Remote: http://10.0.0.222:8080";
+        }
+    }
+
+    function handleRemoteCommand(cmd) {
+        if (!cmd) return;
+        var k = cmd.toLowerCase().trim();
+        showToast("📱 Remote: " + k.toUpperCase());
+
+        if (k === 'up') handleKeyDown({ keyCode: TIZEN_KEYS.KEY_UP, preventDefault: function(){} });
+        else if (k === 'down') handleKeyDown({ keyCode: TIZEN_KEYS.KEY_DOWN, preventDefault: function(){} });
+        else if (k === 'left') handleKeyDown({ keyCode: TIZEN_KEYS.KEY_LEFT, preventDefault: function(){} });
+        else if (k === 'right') handleKeyDown({ keyCode: TIZEN_KEYS.KEY_RIGHT, preventDefault: function(){} });
+        else if (k === 'center' || k === 'ok' || k === 'enter') handleKeyDown({ keyCode: TIZEN_KEYS.KEY_ENTER, preventDefault: function(){} });
+        else if (k === 'back' || k === 'return' || k === 'esc') handleKeyDown({ keyCode: TIZEN_KEYS.KEY_RETURN, preventDefault: function(){} });
+        else if (k === 'menu') {
+            if (!isSettingsModalOpen) openSettingsModal(); else closeSettingsModal();
+        }
+        else if (k === 'overlay') {
+            toggleChannelOverlay();
+        }
+        else if (k === 'ch_prev') {
+            switchChannelByOffset(-1);
+        }
+        else if (k === 'ch_next') {
+            switchChannelByOffset(1);
+        }
+        else if (k === 'vol_up') {
+            try { if (window.tizen && tizen.tvaudiocontrol) tizen.tvaudiocontrol.setVolumeUp(); } catch (e) {}
+        }
+        else if (k === 'vol_down') {
+            try { if (window.tizen && tizen.tvaudiocontrol) tizen.tvaudiocontrol.setVolumeDown(); } catch (e) {}
+        }
+        else if (k === 'mute') {
+            try { if (window.tizen && tizen.tvaudiocontrol) tizen.tvaudiocontrol.setMute(!tizen.tvaudiocontrol.isMute()); } catch (e) {}
+        }
+        else if (k === 'mode_tv') {
+            triggerSidebarAction(1);
+        }
+        else if (k === 'mode_sports') {
+            triggerSidebarAction(2);
+        }
+        else if (k === 'mode_fav') {
+            triggerSidebarAction(0);
+        }
+        else if (/^[0-9]$/.test(k)) {
+            var numCode = 48 + parseInt(k, 10);
+            handleKeyDown({ keyCode: numCode, preventDefault: function(){} });
+        }
+    }
+
     window.playChannel = playChannel;
     window.openQuickPlaylistModal = openQuickPlaylistModal;
     window.closeQuickPlaylistModal = closeQuickPlaylistModal;

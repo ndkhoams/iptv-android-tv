@@ -1,5 +1,5 @@
 {
-  "version": "2.2.0",
-  "notes": "Bản cập nhật TV Play Tizen v2.2.0: Cập nhật logo trực tiếp thể thao chuẩn ATV (quả bóng chữ Live), rút gọn thẻ luồng phát 2 dòng (chỉ hiện Nguồn và BLV), cố định kích thước mượt mà không co giật.",
+  "version": "2.2.4",
+  "notes": "Bản cập nhật v2.2.4: Khởi động siêu tốc <0.5s với bộ nhớ đệm Offline-First, đồng bộ dữ liệu siêu tốc qua LAN Armbian 10.0.0.222, tối ưu CPU Samsung TV 2020 (Tizen 5.5) và tích hợp điều khiển Web Remote.",
   "bundleUrl": "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/tizen_tvplay/js/app.js"
 }
