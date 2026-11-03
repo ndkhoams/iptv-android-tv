@@ -1409,63 +1409,93 @@ body, html {
 }
 
 /* ==========================================================================
-   8. TỐI ƯU HÓA ĐỘ PHÂN GIẢI 4K CRYSTAL UHD (3840x2160)
-   Dành riêng cho TV Samsung 55" 4K UHD
+   8. GIAO DIỆN PHÓNG TO 1.5 LẦN DÀNH CHO TV SAMSUNG (1080p & 4K UHD)
+   Tự động kích hoạt trên TV (>=1400px rộng hoặc >=800px cao) để giao diện to rõ,
+   dễ đọc từ khoảng cách sofa 3 mét
    ========================================================================== */
-@media (min-width: 2500px) {
+@media (min-width: 1400px), (min-height: 800px) {
+    .overlay-container {
+        padding: 16px 28px 12px 28px;
+    }
+
     .overlay-header {
-        height: 60px;
-        margin-bottom: 14px;
+        height: 56px;
+        margin-bottom: 12px;
     }
 
     .brand-tv, .brand-play {
-        font-size: 34px;
+        font-size: 32px;
+    }
+
+    .badge-iptv {
+        font-size: 13px;
+        padding: 3px 8px;
     }
 
     .badge-chip {
-        font-size: 16px;
+        font-size: 15px;
         padding: 5px 12px;
         border-radius: 8px;
     }
 
     .digital-clock {
-        font-size: 26px;
+        font-size: 24px;
+    }
+
+    .overlay-body {
+        height: calc(100% - 116px);
+        gap: 12px;
+    }
+
+    .glass-panel {
+        border-radius: 14px;
+        padding: 12px;
     }
 
     .sidebar-nav {
-        width: 72px;
-        gap: 18px;
+        width: 68px;
+        gap: 16px;
+        padding-top: 6px;
     }
 
     .sidebar-btn {
-        width: 60px;
-        height: 60px;
-        border-radius: 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
     }
 
     .sidebar-btn .svg-icon {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
     }
 
     .col-categories {
-        width: 320px;
+        width: 300px;
     }
 
     .col-header-title {
-        font-size: 19px;
+        font-size: 18px;
         padding: 10px 14px;
     }
 
+    .col-header-row .col-header-title {
+        font-size: 18px;
+    }
+
+    .col-header-count {
+        font-size: 16px;
+    }
+
     .cat-item {
-        padding: 14px 18px;
-        font-size: 19px;
-        border-radius: 12px;
+        padding: 13px 16px;
+        font-size: 18px;
+        border-radius: 10px;
     }
 
     .cat-item-count {
-        font-size: 16px;
+        font-size: 15px;
         padding: 3px 10px;
+        border-radius: 8px;
     }
 
     .ch-card {
@@ -1473,17 +1503,20 @@ body, html {
         min-height: 72px;
         padding: 0 16px;
         border-radius: 12px;
+        gap: 6px;
     }
 
     .ch-card-num {
         font-size: 20px;
         width: 44px;
+        min-width: 44px;
     }
 
     .ch-card-logo {
         width: 58px;
         height: 42px;
         border-radius: 8px;
+        margin: 0 14px 0 8px;
     }
 
     .ch-card-name {
@@ -1491,13 +1524,17 @@ body, html {
     }
 
     .badge-fhd, .badge-sources-count, .badge-live-playing {
-        font-size: 14px;
+        font-size: 13px;
         padding: 4px 10px;
         border-radius: 6px;
     }
 
+    .star-fav {
+        font-size: 20px;
+    }
+
     .col-spotlight {
-        width: 420px;
+        width: 400px;
     }
 
     .spotlight-logo-box {
@@ -1513,64 +1550,118 @@ body, html {
         font-size: 24px;
     }
 
+    .spotlight-tags {
+        font-size: 15px;
+        gap: 8px;
+    }
+
+    .epg-section-header {
+        font-size: 16px;
+        padding: 8px 12px;
+    }
+
     .epg-title {
         font-size: 16px;
     }
 
+    .epg-timeline {
+        gap: 8px;
+    }
+
+    .epg-item {
+        padding: 10px 14px;
+        border-radius: 8px;
+    }
+
     .epg-time {
-        font-size: 16px;
+        font-size: 15px;
     }
 
     .epg-name {
-        font-size: 18px;
+        font-size: 17px;
+    }
+
+    .overlay-footer {
+        height: 42px;
+        gap: 24px;
+        margin-top: 8px;
+    }
+
+    .nav-hint {
+        font-size: 15px;
+        gap: 8px;
+    }
+
+    .key-pill {
+        font-size: 14px;
+        padding: 3px 9px;
+        border-radius: 6px;
     }
 
     .quick-banner {
-        bottom: 40px;
-        left: 48px;
-        right: 48px;
-        border-radius: 20px;
-        padding: 18px 32px;
+        bottom: 35px;
+        left: 40px;
+        right: 40px;
+        border-radius: 18px;
+        padding: 18px 30px;
     }
 
     .quick-num {
-        font-size: 38px;
+        font-size: 36px;
+        width: 46px;
     }
 
     .quick-logo {
-        width: 68px;
-        height: 48px;
+        width: 64px;
+        height: 46px;
     }
 
     .quick-name {
-        font-size: 30px;
+        font-size: 28px;
     }
 
     .quick-program {
         font-size: 22px;
+        margin: 8px 0;
     }
 
     .quick-tech-info, .quick-hint {
-        font-size: 18px;
+        font-size: 17px;
     }
 
     .modal-card {
-        width: 1080px;
+        width: 980px;
+        max-width: 92vw;
+    }
+
+    .modal-title {
+        font-size: 24px;
+    }
+
+    .modal-subtitle {
+        font-size: 16px;
+    }
+
+    .modal-body {
+        padding: 20px 28px;
+        gap: 12px;
+        font-size: 17px;
     }
 
     .source-item {
-        height: 70px;
-        font-size: 20px;
+        height: 68px;
+        font-size: 19px;
+        padding: 0 18px;
     }
 
     .source-name {
-        font-size: 20px;
+        font-size: 19px;
     }
 
     .match-source-chip {
-        height: 76px;
-        min-height: 76px;
-        max-height: 76px;
+        height: 74px;
+        min-height: 74px;
+        max-height: 74px;
         padding: 10px 18px;
         border-radius: 12px;
         margin-bottom: 8px;
@@ -1582,6 +1673,18 @@ body, html {
     }
 
     .match-source-chip .match-source-icon {
-        font-size: 15px;
+        font-size: 16px;
+    }
+
+    .form-input {
+        height: 52px;
+        font-size: 18px;
+        padding: 0 16px;
+    }
+
+    .action-btn {
+        height: 52px;
+        font-size: 17px;
+        padding: 0 24px;
     }
 }

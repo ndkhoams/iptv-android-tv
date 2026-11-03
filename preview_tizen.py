@@ -72,7 +72,7 @@ def get_browser_cmd(url):
         "--test-type",
         f"--user-data-dir={temp_profile}",
         f"--app={url}",
-        "--window-size=1280,720",
+        "--window-size=1920,1080",
         "--autoplay-policy=no-user-gesture-required"
     ]
 

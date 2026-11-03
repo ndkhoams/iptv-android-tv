@@ -75,7 +75,7 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.2";
+    var APP_VERSION = "2.2.3";
     var DEFAULT_M3U_URL = "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
@@ -323,12 +323,12 @@
             try {
                 tizen.systeminfo.getPropertyValue("WIFI_NETWORK", function (wifi) {
                     if (wifi && wifi.ipAddress && wifi.ipAddress !== "0.0.0.0") {
-                        badge.textContent = "📱 Web Remote: http://" + wifi.ipAddress + ":8080";
+                        badge.textContent = "🌐 IP TV: " + wifi.ipAddress;
                     }
                 });
                 tizen.systeminfo.getPropertyValue("ETHERNET_NETWORK", function (eth) {
                     if (eth && eth.ipAddress && eth.ipAddress !== "0.0.0.0") {
-                        badge.textContent = "📱 Web Remote: http://" + eth.ipAddress + ":8080";
+                        badge.textContent = "🌐 IP TV: " + eth.ipAddress;
                     }
                 });
             } catch (e) {}
@@ -337,7 +337,7 @@
         // 2. Kiểm tra qua hostname nếu chạy qua HTTP Server
         var host = window.location.hostname;
         if (host && host !== "127.0.0.1" && host !== "localhost") {
-            badge.textContent = "📱 Web Remote: http://" + host + ":8080";
+            badge.textContent = "🌐 IP TV: " + host;
         } else {
             // Lấy LAN IP từ server preview
             try {
@@ -345,7 +345,7 @@
                 xhr.open('GET', '/api/my_ip', true);
                 xhr.onload = function () {
                     if (xhr.status === 200 && xhr.responseText.trim()) {
-                        badge.textContent = "📱 Web Remote: http://" + xhr.responseText.trim() + ":8080";
+                        badge.textContent = "🌐 IP TV: " + xhr.responseText.trim();
                     }
                 };
                 xhr.send();
