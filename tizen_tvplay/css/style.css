@@ -1534,7 +1534,7 @@ body, html {
     }
 
     .col-spotlight {
-        width: 400px;
+        width: 420px;
     }
 
     .spotlight-logo-box {
@@ -1687,6 +1687,112 @@ body, html {
         font-size: 17px;
         padding: 0 24px;
     }
+    /* Standings Bảng xếp hạng trên TV 1080p */
+    .spotlight-standings-box {
+        padding: 10px 14px;
+        border-radius: 14px;
+        margin-top: 10px;
+    }
+
+    .epg-box-header .epg-title {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+    .epg-box-header .epg-source {
+        font-size: 14px;
+    }
+
+    .standings-table-header {
+        font-size: 16px;
+        font-weight: 800;
+        padding: 10px 6px;
+        color: #E2E8F0;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .standings-table-header .st-col-rank {
+        width: 36px;
+        font-size: 16px;
+    }
+
+    .standings-table-header .st-col-team {
+        margin-left: 10px;
+        font-size: 16px;
+    }
+
+    .standings-table-header .st-col-played {
+        width: 46px;
+        font-size: 16px;
+    }
+
+    .standings-table-header .st-col-pts {
+        width: 50px;
+        font-size: 16px;
+        color: #FF6500;
+    }
+
+    .standings-list-scroll {
+        gap: 4px;
+        padding-top: 8px;
+    }
+
+    .standing-row {
+        height: 44px;
+        min-height: 44px;
+        font-size: 18px;
+        font-weight: 600;
+        padding: 0 10px;
+        border-radius: 8px;
+    }
+
+    .standing-row.highlight {
+        background: rgba(255, 101, 0, 0.28);
+        border: 2px solid #FF6500;
+        color: #FFFFFF;
+        font-weight: 800;
+        box-shadow: 0 0 14px rgba(255, 101, 0, 0.35);
+    }
+
+    .standing-row .st-col-rank {
+        width: 36px;
+        font-size: 17px;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .standing-row .st-logo {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        margin-right: 10px;
+        margin-left: 2px;
+    }
+
+    .standing-row .st-col-team {
+        flex: 1;
+        font-size: 18px;
+        font-weight: 600;
+        margin-left: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .standing-row .st-col-played {
+        width: 46px;
+        text-align: center;
+        font-size: 17px;
+    }
+
+    .standing-row .st-col-pts {
+        width: 50px;
+        text-align: center;
+        font-size: 19px;
+        font-weight: 800;
+        color: #FF6500;
+    }
 }
 /* ==========================================
    BẢNG XẾP HẠNG STANDINGS & CHIP NGUỒN PHÁT
@@ -1748,43 +1854,48 @@ body, html {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 8px;
-    padding: 6px 8px;
-    margin-top: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .standings-table-header {
     display: flex;
     align-items: center;
-    padding: 4px 2px;
-    font-size: 10px;
+    padding: 6px 4px;
+    font-size: 13px;
     font-weight: 800;
     color: #94A3B8;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
     text-transform: uppercase;
 }
 
 .st-col-rank {
-    width: 20px;
+    width: 28px;
     text-align: center;
+    font-weight: 700;
 }
 
 .st-col-team {
     flex: 1;
     margin-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .st-col-played {
-    width: 26px;
+    width: 34px;
     text-align: center;
 }
 
 .st-col-pts {
-    width: 28px;
+    width: 38px;
     text-align: center;
     color: #FF6500;
+    font-weight: 800;
 }
 
 .standings-list-scroll {
@@ -1792,31 +1903,33 @@ body, html {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     padding-top: 4px;
 }
 
 .standing-row {
-    height: 25px;
+    height: 34px;
+    min-height: 34px;
     display: flex;
     align-items: center;
-    padding: 0 4px;
-    font-size: 11px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
+    padding: 0 6px;
+    font-size: 14px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
     transition: all 0.1s ease;
 }
 
 .standing-row.highlight {
-    background: rgba(255, 101, 0, 0.18);
-    border: 1px solid #FF6500;
+    background: rgba(255, 101, 0, 0.22);
+    border: 1.5px solid #FF6500;
     color: #FFFFFF;
     font-weight: 700;
 }
 
 .standing-row .st-logo {
-    width: 15px;
-    height: 15px;
+    width: 22px;
+    height: 22px;
     object-fit: contain;
-    margin-left: 4px;
+    margin-right: 6px;
+    margin-left: 2px;
 }

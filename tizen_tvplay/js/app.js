@@ -91,7 +91,7 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.6";
+    var APP_VERSION = "2.2.7";
     var DEFAULT_M3U_URL = "http://10.0.0.222:8080/data/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
@@ -1526,6 +1526,23 @@
         return pad2(d.getHours()) + ":" + pad2(d.getMinutes());
     }
 
+    function getCleanMatchTitle(ch) {
+        if (!ch) return "";
+        if (ch.matchData) {
+            var md = ch.matchData;
+            if (md.homeTeam && md.awayTeam) {
+                return (md.homeTeam + " vs " + md.awayTeam).trim();
+            } else if (md.homeTeam) {
+                return md.homeTeam.trim();
+            }
+        }
+        var title = ch.name || "";
+        title = title.replace(/^[^\w\[\u00C0-\u1EF9]+/i, '').trim();
+        title = title.replace(/^\[\s*\d{1,2}:\d{2}(?:\s+\d{1,2}\/\d{1,2})?\s*\]\s*/i, '');
+        title = title.replace(/^\d{1,2}:\d{2}(?:\s+\d{1,2}\/\d{1,2})?\s+/i, '');
+        return title.trim() || ch.name;
+    }
+
     function updateSpotlight() {
         var currentCat = categories[selectedCatIdx];
         if (!currentCat || !currentCat.channels || currentCat.channels.length === 0) return;
@@ -1536,7 +1553,13 @@
             spotlightLogoEl.src = ch.logo || ((currentAppMode === APP_MODE_SPORTS) ? LEAGUE_LOGOS_BASE64.DEFAULT : 'icon.png');
             spotlightLogoEl.onerror = function () { this.src = (currentAppMode === APP_MODE_SPORTS) ? LEAGUE_LOGOS_BASE64.DEFAULT : 'icon.png'; };
         }
-        if (spotlightNameEl) spotlightNameEl.textContent = ch.name;
+        if (spotlightNameEl) {
+            if (ch.isMatch || currentAppMode === APP_MODE_SPORTS) {
+                spotlightNameEl.textContent = getCleanMatchTitle(ch);
+            } else {
+                spotlightNameEl.textContent = ch.name;
+            }
+        }
         if (spotlightCatTagEl) spotlightCatTagEl.textContent = ch.group || "Truyền Hình";
 
         var isPlaying = (currentPlayingChannel && currentPlayingChannel.url === ch.url) ||
@@ -1557,34 +1580,12 @@
             else spotlightLiveTagEl.classList.add('hidden');
         }
 
-        var sourcesContainer = document.getElementById('spotlight-sources-container');
-        var sourcesRow = document.getElementById('spotlight-sources-row');
         var standingsBox = document.getElementById('spotlight-standings-box');
         var standingsTitle = document.getElementById('standings-box-title');
         var standingsContent = document.getElementById('spotlight-standings-content');
         var epgBox = document.getElementById('spotlight-epg-box');
 
         if (ch.isMatch || currentAppMode === APP_MODE_SPORTS) {
-            // 1. Render các chip nguồn phát (bình luận viên)
-            if (sourcesContainer && sourcesRow) {
-                var sources = (ch && ch.sources && ch.sources.length > 0) ? ch.sources : [];
-                if (sources.length > 0) {
-                    sourcesContainer.classList.remove('hidden');
-                    sourcesRow.innerHTML = "";
-                    sources.forEach(function (s, sIdx) {
-                        var btn = document.createElement('div');
-                        btn.className = 'src-chip-btn' + (sIdx === selectedSpotlightSourceIdx ? ' focused' : '');
-                        btn.textContent = formatMatchSourceTitle(s, ch.matchData);
-                        btn.title = s.name || '';
-                        btn.addEventListener('click', function () {
-                            playMatchSource(ch, s);
-                        });
-                        sourcesRow.appendChild(btn);
-                    });
-                } else {
-                    sourcesContainer.classList.add('hidden');
-                }
-            }
 
             // 2. Render Bảng xếp hạng Standings nếu có
             var targetLeague = (ch.matchData && ch.matchData.league) ? ch.matchData.league.toUpperCase() : "";
@@ -1610,6 +1611,7 @@
                     var hLow = ch.matchData && ch.matchData.homeTeam ? ch.matchData.homeTeam.toLowerCase() : "";
                     var aLow = ch.matchData && ch.matchData.awayTeam ? ch.matchData.awayTeam.toLowerCase() : "";
 
+                    var firstHighlightRow = null;
                     sList.forEach(function (item) {
                         var row = document.createElement('div');
                         var tLow = (item.teamName || item.shortName || "").toLowerCase();
@@ -1623,7 +1625,16 @@
                                         '<span class="st-col-played">' + item.played + '</span>' +
                                         '<span class="st-col-pts">' + item.points + '</span>';
                         standingsContent.appendChild(row);
+                        if (isHighlighted && !firstHighlightRow) {
+                            firstHighlightRow = row;
+                        }
                     });
+
+                    if (firstHighlightRow) {
+                        setTimeout(function () {
+                            firstHighlightRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                        }, 50);
+                    }
                 }
             } else {
                 // Không có bảng xếp hạng: hiển thị thẻ chi tiết trận đấu trong EPG box
@@ -1658,7 +1669,7 @@
             }
         } else {
             // Kênh TV thông thường
-            if (sourcesContainer) sourcesContainer.classList.add('hidden');
+            // Sources row removed from spotlight
             if (standingsBox) standingsBox.classList.add('hidden');
             if (epgBox) epgBox.classList.remove('hidden');
 
@@ -2860,9 +2871,7 @@
                     } else if (focusedColumn === 'channels') {
                         var curItem = categories[selectedCatIdx].channels[selectedChIdx];
                         if (curItem && curItem.isMatch && curItem.sources && curItem.sources.length > 0) {
-                            focusedColumn = 'spotlight';
-                            selectedSpotlightSourceIdx = 0;
-                            updateFocusView();
+                            openMatchSourcesModal(curItem);
                         }
                     }
                 }

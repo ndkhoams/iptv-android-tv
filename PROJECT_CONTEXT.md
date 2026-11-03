@@ -1,6 +1,6 @@
 # HỒ SƠ DỰ ÁN & BÀN GIAO NGỮ CẢNH (MASTER CONTEXT HANDOVER)
 > **Tài liệu ghi nhớ ngữ cảnh làm việc đồng bộ giữa Máy Nhà & Máy Công Ty**  
-> Cập nhật lần cuối: **03/11/2026** - Phiên bản hệ thống: **v2.2.6**
+> Cập nhật lần cuối: **03/11/2026** - Phiên bản hệ thống: **v2.2.7**
 
 ---
 
@@ -41,37 +41,32 @@
 
 ---
 
-## 3. TIẾN ĐỘ & CÁC CÔNG VIỆC ĐÃ HOÀN TẤT (CẬP NHẬT v2.2.6)
+## 3. TIẾN ĐỘ & CÁC CÔNG VIỆC ĐÃ HOÀN TẤT (CẬP NHẬT v2.2.7)
 
-### A. Quản lý Playlist trên Web Remote (`web_remote.py` & Armbian 10.0.0.222:8080)
+### A. Tinh chỉnh Giao diện Tizen TV (`tizen_tvplay/` v2.2.7)
+- **Loại bỏ khối nguồn phát thừa ở cột phải:** Đã xóa bỏ hoàn toàn danh sách chip luồng phát / bình luận viên (`#spotlight-sources-container`) nằm chèn lên bảng xếp hạng. Việc chọn luồng phát thể thao đã được tách biệt vào hộp thoại pop-up chuyên dụng (`#match-sources-modal`), giúp giao diện thanh thoát và dành trọn diện tích cho Bảng xếp hạng.
+- **Rút gọn tên trận đấu ở cột phải:** Hàm `getCleanMatchTitle()` tự động lọc bỏ tiền tố ngày giờ `[00:45 04/11]` và các biểu tượng không cần thiết, chỉ hiển thị tên 2 đội bóng (ví dụ: `Galatasaray vs VfB Stuttgart`).
+- **Nâng cấp Bảng xếp hạng Standings cực nét cho TV 55 inch:**
+  - Tăng chiều cao hàng từ `25px` lên `44px` (+76%).
+  - Tăng cỡ chữ tên đội và thông số từ `11px` lên `18px` (+64%).
+  - Phóng to logo các câu lạc bộ từ `15px` lên `28px x 28px`.
+  - Cột Điểm số in đậm màu cam FPT (`#FF6500`, 19px).
+  - Tự động cuộn mượt mà (`scrollIntoView({ block: 'center' })`) tới đội bóng của trận đấu đang được chọn.
+- **Điều hướng phím Sang Phải mượt mà:** Khi đang đứng ở thẻ trận đấu trong danh sách kênh, bấm phím `Sang Phải` (KEY_RIGHT) hoặc phím `OK` sẽ mở ngay hộp thoại chọn luồng phát thể thao / BLV.
+
+### B. Quản lý Playlist trên Web Remote (`web_remote.py` & Armbian 10.0.0.222:8080)
 - **Tab 📑 "Danh Sách" (Playlists) trên Web Remote:**
   - **Dán Link URL M3U:** Cho phép thêm link M3U mới từ điện thoại, lưu vào `/opt/iptv-sports/data/playlists.json`.
-  - **Tải File M3U Lên TV:** Hỗ trợ chọn file `.m3u`, `.m3u8`, `.txt` trực tiếp từ bộ nhớ điện thoại/máy tính qua Wi-Fi. File được lưu tại `/opt/iptv-sports/data/custom_<id>.m3u` và cấp URL LAN.
+  - **Tải File M3U Lên TV:** Hỗ trợ chọn file `.m3u`, `.m3u8`, `.txt` trực tiếp từ điện thoại/máy tính qua Wi-Fi. File được lưu tại `/opt/iptv-sports/data/custom_<id>.m3u` và cấp URL LAN.
   - **Quản lý danh sách:** Thẻ hiển thị tên, URL, nhãn xanh `✓ ĐANG PHÁT`, nút **Chọn** và nút **Xóa** (tự động dọn dẹp file local nếu có).
-- **Bộ API Backend:**
-  - `GET /api/playlists`: Trả về danh sách playlist hiện có.
-  - `POST /api/playlist/add`: Thêm playlist mới qua URL.
-  - `POST /api/playlist/upload`: Nhận nội dung file tải lên và lưu trữ cục bộ.
-  - `POST /api/playlist/select`: Chọn playlist đang phát, đồng thời làm mới danh sách kênh trên tab "Kênh TV".
-  - `POST /api/playlist/delete`: Xóa playlist và dọn dẹp file local.
-- **Đồng bộ thời gian thực SSE (Server-Sent Events) `/events`:**
-  - Bắn sự kiện `playlist_select` và `sync_playlists` để TV Samsung tự động chuyển nguồn phát ngay tức khắc khi có thao tác trên điện thoại.
-- **Khắc phục lỗi đơ web remote:** Chuyển toàn bộ các event handler inline sang cơ chế index (`onChannelClick`, `onSportsSourceClick`, `onSelectPlaylistClick`, `onDeletePlaylistClick`) giúp mã JS không bao giờ bị lỗi cú pháp ký tự nháy `\'`.
-
-### B. Phiên bản Samsung Tizen TV (`tizen_tvplay/` v2.2.6)
-- **Khởi động siêu tốc (< 0.5s):** Áp dụng kiến trúc Offline-First Cache với `localStorage`, nạp danh sách kênh và phát luồng cuối ngay tức thì, tải ngầm cập nhật sau.
-- **Tích hợp đồng bộ Web Remote:** Lắng nghe sự kiện `playlist_select` từ SSE Armbian để tự động đổi playlist mà không cần dùng remote vật lý.
-- **Logo giải đấu & Bảng xếp hạng:**
-  - Nhúng trực tiếp 11 Base64 Logo giải đấu chuẩn SVG/PNG (LaLiga, Premier League, Serie A, Champions League, V-League, v.v.).
-  - Hiển thị bảng xếp hạng LaLiga, Ngoại Hạng Anh, Serie A ở cột thông tin bên phải trận đấu thể thao.
-- **Tối ưu CPU Samsung TV 2020:** 
-  - Trì hoãn nạp EPG 5 giây sau khi mở ứng dụng.
-  - Lọc giới hạn chương trình EPG trong khung `[-6h, +18h]`.
-  - Giảm thời gian đệm `INITIAL_BUFFERING_TIME` trên AVPlay xuống `500ms` cho luồng udpxy nội mạng và `1000ms` cho Internet.
+- **Bộ API Backend:** `GET /api/playlists`, `POST /api/playlist/add`, `POST /api/playlist/upload`, `POST /api/playlist/select`, `POST /api/playlist/delete`.
+- **Đồng bộ thời gian thực SSE (Server-Sent Events) `/events`:** Tizen TV tự động chuyển nguồn phát ngay khi đổi playlist trên điện thoại.
+- **Khắc phục lỗi đơ web remote:** Chuyển sang cơ chế index an toàn (`onChannelClick`, `onSportsSourceClick`, `onSelectPlaylistClick`, `onDeletePlaylistClick`), không bao giờ bị lỗi escaping `\'`.
 
 ### C. Công cụ xem trước trên máy tính (`preview_tizen.py`)
 - Khởi chạy web server xem trước giao diện Tizen trên Windows.
-- Tự động dò tìm cổng bắt đầu từ `8150` bằng hàm `is_port_bindable()` để tránh đụng độ dải cổng `8041 - 8140` bị Windows Hyper-V/NAT chiếm quyền (`WinError 10013`).
+- Tự động dò tìm cổng khả dụng bắt đầu từ `8150` bằng hàm `is_port_bindable()` để tránh đụng độ dải cổng `8041 - 8140` bị Windows Hyper-V/NAT chiếm quyền (`WinError 10013`).
+- Tích hợp cơ chế fallback về `127.0.0.1` nếu Windows Firewall chặn lắng nghe `0.0.0.0`.
 
 ---
 

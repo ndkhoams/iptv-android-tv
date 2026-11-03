@@ -58,11 +58,13 @@ def is_port_bindable(port, host='0.0.0.0'):
     except (OSError, PermissionError):
         return False
 
-def find_available_port(start=8150, host='0.0.0.0'):
+def find_available_port(start=8150, host='0.0.0.0', max_tries=100):
     p = start
-    while not is_port_bindable(p, host):
+    for _ in range(max_tries):
+        if is_port_bindable(p, host):
+            return p
         p += 1
-    return p
+    return start
 
 def get_browser_cmd(url):
     chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -101,7 +103,8 @@ def main():
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     
-    url = f"http://{LAN_IP}:{port}/index.html"
+    display_host = '127.0.0.1' if host == '127.0.0.1' else LAN_IP
+    url = f"http://{display_host}:{port}/index.html"
     print(f"==================================================")
     print(f"  TV PLAY - TIZEN TV PREVIEW DÀNH CHO WINDOWS")
     print(f"==================================================")
