@@ -490,11 +490,8 @@ class MainActivity : AppCompatActivity() {
             channelProvider = { allChannels },
             currentPlayingProvider = { currentPlayingChannel },
             onPlayChannel = { ch ->
-                val isSportsChannel = sportsCategoriesList.any { cat -> cat.channels.any { s -> s.streamUrl == ch.streamUrl } } || ch.streamUrl.startsWith("match://")
-                if (isSportsChannel && currentAppMode != AppMode.SPORTS) {
-                    switchAppMode(AppMode.SPORTS, focusCategories = false)
-                } else if (!isSportsChannel && currentAppMode != AppMode.TV) {
-                    switchAppMode(AppMode.TV, focusCategories = false)
+                if (currentAppMode == AppMode.SPORTS && !ch.streamUrl.startsWith("match://")) {
+                    currentPlayingMatchGroup = playlistManager.sportsLiveManager.findMatchForChannel(ch)
                 }
                 playChannel(ch)
                 hideHandler.postDelayed({ hideOverlay() }, 800)
@@ -1518,7 +1515,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Giao thức
-        val udpxy = prefs.udpxyServer.trim()
+        val udpxy = prefs.udpxyServer.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
         val protocol = when {
             channel.streamUrl.contains("/truc-tiep/") || channel.streamUrl.startsWith("streamfree://") -> "Web Live Stream (HLS)"
             channel.streamUrl.contains("/udp/", ignoreCase = true) || (udpxy.isNotBlank() && channel.streamUrl.startsWith("udp", ignoreCase = true)) -> "udpxy ($udpxy)"
@@ -1653,7 +1650,7 @@ class MainActivity : AppCompatActivity() {
     private fun normalizeStreamUrl(rawUrl: String, isVlc: Boolean): String {
         val (cleanUrl, headers) = parseStreamUrlAndHeaders(rawUrl)
         val trimmed = cleanUrl.trim()
-        val udpxy = prefs.udpxyServer.trim()
+        val udpxy = prefs.udpxyServer.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
 
         // Nếu đã cấu hình máy chủ udpxy (server:port), tự động chuyển đổi luồng multicast sang HTTP proxy
         val effectiveUrl = if (udpxy.isNotBlank()) {
@@ -2614,7 +2611,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteOkFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
+        val isSports = (currentAppMode == AppMode.SPORTS)
         if (isSports) {
             // Mục Thể Thao: Nhấn OK mở LIVE EVENTS với Highlight trận đấu đó
             if (currentAppMode != AppMode.SPORTS) {
@@ -2658,7 +2655,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteBackFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
+        val isSports = (currentAppMode == AppMode.SPORTS)
         if (isSports) {
             // Mục Thể Thao: Nhấn BACK/Dpad Trái mở danh mục Nguồn phát chứa link đó kèm highlight kênh đang phát
             if (currentAppMode != AppMode.SPORTS) {
@@ -2712,7 +2709,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteRightFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
+        val isSports = (currentAppMode == AppMode.SPORTS)
         if (isSports) {
             // Mục Thể Thao: Nhấn Dpad Phải mở hộp thoại chọn nguồn phát trực tiếp của trận đấu
             // Chỉ hiển thị nguồn phát nếu kênh đang phát thuộc về một trận đấu thực sự
@@ -2726,8 +2723,9 @@ class MainActivity : AppCompatActivity() {
                 showBottomNotification("Không có danh sách nguồn phát khác cho kênh này")
             }
         } else {
-            // Mục Xem TV: Nhấn Dpad Phải mở hộp thoại chọn danh sách phát .m3u
-            showQuickPlaylistDialog()
+            // Mục Xem TV: Nhấn Dpad Phải mở danh mục kênh
+            showOverlay()
+            focusPlayingChannel()
         }
     }
 
@@ -2785,12 +2783,7 @@ class MainActivity : AppCompatActivity() {
         startTelemetryUpdates()
 
         val playing = currentPlayingChannel
-        val shouldBeSports = (currentAppMode == AppMode.SPORTS) || isSportsLiveMatch(playing)
-        val targetMode = if (shouldBeSports) AppMode.SPORTS else AppMode.TV
-
-        if (currentAppMode != targetMode) {
-            switchAppMode(targetMode, focusCategories = false)
-        }
+        val targetMode = currentAppMode
 
         // Nếu danh mục hiện tại đã được chọn và hợp lệ thì giữ nguyên và focus kênh
         val currentCat = currentSelectedCategory
@@ -3154,10 +3147,11 @@ class MainActivity : AppCompatActivity() {
     private fun isSportsLiveMatch(channel: Channel?): Boolean {
         if (channel == null) return false
         if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://") || channel.streamUrl.startsWith("match://")) return true
+        if (currentAppMode == AppMode.TV && !channel.id.startsWith("src_") && !channel.id.startsWith("streamfree_") && !channel.id.startsWith("intl_sports_")) return false
         if (currentAppMode == AppMode.SPORTS) return true
         if (channel.id.startsWith("src_") || channel.id.startsWith("streamfree_") || channel.id.startsWith("intl_sports_")) return true
         val g = channel.groupTitle
-        if (g.contains("Chuối Chiên") || g.contains("Gà Vàng") || g.contains("Cola") || g.contains("Bia Ôm") ||
+        if (g.contains("Chuối Chiên") || g.contains("Gà Vàng") || g.contains("Bia Ôm") ||
             g.contains("Phá Làng") || g.contains("Vua Sân Cỏ") || g.contains("Sao Kê") || g.contains("LIVE EVENTS")) return true
         return channel.streamUrl.contains("/truc-tiep/") ||
                 channel.streamUrl.startsWith("streamfree://") ||

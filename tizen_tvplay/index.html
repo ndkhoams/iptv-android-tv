@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TV Play - Samsung Tizen</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/hls.light.min.js"></script>
+    <script src="js/mpegts.min.js"></script>
+</head>
+
+<body>
+    <div id="app-container">
+        <!-- 1. Trình phát Video toàn màn hình -->
+        <div id="video-wrapper">
+            <video id="tv-video" playsinline></video>
+        </div>
+
+        <!-- 2. Loading / Buffering Spinner Cam FPT -->
+        <div id="buffering-spinner" class="spinner-overlay hidden">
+            <div class="spinner-card">
+                <div class="spinner-ring"></div>
+                <div id="buffering-text" class="spinner-text">Đang tải luồng...</div>
+            </div>
+        </div>
+
+        <!-- 3. Thẻ OSD toàn chiều dài màn hình (Full-Width Bottom Banner) -->
+        <div id="quick-info" class="quick-banner hidden">
+            <div class="quick-banner-top">
+                <div class="quick-left-group">
+                    <span id="quick-number" class="quick-num">01</span>
+                    <img id="quick-logo" class="quick-logo" src="icon.png" alt="Logo" onerror="this.src='icon.png'">
+                    <span id="quick-name" class="quick-name">VTV1 HD</span>
+                    <span id="quick-mode-tag" class="badge-chip badge-orange">XEM TV</span>
+                </div>
+                <div id="quick-buffering-tag" class="quick-tag-buffering hidden">
+                    <span class="mini-spinner"></span> Đang tải luồng...
+                </div>
+            </div>
+            <!-- Dòng 2: Lịch phát sóng / Chương trình đang phát -->
+            <div id="quick-program" class="quick-program">● Đang phát: Chương trình trực tiếp</div>
+            <!-- Dòng 3 & 4: Kích thước độ phân giải @ FPS • Bitrate • Hint điều khiển -->
+            <div class="quick-banner-bottom">
+                <span id="quick-tech-info" class="quick-tech-info">1920x1080 @ 25fps • 0.5 Mbps • MPEG AAC AUDIO Stereo
+                    2.0</span>
+                <span class="quick-hint">► Nhấn [OK] mở danh sách kênh • [Sang Phải] chọn danh sách phát M3U • [Trái]
+                    hiện OSD</span>
+            </div>
+        </div>
+
+        <!-- 4. GIAO DIỆN CHÍNH FPT PLAY BOX G2 3 CỘT (Channel Guide Overlay) -->
+        <div id="channel-overlay" class="overlay-container hidden">
+            <!-- Header Bar -->
+            <div class="overlay-header">
+                <div class="header-brand-group">
+                    <span class="brand-tv">TV</span>
+                    <span class="brand-play">Play</span>
+                    <span class="badge-iptv">IPTV</span>
+                    <span id="header-playlist-badge" class="badge-chip">Danh sách: KTV</span>
+                    <span id="header-remote-badge" class="badge-chip badge-green">📱 Web Remote: Đang phát hiện
+                        IP...</span>
+                    <span id="header-stats-badge" class="badge-chip badge-cyan">⚡ CPU: 12% RAM: 38%</span>
+                </div>
+                <div class="header-right">
+                    <span id="app-version-badge" class="badge-chip">v2.2.0</span>
+                    <span id="digital-clock" class="digital-clock">12:00</span>
+                </div>
+            </div>
+
+            <!-- Khu vực thân giao diện: Sidebar + 3 Cột -->
+            <div class="overlay-body">
+                <!-- Thanh Sidebar điều hướng bên trái (Icon buttons 42dp) -->
+                <div id="sidebar-nav" class="sidebar-nav">
+                    <button id="nav-fav" class="sidebar-btn" title="Kênh Yêu Thích">
+                        <svg viewBox="0 0 24 24" class="svg-icon">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                    </button>
+                    <button id="nav-tv" class="sidebar-btn active" title="Xem TV">
+                        <svg viewBox="0 0 24 24" class="svg-icon">
+                            <rect x="2" y="7" width="20" height="15" rx="2" ry="2" />
+                            <polyline points="17 2 12 7 7 2" />
+                        </svg>
+                    </button>
+                    <button id="nav-sports" class="sidebar-btn" title="Trực tiếp Thể Thao">
+                        <svg viewBox="0 0 24 24" class="svg-icon svg-nav-sports">
+                            <path class="sports-ball-arc" fill="none" stroke="currentColor" stroke-width="0.75"
+                                stroke-linecap="round" d="M 5.8,9.21 A 6.2,6.2 0 0 1 18.2,9.21" />
+                            <path class="sports-ball-facets" fill="currentColor" stroke="none"
+                                d="M 9.75,3.39 L 11.65,4.65 L 11.65,6.9 L 9.96,8.1 L 7.78,7.46 L 7.11,5.39 L 8.13,4.3 Z M 14.25,3.39 L 12.35,4.65 L 12.35,6.9 L 14.04,8.1 L 16.22,7.46 L 16.89,5.39 L 15.87,4.3 Z M 7.54,8.13 L 9.75,8.84 L 10.35,10.73 L 9.08,12.49 L 7.75,12.49 L 7.01,11.68 L 6.2,10.21 L 5.95,9.33 Z M 16.46,8.13 L 14.25,8.84 L 13.65,10.73 L 14.92,12.49 L 16.25,12.49 L 16.99,11.68 L 17.8,10.21 L 18.05,9.33 Z M 10.88,11.12 L 13.12,11.12 L 14.39,12.91 L 14.11,13.76 L 12.98,14.11 L 11.02,14.11 L 9.89,13.76 L 9.61,12.91 Z" />
+                            <path class="sports-live-badge" fill="currentColor" stroke="none" fill-rule="evenodd"
+                                d="M 6.03,14.18 H 17.97 A 1.48,1.48 0 0 1 19.45,15.66 V 19.52 A 1.48,1.48 0 0 1 17.97,21.0 H 6.03 A 1.48,1.48 0 0 1 4.55,19.52 V 15.66 A 1.48,1.48 0 0 1 6.03,14.18 Z M 6.66,15.73 L 6.45,15.9 L 6.45,19.24 L 6.59,19.38 L 8.7,19.38 L 8.84,19.24 L 8.84,19.03 L 8.7,18.86 L 7.04,18.86 L 6.97,18.79 L 6.97,15.9 L 6.83,15.76 L 6.66,15.73 Z M 9.79,15.73 L 9.54,15.9 L 9.54,19.21 L 9.68,19.38 L 9.93,19.38 L 10.1,19.14 L 10.1,16.01 L 10.0,15.8 L 9.79,15.73 Z M 11.33,15.73 L 11.12,15.87 L 11.09,16.11 L 12.28,19.1 L 12.42,19.35 L 12.7,19.38 L 12.91,19.14 L 14.11,16.15 L 14.11,15.9 L 13.86,15.73 L 13.62,15.83 L 12.6,18.29 L 11.61,15.87 L 11.33,15.73 Z M 15.38,15.73 L 15.13,15.9 L 15.13,19.24 L 15.27,19.38 L 17.38,19.38 L 17.52,19.24 L 17.52,19.0 L 17.38,18.86 L 15.69,18.82 L 15.73,17.84 L 17.38,17.84 L 17.52,17.7 L 17.52,17.45 L 17.24,17.27 L 15.73,17.27 L 15.69,16.32 L 17.34,16.29 L 17.52,16.15 L 17.48,15.83 L 17.27,15.73 L 15.38,15.73 Z" />
+                        </svg>
+                    </button>
+                    <button id="nav-refresh" class="sidebar-btn" title="Làm mới">
+                        <svg viewBox="0 0 24 24" class="svg-icon">
+                            <polyline points="23 4 23 10 17 10" />
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                    </button>
+                    <button id="nav-settings" class="sidebar-btn" title="Cài đặt hệ thống & udpxy">
+                        <svg viewBox="0 0 24 24" class="svg-icon">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- CỘT 1: DANH MỤC (Categories 210px) -->
+                <div class="col-categories glass-panel">
+                    <div id="col-categories-header" class="col-header-title">DANH MỤC TRUYỀN HÌNH</div>
+                    <ul id="categories-list" class="categories-list">
+                        <!-- Dynamic items -->
+                    </ul>
+                </div>
+
+                <!-- CỘT 2: DANH SÁCH KÊNH (Channel List - 1 Cột dọc rộng rãi) -->
+                <div class="col-channels glass-panel">
+                    <div class="col-header-row">
+                        <span id="col-channels-title" class="col-header-title">TẤT CẢ KÊNH</span>
+                        <span id="col-channels-count" class="col-header-count">0 kênh</span>
+                    </div>
+                    <ul id="channels-list" class="channels-list">
+                        <!-- Dynamic items -->
+                    </ul>
+                </div>
+
+                <!-- CỘT 3: SPOTLIGHT / EPG LỊCH PHÁT SÓNG & CHI TIẾT TRẬN ĐẤU (280px) -->
+                <div class="col-spotlight glass-panel">
+                    <div class="spotlight-logo-box">
+                        <img id="spotlight-logo" class="spotlight-logo" src="icon.png" alt="Logo"
+                            onerror="this.src='icon.png'">
+                        <span id="spotlight-live-tag" class="badge-live hidden">TRỰC TIẾP</span>
+                    </div>
+                    <div id="spotlight-name" class="spotlight-channel-name">VTV1 HD</div>
+                    <div class="spotlight-tags-row">
+                        <span id="spotlight-res-tag" class="badge-chip badge-cyan">FHD 1080i</span>
+                        <span id="spotlight-cat-tag" class="badge-chip badge-orange">VTV</span>
+                        <span id="spotlight-playing-tag" class="tag-now-playing hidden">● Đang phát</span>
+                    </div>
+
+                    <!-- Panel EPG / Chi tiết chương trình hoặc Bảng trận đấu -->
+                    <div class="spotlight-epg-box">
+                        <div class="epg-box-header">
+                            <span id="epg-box-title" class="epg-title">LỊCH PHÁT SÓNG (EPG)</span>
+                            <span class="epg-source">TV Play</span>
+                        </div>
+                        <div id="spotlight-epg-content" class="epg-timeline">
+                            <!-- Dynamic items -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Bar hướng dẫn điều khiển TV -->
+            <div class="overlay-footer">
+                <div class="nav-hint"><span class="key-pill">▲ ▼</span> Chọn kênh / danh mục</div>
+                <div class="nav-hint"><span class="key-pill">◄ ►</span> Chuyển cột</div>
+                <div class="nav-hint"><span class="key-pill">OK</span> Phát kênh / Chọn luồng</div>
+                <div class="nav-hint"><span class="key-pill red-pill">Phím Đỏ</span> Yêu thích</div>
+                <div class="nav-hint"><span class="key-pill">Return / Back</span> Đóng menu / Thoát</div>
+            </div>
+        </div>
+
+        <!-- 5. MODAL CHỌN NGUỒN PHÁT BÓNG ĐÁ (MATCH SOURCES DIALOG) -->
+        <div id="match-sources-modal" class="modal-backdrop hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <div>
+                        <div id="modal-match-title" class="modal-title">Trực tiếp bóng đá</div>
+                        <div id="modal-match-subtitle" class="modal-subtitle">⏰ 00:00 • Nguồn phát trực tiếp</div>
+                    </div>
+                    <button id="modal-match-close" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <ul id="match-sources-list" class="match-sources-list">
+                        <!-- Dynamic items -->
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <span>▲ ▼ Chọn luồng • [OK] Phát luồng • [Back] Đóng</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5B. MODAL CHỌN NHANH DANH SÁCH FILE M3U (QUICK PLAYLIST DIALOG) -->
+        <div id="quick-playlist-modal" class="modal-backdrop hidden">
+            <div class="modal-card quick-playlist-card">
+                <div class="modal-header">
+                    <div>
+                        <div class="modal-title">DANH SÁCH FILE M3U</div>
+                        <div class="modal-subtitle">Bấm [OK] để chọn danh sách phát</div>
+                    </div>
+                    <button id="quick-playlist-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <ul id="quick-playlists-list" class="quick-playlists-list">
+                        <!-- Dynamic items -->
+                    </ul>
+                </div>
+                <div class="quick-playlist-footer">
+                    <button id="btn-quick-manage-playlists" class="action-btn">⚙ Quản lý danh sách...</button>
+                    <button id="btn-quick-close-playlists" class="action-btn btn-secondary">Đóng</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. MODAL CÀI ĐẶT & UDPXY & PLAYLISTS & CẬP NHẬT OTA -->
+        <div id="settings-modal" class="modal-backdrop hidden">
+            <div class="modal-card settings-card">
+                <div class="modal-header">
+                    <div class="modal-title">⚙️ CÀI ĐẶT HỆ THỐNG & DANH SÁCH PHÁT</div>
+                    <button id="settings-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body settings-body">
+                    <!-- Mục 1: Máy chủ udpxy -->
+                    <div class="settings-section">
+                        <div class="section-title">📡 MÁY CHỦ UDPXY (CHUYỂN ĐỔI LUỒNG MULTICAST / FPT)</div>
+                        <div class="section-desc">Nhập địa chỉ ip:port của máy chủ udpxy (ví dụ: 10.0.0.222:4022 hoặc để
+                            trống nếu dùng mạng thường):</div>
+                        <div class="input-row">
+                            <input id="setting-udpxy-input" type="text" class="text-input"
+                                placeholder="Ví dụ: 10.0.0.222:4022">
+                            <button id="setting-udpxy-save" class="action-btn">Lưu udpxy</button>
+                        </div>
+                    </div>
+
+                    <!-- Mục 2: Danh sách phát Playlist M3U -->
+                    <div class="settings-section">
+                        <div class="section-title">📑 QUẢN LÝ DANH SÁCH LINK M3U</div>
+                        <div id="playlists-manage-list" class="playlists-list">
+                            <!-- Dynamic items -->
+                        </div>
+                        <div class="add-playlist-box">
+                            <input id="new-playlist-name" type="text" class="text-input"
+                                placeholder="Tên danh sách (ví dụ: KTV M3U)">
+                            <input id="new-playlist-url" type="text" class="text-input"
+                                placeholder="Đường link M3U (https://...)">
+                            <button id="btn-add-playlist" class="action-btn">Thêm danh sách</button>
+                        </div>
+                    </div>
+
+                    <!-- Mục 3: Cập nhật ứng dụng OTA -->
+                    <div class="settings-section">
+                        <div class="section-title">🚀 CẬP NHẬT ỨNG DỤNG TRỰC TIẾP (OTA UPDATE)</div>
+                        <div class="section-desc">Cập nhật ứng dụng trực tiếp từ GitHub mà không cần cài đặt lại file
+                            .wgt qua máy tính:</div>
+                        <div class="update-info-row">
+                            <div>
+                                <div>Phiên bản hiện tại: <span id="current-ota-version"
+                                        class="text-highlight">v2.2.0</span></div>
+                                <div id="ota-status-text" class="text-muted">Nhấn kiểm tra để tải bản mới nhất</div>
+                            </div>
+                            <div class="btn-group">
+                                <button id="btn-check-ota" class="action-btn btn-orange">🚀 Kiểm tra cập nhật
+                                    ngay</button>
+                                <button id="btn-reset-ota" class="action-btn btn-secondary">Khôi phục bản gốc</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span>Nhấn [Back / Esc] để đóng Cài đặt</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Toast Message -->
+        <div id="toast-message" class="toast hidden"></div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

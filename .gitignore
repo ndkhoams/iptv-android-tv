@@ -18,5 +18,9 @@ source.zip
 *.apk
 .vscode/
 sports_updater.py
+__pycache__/
+*.pyc
 
 scratch/
+
+*.bat

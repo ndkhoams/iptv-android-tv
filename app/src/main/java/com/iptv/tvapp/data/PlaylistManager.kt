@@ -91,7 +91,7 @@ class PlaylistManager(private val context: Context) {
      * Tự động thay thế hoặc bổ sung tham số udpxy=server:port nếu người dùng đã cấu hình server udpxy
      */
     fun resolvePlaylistUrl(rawUrl: String): String {
-        val server = prefs.udpxyServer.trim()
+        val server = prefs.udpxyServer.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
         if (server.isBlank()) return rawUrl
 
         return when {

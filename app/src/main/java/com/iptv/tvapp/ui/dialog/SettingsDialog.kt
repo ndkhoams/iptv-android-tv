@@ -145,6 +145,12 @@ class SettingsDialog(
         }
     }
 
+    override fun onBackPressed() {
+        saveSettings()
+        onSettingsChanged(hasChangedPlaylist, hasChangedEngine)
+        super.onBackPressed()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS || keyCode == KeyEvent.KEYCODE_HELP) {
             saveSettings()
@@ -452,7 +458,8 @@ class SettingsDialog(
             else -> PreferencesHelper.MODE_FIRST_CHANNEL
         }
 
-        val newUdpxy = binding.etUdpxyServer.text.toString().trim()
+        val rawUdpxy = binding.etUdpxyServer.text.toString().trim()
+        val newUdpxy = rawUdpxy.removePrefix("http://").removePrefix("https://").trimEnd('/')
         if (newUdpxy != prefs.udpxyServer) {
             prefs.udpxyServer = newUdpxy
             hasChangedPlaylist = true

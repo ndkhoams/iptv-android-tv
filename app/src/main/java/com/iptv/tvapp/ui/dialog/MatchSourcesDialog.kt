@@ -116,7 +116,12 @@ class MatchSourcesDialog(
                 val blv = blvMatch?.groupValues?.get(1)?.trim()
                     ?.replace(Regex("""(?i)\b(hls|fhd|hd|sd|geo)\b"""), "")?.trim()
 
+                val isNhaDai = blv?.equals("Nhà đài", ignoreCase = true) == true ||
+                        name.contains("Nhà đài", ignoreCase = true) ||
+                        group.contains("Nhà đài", ignoreCase = true)
+
                 val sourcePrefix = when {
+                    isNhaDai -> "📺 Nguồn Nhà Đài"
                     group.contains("Chuối Chiên") || name.contains("Chuối Chiên") -> "🍌 Chuối Chiên"
                     group.contains("Gà Vàng") || name.contains("Gà Vàng") -> "🐔 Gà Vàng"
                     group.contains("Xôi Lạc") || name.contains("Xôi Lạc") -> "🍚 Xôi Lạc"
@@ -133,8 +138,11 @@ class MatchSourcesDialog(
                     else -> group.ifBlank { "⚽ Trực tiếp" }
                 }
 
-                return if (!blv.isNullOrBlank() && !blv.equals("Nhà đài", ignoreCase = true) && !blv.equals("hls", ignoreCase = true)) {
-                    "$sourcePrefix • BLV $blv"
+                return if (isNhaDai) {
+                    "📺 Nguồn Nhà Đài"
+                } else if (!blv.isNullOrBlank() && !blv.equals("hls", ignoreCase = true)) {
+                    val blvText = if (blv.startsWith("BLV", ignoreCase = true)) blv else "BLV $blv"
+                    "$sourcePrefix • $blvText"
                 } else {
                     sourcePrefix
                 }

@@ -1,0 +1,5 @@
+{
+  "version": "2.2.0",
+  "notes": "Bản cập nhật TV Play Tizen v2.2.0: Cập nhật logo trực tiếp thể thao chuẩn ATV (quả bóng chữ Live), rút gọn thẻ luồng phát 2 dòng (chỉ hiện Nguồn và BLV), cố định kích thước mượt mà không co giật.",
+  "bundleUrl": "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/tizen_tvplay/js/app.js"
+}
