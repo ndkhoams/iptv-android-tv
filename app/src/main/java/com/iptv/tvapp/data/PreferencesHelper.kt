@@ -34,11 +34,11 @@ class PreferencesHelper(context: Context) {
                 }
             }
 
-            // Danh sách mặc định ban đầu: Duy nhất KTV Playlist
+            // Danh sách mặc định ban đầu: FPT IPTV (UDP) tích hợp sẵn trong APK
             val defaultSource = PlaylistSource(
-                id = UUID.randomUUID().toString(),
-                name = "KTV Playlist",
-                url = DEFAULT_URL,
+                id = BUILTIN_PLAYLIST_ID,
+                name = "FPT IPTV (UDP)",
+                url = BUILTIN_PLAYLIST_URL,
                 isSelected = true
             )
             list.add(defaultSource)
@@ -63,22 +63,49 @@ class PreferencesHelper(context: Context) {
             e.printStackTrace()
         }
 
-        // Tự động làm sạch danh sách: Chỉ loại bỏ TV Play Pro / Builtin cũ nếu còn sót lại
+        // Tự động nâng cấp danh sách: Thay thế KTV cũ và tích hợp FPT IPTV (UDP)
         val cleanedList = mutableListOf<PlaylistSource>()
+        var hasBuiltin = false
         for (item in list) {
-            if (item.url == BUILTIN_PLAYLIST_URL || item.id == BUILTIN_PLAYLIST_ID || item.name.contains("TV Play Pro")) {
-                continue // Bỏ qua TV Play Pro cũ
+            if (item.url == BUILTIN_PLAYLIST_URL || item.id == BUILTIN_PLAYLIST_ID || item.name.contains("FPT IPTV")) {
+                cleanedList.add(item.copy(name = "FPT IPTV (UDP)", url = BUILTIN_PLAYLIST_URL))
+                hasBuiltin = true
+            } else if (item.url == DEFAULT_OLD_KTV_URL || item.name == "KTV Playlist") {
+                // Thay thế KTV cũ bằng FPT IPTV (UDP) builtin
+                cleanedList.add(
+                    PlaylistSource(
+                        id = BUILTIN_PLAYLIST_ID,
+                        name = "FPT IPTV (UDP)",
+                        url = BUILTIN_PLAYLIST_URL,
+                        isSelected = item.isSelected
+                    )
+                )
+                hasBuiltin = true
+            } else {
+                cleanedList.add(item)
             }
-            cleanedList.add(item)
+        }
+
+        // Nếu chưa có playlist FPT IPTV (UDP), bổ sung lên đầu danh sách
+        if (!hasBuiltin) {
+            cleanedList.add(
+                0,
+                PlaylistSource(
+                    id = BUILTIN_PLAYLIST_ID,
+                    name = "FPT IPTV (UDP)",
+                    url = BUILTIN_PLAYLIST_URL,
+                    isSelected = cleanedList.none { it.isSelected }
+                )
+            )
         }
 
         // Nếu danh sách rỗng (do lỗi hoặc xoá hết), tạo lại 1 danh sách mặc định để app luôn chạy được
         if (cleanedList.isEmpty()) {
             cleanedList.add(
                 PlaylistSource(
-                    id = UUID.randomUUID().toString(),
-                    name = "KTV Playlist",
-                    url = DEFAULT_URL,
+                    id = BUILTIN_PLAYLIST_ID,
+                    name = "FPT IPTV (UDP)",
+                    url = BUILTIN_PLAYLIST_URL,
                     isSelected = true
                 )
             )
@@ -193,7 +220,7 @@ class PreferencesHelper(context: Context) {
 
     // ===== CÀI ĐẶT MÁY CHỦ UDPXY (SERVER:PORT) =====
     var udpxyServer: String
-        get() = prefs.getString(KEY_UDPXY_SERVER, "") ?: ""
+        get() = prefs.getString(KEY_UDPXY_SERVER, DEFAULT_UDPXY_SERVER) ?: DEFAULT_UDPXY_SERVER
         set(value) = prefs.edit().putString(KEY_UDPXY_SERVER, value.trim()).apply()
 
     // ===== ĐƯỜNG DẪN FILE THỂ THAO TRỰC TIẾP (THETHAO.M3U TỪ GITHUB / ARMBIAN) =====
@@ -476,8 +503,9 @@ class PreferencesHelper(context: Context) {
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 
-        const val DEFAULT_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
-        const val BUILTIN_PLAYLIST_ID = "builtin_pro_playlist"
+        const val DEFAULT_OLD_KTV_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
+        const val BUILTIN_PLAYLIST_ID = "builtin_fpt_udp"
         const val BUILTIN_PLAYLIST_URL = "asset://builtin_playlist.m3u"
+        const val DEFAULT_UDPXY_SERVER = "10.0.0.222:4022"
     }
 }

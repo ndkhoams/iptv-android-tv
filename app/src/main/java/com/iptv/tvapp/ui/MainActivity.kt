@@ -146,6 +146,7 @@ class MainActivity : AppCompatActivity() {
             .start()
     }
     private var sportsFetchJob: Job? = null
+    private var hasLoadedSportsOnce: Boolean = false
 
     fun showBottomNotification(message: String) {
         bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
@@ -228,23 +229,31 @@ class MainActivity : AppCompatActivity() {
         appUpdateManager = AppUpdateManager(this)
 
         acquireMulticastLock()
-        checkStoragePermission()
+        // Loại bỏ checkStoragePermission() tại onCreate() để tránh crash ANR/dialog trên Android 6.0 Marshmallow (Mi Box 3c)
         initViews()
         initPlayer()
         initWebServer()
         startClock()
         loadPlaylist(forceRefresh = false, isStartup = true)
         loadEpgData()
-        startPeriodicSportsRefresh()
+        // Không chạy startPeriodicSportsRefresh() lúc khởi động để giảm tải RAM/CPU tối đa cho thiết bị 1GB RAM
         checkAppUpdate(isManual = false)
     }
 
     private fun loadEpgData() {
         lifecycleScope.launch {
-            epgManager.loadEpg()
-            withContext(Dispatchers.Main) {
-                currentFocusedChannel?.let { updateSpotlight(it) }
-                    ?: currentPlayingChannel?.let { updateSpotlight(it) }
+            try {
+                // Trì hoãn 10s sau khởi động để phát luồng TV mượt mà trước, tránh giật lag hay tràn RAM (OOM) trên Mi Box 1GB
+                delay(10000L)
+                epgManager.loadEpg()
+                withContext(Dispatchers.Main) {
+                    currentFocusedChannel?.let { updateSpotlight(it) }
+                        ?: currentPlayingChannel?.let { updateSpotlight(it) }
+                }
+            } catch (oom: OutOfMemoryError) {
+                // Chống crash bộ nhớ thấp
+            } catch (e: Exception) {
+                // Bỏ qua lỗi mạng
             }
         }
     }
@@ -802,9 +811,41 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    private fun releaseVlcPlayer() {
+        try {
+            vlcPlayer?.apply {
+                stop()
+                try {
+                    if (vlcVout.areViewsAttached()) {
+                        detachViews()
+                    }
+                } catch (e: Exception) {}
+                release()
+            }
+            vlcPlayer = null
+            libVLC?.release()
+            libVLC = null
+        } catch (e: Exception) {}
+    }
+
+    private fun releaseExoPlayer() {
+        try {
+            binding.playerView.player = null
+            player?.stop()
+            player?.release()
+            player = null
+        } catch (e: Exception) {}
+    }
+
     private fun initPlayer() {
-        initVlcPlayer()
-        initExoPlayer()
+        // Tối ưu giải phóng RAM cho Mi Box 3c (1GB): Chỉ khởi tạo duy nhất Engine được chọn, giải phóng Engine còn lại
+        if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
+            releaseVlcPlayer()
+            initExoPlayer()
+        } else {
+            releaseExoPlayer()
+            initVlcPlayer()
+        }
         applyPlayerVisibility()
     }
 
@@ -1084,8 +1125,7 @@ class MainActivity : AppCompatActivity() {
                     showOverlay()
                 }
 
-                // Luôn cập nhật trực tiếp thể thao ngầm trong nền
-                fetchSportsInBackground(forceRefresh = forceRefresh, showNotification = !isStartup)
+                // Không tải ngầm trực tiếp thể thao lúc khởi động. Chỉ tải khi người dùng lần đầu chọn mục Trực tiếp Thể Thao.
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
@@ -1151,7 +1191,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             allCategories.addAll(sportsCategoriesList)
-            fetchSportsInBackground(forceRefresh = false, showNotification = false)
+            // Lazy Loading: Chỉ kích hoạt tải mạng trực tiếp thể thao khi người dùng lần đầu chọn chế độ Thể Thao
+            if (!hasLoadedSportsOnce) {
+                hasLoadedSportsOnce = true
+                fetchSportsInBackground(forceRefresh = false, showNotification = false)
+                startPeriodicSportsRefresh()
+            }
         }
 
         categoryAdapter.submitList(allCategories.toList())
@@ -3381,24 +3426,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
         multicastLock = null
 
-        try {
-            vlcPlayer?.apply {
-                stop()
-                try {
-                    if (vlcVout.areViewsAttached()) {
-                        detachViews()
-                    }
-                } catch (e: Exception) {}
-                release()
-            }
-            vlcPlayer = null
-            libVLC?.release()
-            libVLC = null
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        player?.release()
-        player = null
+        releaseVlcPlayer()
+        releaseExoPlayer()
     }
 }

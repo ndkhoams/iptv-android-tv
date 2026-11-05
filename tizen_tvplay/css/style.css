@@ -1,1935 +1,1959 @@
-/* ==========================================================================
-   TV PLAY - SAMSUNG TIZEN CLONE OF ANDROID TV (FPT PLAY BOX G2 DARK THEME)
-   Full HD 1080p & 4K Crystal UHD Responsive
-   ========================================================================== */
-
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-body, html {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #121212;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color: #F8FAFC;
-}
-
-#app-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    background: #121212;
-}
-
-/* ==========================================
-   1. TRÌNH PHÁT VIDEO TOÀN MÀN HÌNH (4K UHD)
-   ========================================== */
-#video-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    background: #000000;
-}
-
-#app-container.avplay-active,
-#app-container.avplay-active #video-wrapper,
-#app-container.avplay-active #tv-video {
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-#tv-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.hidden {
-    display: none !important;
-}
-
-/* ==========================================
-   2. BUFFERING SPINNER CAM FPT
-   ========================================== */
-.spinner-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.4);
-}
-
-.spinner-card {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    padding: 20px 32px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-}
-
-.spinner-ring {
-    width: 44px;
-    height: 44px;
-    border: 4px solid rgba(255, 255, 255, 0.15);
-    border-top: 4px solid #FF6500;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-.spinner-text {
-    font-size: 14px;
-    font-weight: 700;
-    color: #F8FAFC;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* ==========================================================================
-   3. THẺ OSD TOÀN CHIỀU DÀI MÀN HÌNH (FULL-WIDTH BOTTOM BANNER)
-   ========================================================================== */
-.quick-banner {
-    position: absolute;
-    bottom: 24px;
-    left: 28px;
-    right: 28px;
-    width: auto;
-    z-index: 15;
-    background: linear-gradient(135deg, rgba(28, 28, 28, 0.96), rgba(18, 18, 18, 0.96));
-    border: 1.5px solid #FF6500;
-    border-radius: 14px;
-    padding: 12px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
-    animation: fadeIn 0.25s ease;
-}
-
-.quick-banner-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.quick-left-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.quick-num {
-    font-size: 26px;
-    font-weight: 900;
-    color: #FF6500;
-    letter-spacing: -0.5px;
-}
-
-.quick-logo {
-    width: 46px;
-    height: 32px;
-    object-fit: contain;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 6px;
-    padding: 2px;
-}
-
-.quick-name {
-    font-size: 20px;
-    font-weight: 800;
-    color: #FFFFFF;
-}
-
-.quick-tag-buffering {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #FF6500;
-}
-
-.mini-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 101, 0, 0.2);
-    border-top: 2px solid #FF6500;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-}
-
-.quick-program {
-    font-size: 14px;
-    font-weight: 700;
-    color: #FF6500;
-    margin-top: 1px;
-}
-
-.quick-banner-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 2px;
-}
-
-.quick-tech-info {
-    font-size: 12px;
-    font-weight: 700;
-    color: #38BDF8;
-}
-
-.quick-hint {
-    font-size: 12px;
-    color: #CBD5E1;
-}
-
-/* ==========================================================================
-   4. GIAO DIỆN CHÍNH FPT PLAY BOX G2 3 CỘT (CHANNEL GUIDE OVERLAY)
-   ========================================================================== */
-.overlay-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 20;
-    background: rgba(18, 18, 18, 0.96);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    display: flex;
-    flex-direction: column;
-    padding: 12px 18px 8px 18px;
-    animation: fadeIn 0.2s ease;
-}
-
-/* Header Bar */
-.overlay-header {
-    height: 38px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding: 0 4px;
-}
-
-.header-brand-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.brand-tv {
-    font-size: 22px;
-    font-weight: 900;
-    color: #FF6500;
-}
-
-.brand-play {
-    font-size: 22px;
-    font-weight: 900;
-    color: #FFFFFF;
-}
-
-.badge-iptv {
-    font-size: 10px;
-    font-weight: 800;
-    color: #FF6500;
-    background: #1E1E1E;
-    border: 1px solid rgba(255, 101, 0, 0.6);
-    border-radius: 4px;
-    padding: 2px 5px;
-}
-
-.badge-chip {
-    font-size: 11px;
-    font-weight: 700;
-    background: #1E1E1E;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    padding: 3px 8px;
-    color: #94A3B8;
-}
-
-.badge-green {
-    color: #34D399;
-}
-
-.badge-cyan {
-    color: #38BDF8;
-}
-
-.badge-orange {
-    color: #FF6500;
-    border-color: rgba(255, 101, 0, 0.4);
-}
-
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.digital-clock {
-    font-size: 16px;
-    font-weight: 800;
-    color: #F8FAFC;
-    letter-spacing: 0.5px;
-}
-
-/* Thân giao diện: Sidebar + 3 Cột */
-.overlay-body {
-    flex: 1;
-    display: flex;
-    gap: 8px;
-    height: calc(100% - 78px);
-    overflow: hidden;
-}
-
-/* Panels nền chuẩn FotMob */
-.glass-panel {
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 8px;
-}
-
-.col-header-title {
-    font-size: 13px;
-    font-weight: 800;
-    color: #FF6500;
-    letter-spacing: 0.5px;
-    padding: 6px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    margin-bottom: 6px;
-}
-
-.col-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    margin-bottom: 6px;
-}
-
-.col-header-row .col-header-title {
-    border-bottom: none;
-    padding: 0;
-    margin-bottom: 0;
-}
-
-.col-header-count {
-    font-size: 12px;
-    color: #64748B;
-    font-weight: 600;
-}
-
-/* THANH SIDEBAR ĐIỀU HƯỚNG BÊN TRÁI (46px) */
-.sidebar-nav {
-    width: 46px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding-top: 10px;
-}
-
-.sidebar-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: #1E1E1E;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    outline: none;
-}
-
-.sidebar-btn .svg-icon {
-    width: 20px;
-    height: 20px;
-    stroke: #94A3B8;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.sidebar-btn.active, .sidebar-btn:hover {
-    background: #2E2E2E;
-    border-color: #FF6500;
-}
-
-.sidebar-btn.active .svg-icon {
-    stroke: #FF6500;
-    fill: rgba(255, 101, 0, 0.2);
-}
-
-.sidebar-btn.focused {
-    background: linear-gradient(135deg, #FF6500, #FF8533);
-    border-color: #FFAA00;
-    box-shadow: 0 0 16px rgba(255, 101, 0, 0.6);
-    transform: scale(1.08);
-}
-
-.sidebar-btn.focused .svg-icon {
-    stroke: #FFFFFF;
-    fill: rgba(255, 255, 255, 0.2);
-}
-
-/* Sidebar Sports Button Custom Vector Icon (Giống hệt ATV) */
-#nav-sports .svg-icon,
-.sidebar-btn .svg-nav-sports {
-    stroke: none;
-    fill: none;
-    stroke-width: 0;
-}
-#nav-sports .sports-ball-arc,
-.sidebar-btn .svg-nav-sports .sports-ball-arc {
-    stroke: #94A3B8;
-    stroke-width: 0.8px;
-    fill: none;
-    transition: stroke 0.2s ease;
-}
-#nav-sports .sports-ball-facets,
-#nav-sports .sports-live-badge,
-.sidebar-btn .svg-nav-sports .sports-ball-facets,
-.sidebar-btn .svg-nav-sports .sports-live-badge {
-    fill: #94A3B8;
-    stroke: none;
-    transition: fill 0.2s ease;
-}
-#nav-sports.active .sports-ball-arc,
-.sidebar-btn.active .svg-nav-sports .sports-ball-arc {
-    stroke: #FFFFFF;
-}
-#nav-sports.active .sports-ball-facets,
-#nav-sports.active .sports-live-badge,
-.sidebar-btn.active .svg-nav-sports .sports-ball-facets,
-.sidebar-btn.active .svg-nav-sports .sports-live-badge {
-    fill: #FFFFFF;
-}
-#nav-sports.focused .sports-ball-arc,
-.sidebar-btn.focused .svg-nav-sports .sports-ball-arc {
-    stroke: #FFFFFF;
-}
-#nav-sports.focused .sports-ball-facets,
-#nav-sports.focused .sports-live-badge,
-.sidebar-btn.focused .svg-nav-sports .sports-ball-facets,
-.sidebar-btn.focused .svg-nav-sports .sports-live-badge {
-    fill: #FFFFFF;
-}
-
-/* CỘT 1: DANH MỤC (Categories 210px) */
-.col-categories {
-    width: 210px;
-    height: 100%;
-}
-
-.categories-list {
-    list-style: none;
-    overflow-y: auto;
-    overflow-x: hidden !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 2px;
-}
-
-.cat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 9px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #CBD5E1;
-    background: #1E1E1E;
-    border: 1.5px solid transparent;
-    cursor: pointer;
-    transition: all 0.12s ease;
-}
-
-.cat-item-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-}
-
-.cat-item-count {
-    font-size: 11px;
-    color: #64748B;
-    background: rgba(0, 0, 0, 0.35);
-    padding: 2px 6px;
-    border-radius: 8px;
-    margin-left: 6px;
-}
-
-.cat-item.selected {
-    background: #2E2E2E;
-    border: 1.5px solid #FF6500;
-    color: #FF8533;
-}
-
-.cat-item.focused {
-    background: linear-gradient(90deg, #FF6500, #FF8533);
-    color: #FFFFFF;
-    border-color: #FFAA00;
-    box-shadow: 0 4px 14px rgba(255, 101, 0, 0.5);
-    transform: scale(1.02);
-}
-
-.cat-item.focused .cat-item-count {
-    color: #FFFFFF;
-    background: rgba(0, 0, 0, 0.3);
-}
-
-/* CỘT 2: DANH SÁCH KÊNH (Channel List - 1 Cột dọc rộng rãi) */
-.col-channels {
-    flex: 1;
-    height: 100%;
-    overflow-x: hidden !important;
-}
-
-.channels-list {
-    list-style: none;
-    overflow-y: auto;
-    overflow-x: hidden !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 2px;
-}
-
-.ch-card {
-    box-sizing: border-box !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    height: 50px;
-    min-height: 50px;
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    border-radius: 8px;
-    background: #1E1E1E;
-    border: 1px solid #1E1E1E;
-    color: #F8FAFC;
-    cursor: pointer;
-    position: relative;
-    transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.ch-card-num {
-    width: 30px;
-    min-width: 30px;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 800;
-    color: #94A3B8;
-}
-
-.ch-card-logo {
-    width: 38px;
-    height: 28px;
-    object-fit: contain;
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 4px;
-    margin: 0 10px 0 6px;
-    padding: 2px;
-}
-
-.ch-card-name {
-    flex: 1;
-    min-width: 0 !important;
-    font-size: 14px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: #F8FAFC;
-    margin-right: 8px;
-}
-
-.badge-fhd {
-    font-size: 9px;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #1E293B;
-    color: #38BDF8;
-    margin-right: 6px;
-}
-
-.badge-sources-count {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: rgba(255, 101, 0, 0.2);
-    border: 1px solid #FF6500;
-    color: #FF8533;
-    margin-right: 6px;
-}
-
-.badge-live-playing {
-    font-size: 9px;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #EF4444;
-    color: #FFFFFF;
-    margin-right: 6px;
-    letter-spacing: 0.5px;
-}
-
-.star-fav {
-    color: #F59E0B;
-    font-size: 14px;
-    margin-right: 6px;
-}
-
-.ch-card.playing {
-    background: #2C2C2C;
-    border: 2px solid #FF6500;
-}
-
-/* ====================================================================
-   TRẠNG THÁI FOCUS HÀNG KÊNH CHUẨN FPT PLAY BOX G2:
-   - NỀN TRẮNG SÁNG #F1F3F5
-   - CHỮ ĐEN ĐẬM #111827
-   - VẠCH ĐỨNG CAM #FF6500 DÀY 7px Ở MÉP PHẢI
-   ==================================================================== */
-.ch-card.focused {
-    background: #F1F3F5 !important;
-    border: 1px solid #F1F3F5 !important;
-    border-right: 7px solid #FF6500 !important;
-    color: #111827 !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
-    z-index: 5;
-}
-
-.ch-card.focused .ch-card-num,
-.ch-card.focused .ch-card-name {
-    color: #111827 !important;
-}
-
-.ch-card.focused .badge-fhd {
-    background: #0284C7;
-    color: #FFFFFF;
-}
-
-.ch-card.focused .badge-sources-count {
-    background: #FF6500;
-    color: #FFFFFF;
-}
-
-/* CỘT 3: SPOTLIGHT / EPG LỊCH PHÁT SÓNG & CHI TIẾT TRẬN ĐẤU (280px) */
-.col-spotlight {
-    width: 280px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.spotlight-logo-box {
-    height: 76px;
-    background: #161616;
-    border-radius: 8px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.spotlight-logo {
-    max-width: 110px;
-    max-height: 54px;
-    object-fit: contain;
-}
-
-.badge-live {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    background: #EF4444;
-    color: #FFFFFF;
-    font-size: 9px;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-}
-
-.spotlight-channel-name {
-    font-size: 16px;
-    font-weight: 800;
-    color: #F8FAFC;
-    margin-top: 8px;
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.spotlight-tags-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 6px;
-    margin-bottom: 8px;
-}
-
-.tag-now-playing {
-    font-size: 10px;
-    font-weight: 700;
-    color: #34D399;
-}
-
-.spotlight-epg-box {
-    flex: 1;
-    background: #161616;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
-    overflow: hidden;
-}
-
-.epg-box-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    margin-bottom: 6px;
-}
-
-.epg-title {
-    font-size: 11px;
-    font-weight: 800;
-    color: #FF6500;
-}
-
-.epg-source {
-    font-size: 9px;
-    color: #64748B;
-}
-
-.epg-timeline {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.epg-item {
-    background: #1E1E1E;
-    border-radius: 6px;
-    padding: 6px 8px;
-    border-left: 3px solid transparent;
-}
-
-.epg-item.current {
-    border-left-color: #FF6500;
-    background: #252525;
-}
-
-.epg-time {
-    font-size: 11px;
-    font-weight: 700;
-    color: #FF8533;
-    margin-bottom: 2px;
-}
-
-.epg-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: #E2E8F0;
-    line-height: 1.3;
-}
-
-.match-info-card {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 4px;
-}
-
-.match-league {
-    font-size: 11px;
-    font-weight: 800;
-    color: #38BDF8;
-    text-transform: uppercase;
-}
-
-.match-time-badge {
-    font-size: 12px;
-    font-weight: 800;
-    color: #FF6500;
-    background: rgba(255, 101, 0, 0.15);
-    padding: 4px 8px;
-    border-radius: 6px;
-    align-self: flex-start;
-}
-
-.match-sources-title {
-    font-size: 11px;
-    font-weight: 700;
-    color: #94A3B8;
-    margin-top: 4px;
-}
-
-.match-source-chip {
-    height: 52px;
-    min-height: 52px;
-    max-height: 52px;
-    box-sizing: border-box;
-    background: #252525;
-    padding: 6px 12px;
-    border-radius: 8px;
-    color: #F8FAFC;
-    margin-bottom: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-right: 5px solid transparent !important;
-    cursor: pointer;
-    transition: background-color 0.12s ease, color 0.12s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    overflow: hidden;
-}
-
-.match-source-chip.focused, .match-source-chip:hover {
-    background: #F1F3F5 !important;
-    color: #111827 !important;
-    border-color: #F1F3F5 !important;
-    border-right: 5px solid #FF6500 !important;
-    box-shadow: 0 4px 12px rgba(255, 101, 0, 0.35);
-    transform: none !important;
-}
-
-.match-source-chip.focused .match-source-text {
-    color: #111827 !important;
-}
-
-.match-source-chip .match-source-icon {
-    font-size: 11px;
-    color: #FF6500;
-    flex-shrink: 0;
-    align-self: center;
-}
-
-.match-source-chip .match-source-text {
-    flex: 1;
-    min-width: 0;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.35;
-    color: #F8FAFC;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-word;
-}
-
-/* ==========================================
-   5. FOOTER BAR HƯỚNG DẪN ĐIỀU KHIỂN
-   ========================================== */
-.overlay-footer {
-    height: 32px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 4px;
-    margin-top: 6px;
-}
-
-.nav-hint {
-    font-size: 12px;
-    color: #94A3B8;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.key-pill {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 800;
-    color: #FFFFFF;
-}
-
-.red-pill {
-    background: rgba(239, 68, 68, 0.25);
-    border-color: #EF4444;
-    color: #EF4444;
-}
-
-/* ==========================================================================
-   6. MODAL DIALOGS (MATCH SOURCES & SETTINGS)
-   ========================================================================== */
-.modal-backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 50;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-}
-
-.modal-card {
-    background: #1E1E1E;
-    border: 1.5px solid #FF6500;
-    border-radius: 16px;
-    width: 680px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
-    overflow: hidden;
-}
-
-.modal-header {
-    padding: 16px 20px;
-    background: #252525;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-title {
-    font-size: 18px;
-    font-weight: 800;
-    color: #FFFFFF;
-}
-
-.modal-subtitle {
-    font-size: 12px;
-    font-weight: 600;
-    color: #FF8533;
-    margin-top: 2px;
-}
-
-.modal-close-btn {
-    background: transparent;
-    border: none;
-    color: #94A3B8;
-    font-size: 28px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.modal-body {
-    padding: 16px 20px;
-    overflow-y: auto;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.modal-footer {
-    padding: 10px 20px;
-    background: #181818;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    font-size: 12px;
-    color: #94A3B8;
-    text-align: right;
-}
-
-/* Match sources list */
-.match-sources-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.source-item {
-    height: 48px;
-    display: flex;
-    align-items: center;
-    padding: 0 14px;
-    border-radius: 8px;
-    background: #282828;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    cursor: pointer;
-    transition: all 0.12s ease;
-}
-
-.source-num {
-    font-size: 14px;
-    font-weight: 800;
-    color: #94A3B8;
-    width: 28px;
-}
-
-.source-badge {
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #0284C7;
-    color: #FFFFFF;
-    margin-right: 10px;
-}
-
-.source-name {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 700;
-    color: #FFFFFF;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.source-item.focused {
-    background: #F1F3F5 !important;
-    color: #111827 !important;
-    border-right: 5px solid #FF6500 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    transform: none !important;
-}
-
-.source-item.focused .source-num,
-.source-item.focused .source-name {
-    color: #111827 !important;
-}
-
-.source-item.playing:not(.focused) {
-    background: rgba(255, 101, 0, 0.18) !important;
-    border-color: #FF6500 !important;
-}
-
-.source-item.playing:not(.focused) .source-name {
-    color: #FF8A3D !important;
-    font-weight: 700;
-}
-
-.source-item .badge-live-playing {
-    margin-left: auto;
-    background: #FF6500;
-    color: #FFFFFF;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 3px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-}
-
-/* Quick Playlist Modal */
-.quick-playlist-card {
-    width: 620px;
-    background: #1E1E1E;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-}
-
-.quick-playlists-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 380px;
-    overflow-y: auto;
-}
-
-.quick-playlist-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    background: #282828;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    cursor: pointer;
-    transition: all 0.12s ease;
-}
-
-.quick-playlist-item.active {
-    border-color: #FF6500;
-}
-
-.quick-playlist-item.focused, .quick-playlist-item:hover {
-    background: #F1F3F5 !important;
-    color: #111827 !important;
-    border-right: 5px solid #FF6500 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.quick-playlist-item.focused .quick-pl-radio,
-.quick-playlist-item.focused .quick-pl-name,
-.quick-playlist-item.focused .quick-pl-url,
-.quick-playlist-item.focused .quick-pl-badge {
-    color: #111827 !important;
-}
-
-.quick-pl-radio {
-    font-size: 18px;
-    color: #94A3B8;
-    width: 24px;
-    text-align: center;
-}
-
-.quick-playlist-item.active .quick-pl-radio {
-    color: #FF6500;
-}
-
-.quick-pl-info {
-    flex: 1;
-    overflow: hidden;
-}
-
-.quick-pl-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: #F8FAFC;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.quick-playlist-item.active .quick-pl-name {
-    color: #FF6500;
-}
-
-.quick-pl-url {
-    font-size: 12px;
-    color: #94A3B8;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.quick-pl-badge {
-    padding: 3px 8px;
-    border-radius: 4px;
-    background: rgba(255, 101, 0, 0.2);
-    color: #FF6500;
-    font-size: 11px;
-    font-weight: 700;
-}
-
-.quick-playlist-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 12px 20px;
-    background: #181818;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 0 0 14px 14px;
-}
-
-/* Settings modal styles */
-.settings-card {
-    width: 820px;
-}
-
-.settings-body {
-    gap: 16px;
-}
-
-.settings-section {
-    background: #252525;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
-    padding: 14px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.section-title {
-    font-size: 13px;
-    font-weight: 800;
-    color: #FF6500;
-    letter-spacing: 0.5px;
-}
-
-.section-desc {
-    font-size: 12px;
-    color: #94A3B8;
-    line-height: 1.4;
-}
-
-.input-row {
-    display: flex;
-    gap: 10px;
-}
-
-.text-input {
-    flex: 1;
-    height: 38px;
-    background: #181818;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    padding: 0 12px;
-    color: #FFFFFF;
-    font-size: 13px;
-    outline: none;
-}
-
-.text-input:focus {
-    border-color: #FF6500;
-    box-shadow: 0 0 10px rgba(255, 101, 0, 0.4);
-}
-
-.action-btn {
-    height: 38px;
-    padding: 0 16px;
-    background: #2E2E2E;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    color: #FFFFFF;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.action-btn:hover, .action-btn.focused {
-    background: #FF6500;
-    border-color: #FFAA00;
-    color: #FFFFFF;
-}
-
-.btn-orange {
-    background: #FF6500;
-    border-color: #FF8533;
-}
-
-.btn-secondary {
-    background: #334155;
-}
-
-.btn-danger {
-    background: #DC2626;
-    border-color: #EF4444;
-}
-
-.btn-danger:hover, .btn-danger.focused {
-    background: #EF4444;
-    border-color: #F87171;
-}
-
-.settings-card input:focus, .settings-card input.focused,
-.settings-card button:focus, .settings-card button.focused {
-    outline: none;
-    border-color: #FF6500 !important;
-    box-shadow: 0 0 14px rgba(255, 101, 0, 0.7) !important;
-    transform: scale(1.02);
-}
-
-.playlists-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 160px;
-    overflow-y: auto;
-}
-
-.playlist-entry {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #1C1C1C;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.playlist-entry.active {
-    border-color: #FF6500;
-    background: rgba(255, 101, 0, 0.1);
-}
-
-.playlist-info {
-    flex: 1;
-    overflow: hidden;
-}
-
-.playlist-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: #FFFFFF;
-}
-
-.playlist-url {
-    font-size: 11px;
-    color: #64748B;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.add-playlist-box {
-    display: flex;
-    gap: 8px;
-    margin-top: 6px;
-}
-
-.update-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #1C1C1C;
-    padding: 12px 14px;
-    border-radius: 8px;
-}
-
-.text-highlight {
-    color: #34D399;
-    font-weight: 800;
-}
-
-.text-muted {
-    font-size: 12px;
-    color: #94A3B8;
-}
-
-.btn-group {
-    display: flex;
-    gap: 8px;
-}
-
-/* ==========================================
-   7. TOAST MESSAGE
-   ========================================== */
-.toast {
-    position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(18, 18, 18, 0.95);
-    border: 1.5px solid #FF6500;
-    border-radius: 24px;
-    padding: 10px 24px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #F8FAFC;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
-    z-index: 60;
-    animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Triệt tiêu hoàn toàn mọi thanh cuộn (cả dọc và ngang) trên toàn bộ ứng dụng TV */
-* {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-}
-
-::-webkit-scrollbar,
-*::-webkit-scrollbar {
-    width: 0px !important;
-    height: 0px !important;
-    display: none !important;
-    background: transparent !important;
-}
-
-::-webkit-scrollbar:horizontal,
-*::-webkit-scrollbar:horizontal,
-::-webkit-scrollbar:vertical,
-*::-webkit-scrollbar:vertical {
-    display: none !important;
-    height: 0px !important;
-    width: 0px !important;
-    background: transparent !important;
-    -webkit-appearance: none !important;
-}
-
-::-webkit-scrollbar-track,
-::-webkit-scrollbar-thumb,
-::-webkit-scrollbar-corner {
-    display: none !important;
-    background: transparent !important;
-}
-
-/* ==========================================================================
-   8. GIAO DIỆN PHÓNG TO 1.5 LẦN DÀNH CHO TV SAMSUNG (1080p & 4K UHD)
-   Tự động kích hoạt trên TV (>=1400px rộng hoặc >=800px cao) để giao diện to rõ,
-   dễ đọc từ khoảng cách sofa 3 mét
-   ========================================================================== */
-@media (min-width: 1400px), (min-height: 800px) {
-    .overlay-container {
-        padding: 16px 28px 12px 28px;
-    }
-
-    .overlay-header {
-        height: 56px;
-        margin-bottom: 12px;
-    }
-
-    .brand-tv, .brand-play {
-        font-size: 32px;
-    }
-
-    .badge-iptv {
-        font-size: 13px;
-        padding: 3px 8px;
-    }
-
-    .badge-chip {
-        font-size: 15px;
-        padding: 5px 12px;
-        border-radius: 8px;
-    }
-
-    .digital-clock {
-        font-size: 24px;
-    }
-
-    .overlay-body {
-        height: calc(100% - 116px);
-        gap: 12px;
-    }
-
-    .glass-panel {
-        border-radius: 14px;
-        padding: 12px;
-    }
-
-    .sidebar-nav {
-        width: 68px;
-        gap: 16px;
-        padding-top: 6px;
-    }
-
-    .sidebar-btn {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
-    }
-
-    .sidebar-btn .svg-icon {
-        width: 30px;
-        height: 30px;
-    }
-
-    .col-categories {
-        width: 300px;
-    }
-
-    .col-header-title {
-        font-size: 18px;
-        padding: 10px 14px;
-    }
-
-    .col-header-row .col-header-title {
-        font-size: 18px;
-    }
-
-    .col-header-count {
-        font-size: 16px;
-    }
-
-    .cat-item {
-        padding: 13px 16px;
-        font-size: 18px;
-        border-radius: 10px;
-    }
-
-    .cat-item-count {
-        font-size: 15px;
-        padding: 3px 10px;
-        border-radius: 8px;
-    }
-
-    .ch-card {
-        height: 72px;
-        min-height: 72px;
-        padding: 0 16px;
-        border-radius: 12px;
-        gap: 6px;
-    }
-
-    .ch-card-num {
-        font-size: 20px;
-        width: 44px;
-        min-width: 44px;
-    }
-
-    .ch-card-logo {
-        width: 58px;
-        height: 42px;
-        border-radius: 8px;
-        margin: 0 14px 0 8px;
-    }
-
-    .ch-card-name {
-        font-size: 20px;
-    }
-
-    .badge-fhd, .badge-sources-count, .badge-live-playing {
-        font-size: 13px;
-        padding: 4px 10px;
-        border-radius: 6px;
-    }
-
-    .star-fav {
-        font-size: 20px;
-    }
-
-    .col-spotlight {
-        width: 420px;
-    }
-
-    .spotlight-logo-box {
-        height: 110px;
-    }
-
-    .spotlight-logo {
-        max-width: 160px;
-        max-height: 80px;
-    }
-
-    .spotlight-channel-name {
-        font-size: 24px;
-    }
-
-    .spotlight-tags {
-        font-size: 15px;
-        gap: 8px;
-    }
-
-    .epg-section-header {
-        font-size: 16px;
-        padding: 8px 12px;
-    }
-
-    .epg-title {
-        font-size: 16px;
-    }
-
-    .epg-timeline {
-        gap: 8px;
-    }
-
-    .epg-item {
-        padding: 10px 14px;
-        border-radius: 8px;
-    }
-
-    .epg-time {
-        font-size: 15px;
-    }
-
-    .epg-name {
-        font-size: 17px;
-    }
-
-    .overlay-footer {
-        height: 42px;
-        gap: 24px;
-        margin-top: 8px;
-    }
-
-    .nav-hint {
-        font-size: 15px;
-        gap: 8px;
-    }
-
-    .key-pill {
-        font-size: 14px;
-        padding: 3px 9px;
-        border-radius: 6px;
-    }
-
-    .quick-banner {
-        bottom: 35px;
-        left: 40px;
-        right: 40px;
-        border-radius: 18px;
-        padding: 18px 30px;
-    }
-
-    .quick-num {
-        font-size: 36px;
-        width: 46px;
-    }
-
-    .quick-logo {
-        width: 64px;
-        height: 46px;
-    }
-
-    .quick-name {
-        font-size: 28px;
-    }
-
-    .quick-program {
-        font-size: 22px;
-        margin: 8px 0;
-    }
-
-    .quick-tech-info, .quick-hint {
-        font-size: 17px;
-    }
-
-    .modal-card {
-        width: 980px;
-        max-width: 92vw;
-    }
-
-    .modal-title {
-        font-size: 24px;
-    }
-
-    .modal-subtitle {
-        font-size: 16px;
-    }
-
-    .modal-body {
-        padding: 20px 28px;
-        gap: 12px;
-        font-size: 17px;
-    }
-
-    .source-item {
-        height: 68px;
-        font-size: 19px;
-        padding: 0 18px;
-    }
-
-    .source-name {
-        font-size: 19px;
-    }
-
-    .match-source-chip {
-        height: 74px;
-        min-height: 74px;
-        max-height: 74px;
-        padding: 10px 18px;
-        border-radius: 12px;
-        margin-bottom: 8px;
-    }
-
-    .match-source-chip .match-source-text {
-        font-size: 18px;
-        line-height: 1.35;
-    }
-
-    .match-source-chip .match-source-icon {
-        font-size: 16px;
-    }
-
-    .form-input {
-        height: 52px;
-        font-size: 18px;
-        padding: 0 16px;
-    }
-
-    .action-btn {
-        height: 52px;
-        font-size: 17px;
-        padding: 0 24px;
-    }
-    /* Standings Bảng xếp hạng trên TV 1080p */
-    .spotlight-standings-box {
-        padding: 10px 14px;
-        border-radius: 14px;
-        margin-top: 10px;
-    }
-
-    .epg-box-header .epg-title {
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: 0.5px;
-    }
-
-    .epg-box-header .epg-source {
-        font-size: 14px;
-    }
-
-    .standings-table-header {
-        font-size: 16px;
-        font-weight: 800;
-        padding: 10px 6px;
-        color: #E2E8F0;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .standings-table-header .st-col-rank {
-        width: 36px;
-        font-size: 16px;
-    }
-
-    .standings-table-header .st-col-team {
-        margin-left: 10px;
-        font-size: 16px;
-    }
-
-    .standings-table-header .st-col-played {
-        width: 46px;
-        font-size: 16px;
-    }
-
-    .standings-table-header .st-col-pts {
-        width: 50px;
-        font-size: 16px;
-        color: #FF6500;
-    }
-
-    .standings-list-scroll {
-        gap: 4px;
-        padding-top: 8px;
-    }
-
-    .standing-row {
-        height: 44px;
-        min-height: 44px;
-        font-size: 18px;
-        font-weight: 600;
-        padding: 0 10px;
-        border-radius: 8px;
-    }
-
-    .standing-row.highlight {
-        background: rgba(255, 101, 0, 0.28);
-        border: 2px solid #FF6500;
-        color: #FFFFFF;
-        font-weight: 800;
-        box-shadow: 0 0 14px rgba(255, 101, 0, 0.35);
-    }
-
-    .standing-row .st-col-rank {
-        width: 36px;
-        font-size: 17px;
-        font-weight: 700;
-        text-align: center;
-    }
-
-    .standing-row .st-logo {
-        width: 28px;
-        height: 28px;
-        object-fit: contain;
-        margin-right: 10px;
-        margin-left: 2px;
-    }
-
-    .standing-row .st-col-team {
-        flex: 1;
-        font-size: 18px;
-        font-weight: 600;
-        margin-left: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .standing-row .st-col-played {
-        width: 46px;
-        text-align: center;
-        font-size: 17px;
-    }
-
-    .standing-row .st-col-pts {
-        width: 50px;
-        text-align: center;
-        font-size: 19px;
-        font-weight: 800;
-        color: #FF6500;
-    }
-}
-/* ==========================================
-   BẢNG XẾP HẠNG STANDINGS & CHIP NGUỒN PHÁT
-   ========================================== */
-.spotlight-sources-container {
-    margin-top: 8px;
-    margin-bottom: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.sources-label {
-    font-size: 11px;
-    font-weight: 800;
-    color: #FF6500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.spotlight-sources-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    max-height: 85px;
-    overflow-y: auto;
-}
-
-.src-chip-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #252525;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #F8FAFC;
-    cursor: pointer;
-    transition: all 0.12s ease;
-}
-
-.src-chip-btn:hover, .src-chip-btn.focused {
-    background: #F1F3F5 !important;
-    color: #111827 !important;
-    border-color: #FF6500 !important;
-    box-shadow: 0 2px 8px rgba(255, 101, 0, 0.4);
-}
-
-.src-chip-btn.active {
-    background: rgba(255, 101, 0, 0.2);
-    border-color: #FF6500;
-    color: #FF8533;
-}
-
-.spotlight-standings-box {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-    padding: 8px 10px;
-    margin-top: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.standings-table-header {
-    display: flex;
-    align-items: center;
-    padding: 6px 4px;
-    font-size: 13px;
-    font-weight: 800;
-    color: #94A3B8;
-    border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
-    text-transform: uppercase;
-}
-
-.st-col-rank {
-    width: 28px;
-    text-align: center;
-    font-weight: 700;
-}
-
-.st-col-team {
-    flex: 1;
-    margin-left: 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.st-col-played {
-    width: 34px;
-    text-align: center;
-}
-
-.st-col-pts {
-    width: 38px;
-    text-align: center;
-    color: #FF6500;
-    font-weight: 800;
-}
-
-.standings-list-scroll {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding-top: 4px;
-}
-
-.standing-row {
-    height: 34px;
-    min-height: 34px;
-    display: flex;
-    align-items: center;
-    padding: 0 6px;
-    font-size: 14px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.03);
-    transition: all 0.1s ease;
-}
-
-.standing-row.highlight {
-    background: rgba(255, 101, 0, 0.22);
-    border: 1.5px solid #FF6500;
-    color: #FFFFFF;
-    font-weight: 700;
-}
-
-.standing-row .st-logo {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    margin-right: 6px;
-    margin-left: 2px;
-}
+/* ==========================================================================
+   TV PLAY - SAMSUNG TIZEN CLONE OF ANDROID TV (FPT PLAY BOX G2 DARK THEME)
+   Full HD 1080p & 4K Crystal UHD Responsive
+   ========================================================================== */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #121212;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #F8FAFC;
+}
+
+#app-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #121212;
+}
+
+/* ==========================================
+   1. TRÌNH PHÁT VIDEO TOÀN MÀN HÌNH (4K UHD)
+   ========================================== */
+#video-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    background: #000000;
+}
+
+html.avplay-active,
+body.avplay-active,
+#app-container.avplay-active,
+#app-container.avplay-active #video-wrapper,
+#app-container.avplay-active #tv-video {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+#tv-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================
+   2. BUFFERING SPINNER CAM FPT
+   ========================================== */
+.spinner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.spinner-card {
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 20px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
+.spinner-ring {
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(255, 255, 255, 0.15);
+    border-top: 4px solid #FF6500;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.spinner-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #F8FAFC;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   3. THẺ OSD TOÀN CHIỀU DÀI MÀN HÌNH (FULL-WIDTH BOTTOM BANNER)
+   ========================================================================== */
+.quick-banner {
+    position: absolute;
+    bottom: 24px;
+    left: 28px;
+    right: 28px;
+    width: auto;
+    z-index: 15;
+    background: linear-gradient(135deg, rgba(28, 28, 28, 0.96), rgba(18, 18, 18, 0.96));
+    border: 1.5px solid #FF6500;
+    border-radius: 14px;
+    padding: 12px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+    animation: fadeIn 0.25s ease;
+}
+
+.quick-banner-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quick-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.quick-num {
+    font-size: 26px;
+    font-weight: 900;
+    color: #FF6500;
+    letter-spacing: -0.5px;
+}
+
+.quick-logo {
+    width: 46px;
+    height: 32px;
+    object-fit: contain;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.quick-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+
+.quick-tag-buffering {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #FF6500;
+}
+
+.mini-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 101, 0, 0.2);
+    border-top: 2px solid #FF6500;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+.quick-program {
+    font-size: 14px;
+    font-weight: 700;
+    color: #FF6500;
+    margin-top: 1px;
+}
+
+.quick-banner-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.quick-tech-info {
+    font-size: 12px;
+    font-weight: 700;
+    color: #38BDF8;
+}
+
+.quick-hint {
+    font-size: 12px;
+    color: #CBD5E1;
+}
+
+/* ==========================================================================
+   4. GIAO DIỆN CHÍNH FPT PLAY BOX G2 3 CỘT (CHANNEL GUIDE OVERLAY)
+   ========================================================================== */
+.overlay-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 20;
+    background: rgba(18, 18, 18, 0.96);
+    /* backdrop blur disabled for 60fps performance */
+    display: flex;
+    flex-direction: column;
+    padding: 12px 18px 8px 18px;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Header Bar */
+.overlay-header {
+    height: 38px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0 4px;
+}
+
+.header-brand-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.brand-tv {
+    font-size: 22px;
+    font-weight: 900;
+    color: #FF6500;
+}
+
+.brand-play {
+    font-size: 22px;
+    font-weight: 900;
+    color: #FFFFFF;
+}
+
+.badge-iptv {
+    font-size: 10px;
+    font-weight: 800;
+    color: #FF6500;
+    background: #1E1E1E;
+    border: 1px solid rgba(255, 101, 0, 0.6);
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+.badge-chip {
+    font-size: 11px;
+    font-weight: 700;
+    background: #1E1E1E;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 3px 8px;
+    color: #94A3B8;
+}
+
+.badge-green {
+    color: #34D399;
+}
+
+.badge-cyan {
+    color: #38BDF8;
+}
+
+.badge-orange {
+    color: #FF6500;
+    border-color: rgba(255, 101, 0, 0.4);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.digital-clock {
+    font-size: 16px;
+    font-weight: 800;
+    color: #F8FAFC;
+    letter-spacing: 0.5px;
+}
+
+/* Thân giao diện: Sidebar + 3 Cột */
+.overlay-body {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    height: calc(100% - 78px);
+    overflow: hidden;
+}
+
+/* Panels nền chuẩn FotMob */
+.glass-panel {
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 8px;
+}
+
+.col-header-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #FF6500;
+    letter-spacing: 0.5px;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 6px;
+}
+
+.col-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 6px;
+}
+
+.col-header-row .col-header-title {
+    border-bottom: none;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+.col-header-count {
+    font-size: 12px;
+    color: #64748B;
+    font-weight: 600;
+}
+
+/* THANH SIDEBAR ĐIỀU HƯỚNG BÊN TRÁI */
+.sidebar-nav {
+    width: 68px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+    padding-top: 50px;
+}
+
+.sidebar-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #1E1E1E;
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    outline: none;
+    flex-shrink: 0;
+    transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1), background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.sidebar-btn .svg-icon {
+    width: 24px;
+    height: 24px;
+    stroke: #94A3B8;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sidebar-btn.active, .sidebar-btn:hover {
+    background: #2E2E2E;
+    border-color: #FF6500;
+}
+
+.sidebar-btn.active .svg-icon {
+    stroke: #FF6500;
+    fill: rgba(255, 101, 0, 0.2);
+}
+
+.sidebar-btn.focused {
+    background: linear-gradient(135deg, #FF6500, #FF8533);
+    border-color: #FFAA00;
+    box-shadow: 0 0 0 2px #FFAA00, 0 6px 20px rgba(255, 101, 0, 0.55);
+    transform: scale(1.05) translateZ(0);
+    -webkit-transform: scale(1.05) translateZ(0);
+    z-index: 10;
+}
+
+.sidebar-btn.focused .svg-icon {
+    stroke: #FFFFFF;
+    fill: rgba(255, 255, 255, 0.2);
+}
+
+/* Sidebar Sports Button Custom Vector Icon (Giống hệt ATV) */
+#nav-sports .svg-icon,
+.sidebar-btn .svg-nav-sports {
+    stroke: none;
+    fill: none;
+    stroke-width: 0;
+}
+#nav-sports .sports-ball-arc,
+.sidebar-btn .svg-nav-sports .sports-ball-arc {
+    stroke: #94A3B8;
+    stroke-width: 0.8px;
+    fill: none;
+    transition: stroke 0.2s ease;
+}
+#nav-sports .sports-ball-facets,
+#nav-sports .sports-live-badge,
+.sidebar-btn .svg-nav-sports .sports-ball-facets,
+.sidebar-btn .svg-nav-sports .sports-live-badge {
+    fill: #94A3B8;
+    stroke: none;
+    transition: fill 0.2s ease;
+}
+#nav-sports.active .sports-ball-arc,
+.sidebar-btn.active .svg-nav-sports .sports-ball-arc {
+    stroke: #FFFFFF;
+}
+#nav-sports.active .sports-ball-facets,
+#nav-sports.active .sports-live-badge,
+.sidebar-btn.active .svg-nav-sports .sports-ball-facets,
+.sidebar-btn.active .svg-nav-sports .sports-live-badge {
+    fill: #FFFFFF;
+}
+#nav-sports.focused .sports-ball-arc,
+.sidebar-btn.focused .svg-nav-sports .sports-ball-arc {
+    stroke: #FFFFFF;
+}
+#nav-sports.focused .sports-ball-facets,
+#nav-sports.focused .sports-live-badge,
+.sidebar-btn.focused .svg-nav-sports .sports-ball-facets,
+.sidebar-btn.focused .svg-nav-sports .sports-live-badge {
+    fill: #FFFFFF;
+}
+
+/* CỘT 1: DANH MỤC (Categories 210px) */
+.col-categories {
+    width: 210px;
+    height: 100%;
+}
+
+.categories-list {
+    list-style: none;
+    overflow-y: auto;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 2px;
+}
+
+.cat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #CBD5E1;
+    background: #1E1E1E;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.3, 1), background-color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.cat-item-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.cat-item-count {
+    font-size: 11px;
+    color: #64748B;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+}
+
+.cat-item.selected {
+    background: #2E2E2E;
+    border: 1.5px solid #FF6500;
+    color: #FF8533;
+}
+
+.cat-item.focused {
+    background: linear-gradient(90deg, #FF6500, #FF8533);
+    color: #FFFFFF;
+    border-color: #FFAA00;
+    box-shadow: 0 4px 14px rgba(255, 101, 0, 0.5);
+    transform: scale(1.025) translateZ(0);
+    -webkit-transform: scale(1.025) translateZ(0);
+}
+
+.cat-item.focused .cat-item-count {
+    color: #FFFFFF;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* CỘT 2: DANH SÁCH KÊNH (Channel List - 1 Cột dọc rộng rãi) */
+.col-channels {
+    flex: 1;
+    height: 100%;
+    overflow-x: hidden !important;
+}
+
+.channels-list {
+    list-style: none;
+    overflow-y: auto;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 2px;
+}
+
+.ch-card {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 50px;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: #1E1E1E;
+    border: 1px solid #1E1E1E;
+    border-right: 7px solid transparent;
+    color: #F8FAFC;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1), background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.ch-card-num {
+    width: 30px;
+    min-width: 30px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: #94A3B8;
+}
+
+.ch-card-logo {
+    width: 38px;
+    height: 28px;
+    object-fit: contain;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+    margin: 0 10px 0 6px;
+    padding: 2px;
+}
+
+.ch-card-name {
+    flex: 1;
+    min-width: 0 !important;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #F8FAFC;
+    margin-right: 8px;
+}
+
+.badge-fhd {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #1E293B;
+    color: #38BDF8;
+    margin-right: 6px;
+}
+
+.badge-sources-count {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 101, 0, 0.2);
+    border: 1px solid #FF6500;
+    color: #FF8533;
+    margin-right: 6px;
+}
+
+.badge-live-playing {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #EF4444;
+    color: #FFFFFF;
+    margin-right: 6px;
+    letter-spacing: 0.5px;
+}
+
+.star-fav {
+    color: #F59E0B;
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+.ch-card.playing {
+    background: #2C2C2C;
+    border: 2px solid #FF6500;
+}
+
+/* ====================================================================
+   TRẠNG THÁI FOCUS HÀNG KÊNH CHUẨN FPT PLAY BOX G2:
+   - NỀN TRẮNG SÁNG #F1F3F5
+   - CHỮ ĐEN ĐẬM #111827
+   - VẠCH ĐỨNG CAM #FF6500 DÀY 7px Ở MÉP PHẢI
+   ==================================================================== */
+.ch-card.focused {
+    background: #F1F3F5 !important;
+    border: 1px solid #F1F3F5 !important;
+    border-right: 7px solid #FF6500 !important;
+    color: #111827 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+    transform: scale(1.015) translateZ(0);
+    -webkit-transform: scale(1.015) translateZ(0);
+    z-index: 5;
+}
+
+.ch-card.focused .ch-card-num,
+.ch-card.focused .ch-card-name {
+    color: #111827 !important;
+}
+
+.ch-card.focused .badge-fhd {
+    background: #0284C7;
+    color: #FFFFFF;
+}
+
+.ch-card.focused .badge-sources-count {
+    background: #FF6500;
+    color: #FFFFFF;
+}
+
+/* CỘT 3: SPOTLIGHT / EPG LỊCH PHÁT SÓNG & CHI TIẾT TRẬN ĐẤU (280px) */
+.col-spotlight {
+    width: 280px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.spotlight-logo-box {
+    height: 76px;
+    background: #161616;
+    border-radius: 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.spotlight-logo {
+    max-width: 110px;
+    max-height: 54px;
+    object-fit: contain;
+}
+
+.badge-live {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #EF4444;
+    color: #FFFFFF;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.spotlight-channel-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #F8FAFC;
+    margin-top: 8px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.spotlight-tags-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 8px;
+}
+
+.tag-now-playing {
+    font-size: 10px;
+    font-weight: 700;
+    color: #34D399;
+}
+
+.spotlight-epg-box {
+    flex: 1;
+    background: #161616;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    overflow: hidden;
+}
+
+.epg-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 6px;
+}
+
+.epg-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #FF6500;
+}
+
+.epg-source {
+    font-size: 9px;
+    color: #64748B;
+}
+
+.epg-timeline {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.epg-item {
+    background: #1E1E1E;
+    border-radius: 6px;
+    padding: 6px 8px;
+    border-left: 3px solid transparent;
+}
+
+.epg-item.current {
+    border-left-color: #FF6500;
+    background: #252525;
+}
+
+.epg-time {
+    font-size: 11px;
+    font-weight: 700;
+    color: #FF8533;
+    margin-bottom: 2px;
+}
+
+.epg-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E2E8F0;
+    line-height: 1.3;
+}
+
+.match-info-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px;
+}
+
+.match-league {
+    font-size: 11px;
+    font-weight: 800;
+    color: #38BDF8;
+    text-transform: uppercase;
+}
+
+.match-time-badge {
+    font-size: 12px;
+    font-weight: 800;
+    color: #FF6500;
+    background: rgba(255, 101, 0, 0.15);
+    padding: 4px 8px;
+    border-radius: 6px;
+    align-self: flex-start;
+}
+
+.match-sources-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94A3B8;
+    margin-top: 4px;
+}
+
+.match-source-chip {
+    height: 52px;
+    min-height: 52px;
+    max-height: 52px;
+    box-sizing: border-box;
+    background: #252525;
+    padding: 6px 12px;
+    border-radius: 8px;
+    color: #F8FAFC;
+    margin-bottom: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 5px solid transparent !important;
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.match-source-chip.focused, .match-source-chip:hover {
+    background: #F1F3F5 !important;
+    color: #111827 !important;
+    border-color: #F1F3F5 !important;
+    border-right: 5px solid #FF6500 !important;
+    box-shadow: 0 4px 12px rgba(255, 101, 0, 0.35);
+    transform: none !important;
+}
+
+.match-source-chip.focused .match-source-text {
+    color: #111827 !important;
+}
+
+.match-source-chip .match-source-icon {
+    font-size: 11px;
+    color: #FF6500;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.match-source-chip .match-source-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: #F8FAFC;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+/* ==========================================
+   5. FOOTER BAR HƯỚNG DẪN ĐIỀU KHIỂN
+   ========================================== */
+.overlay-footer {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 4px;
+    margin-top: 6px;
+}
+
+.nav-hint {
+    font-size: 12px;
+    color: #94A3B8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.key-pill {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+
+.red-pill {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #EF4444;
+    color: #EF4444;
+}
+
+/* ==========================================================================
+   6. MODAL DIALOGS (MATCH SOURCES & SETTINGS)
+   ========================================================================== */
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.85);
+    /* backdrop blur disabled for 60fps performance */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-card {
+    background: #1E1E1E;
+    border: 1.5px solid #FF6500;
+    border-radius: 16px;
+    width: 680px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 16px 20px;
+    background: #252525;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+
+.modal-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: #FF8533;
+    margin-top: 2px;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-footer {
+    padding: 10px 20px;
+    background: #181818;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 12px;
+    color: #94A3B8;
+    text-align: right;
+}
+
+/* Match sources list */
+.match-sources-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.source-item {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: #282828;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.source-num {
+    font-size: 14px;
+    font-weight: 800;
+    color: #94A3B8;
+    width: 28px;
+}
+
+.source-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #0284C7;
+    color: #FFFFFF;
+    margin-right: 10px;
+}
+
+.source-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: #FFFFFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.source-item.focused {
+    background: #F1F3F5 !important;
+    color: #111827 !important;
+    border-right: 5px solid #FF6500 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transform: none !important;
+}
+
+.source-item.focused .source-num,
+.source-item.focused .source-name {
+    color: #111827 !important;
+}
+
+.source-item.playing:not(.focused) {
+    background: rgba(255, 101, 0, 0.18) !important;
+    border-color: #FF6500 !important;
+}
+
+.source-item.playing:not(.focused) .source-name {
+    color: #FF8A3D !important;
+    font-weight: 700;
+}
+
+.source-item .badge-live-playing {
+    margin-left: auto;
+    background: #FF6500;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+/* Quick Playlist Modal */
+.quick-playlist-card {
+    width: 620px;
+    background: #1E1E1E;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+}
+
+.quick-playlists-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.quick-playlist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #282828;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.quick-playlist-item.active {
+    border-color: #FF6500;
+}
+
+.quick-playlist-item.focused, .quick-playlist-item:hover {
+    background: #F1F3F5 !important;
+    color: #111827 !important;
+    border-right: 5px solid #FF6500 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.quick-playlist-item.focused .quick-pl-radio,
+.quick-playlist-item.focused .quick-pl-name,
+.quick-playlist-item.focused .quick-pl-url,
+.quick-playlist-item.focused .quick-pl-badge {
+    color: #111827 !important;
+}
+
+.quick-pl-radio {
+    font-size: 18px;
+    color: #94A3B8;
+    width: 24px;
+    text-align: center;
+}
+
+.quick-playlist-item.active .quick-pl-radio {
+    color: #FF6500;
+}
+
+.quick-pl-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.quick-pl-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #F8FAFC;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quick-playlist-item.active .quick-pl-name {
+    color: #FF6500;
+}
+
+.quick-pl-url {
+    font-size: 12px;
+    color: #94A3B8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.quick-pl-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255, 101, 0, 0.2);
+    color: #FF6500;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.quick-playlist-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 20px;
+    background: #181818;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0 0 14px 14px;
+}
+
+/* Settings modal styles */
+.settings-card {
+    width: 820px;
+}
+
+.settings-body {
+    gap: 16px;
+}
+
+.settings-section {
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #FF6500;
+    letter-spacing: 0.5px;
+}
+
+.section-desc {
+    font-size: 12px;
+    color: #94A3B8;
+    line-height: 1.4;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.text-input {
+    flex: 1;
+    height: 38px;
+    background: #181818;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 0 12px;
+    color: #FFFFFF;
+    font-size: 13px;
+    outline: none;
+}
+
+.text-input:focus, .text-input.focused {
+    border-color: #FF6500 !important;
+    box-shadow: 0 0 12px rgba(255, 101, 0, 0.45) !important;
+    background: #24242A !important;
+}
+
+.action-btn {
+    height: 38px;
+    padding: 0 16px;
+    background: #2E2E2E;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.action-btn:hover, .action-btn.focused {
+    background: #FF6500;
+    border-color: #FFAA00;
+    color: #FFFFFF;
+}
+
+.btn-orange {
+    background: #FF6500;
+    border-color: #FF8533;
+}
+
+.btn-secondary {
+    background: #334155;
+}
+
+.btn-danger {
+    background: #DC2626;
+    border-color: #EF4444;
+}
+
+.btn-danger:hover, .btn-danger.focused {
+    background: #EF4444;
+    border-color: #F87171;
+}
+
+.settings-card input:focus, .settings-card input.focused,
+.settings-card button:focus, .settings-card button.focused {
+    outline: none;
+    border-color: #FF6500 !important;
+    box-shadow: 0 0 14px rgba(255, 101, 0, 0.7) !important;
+    transform: scale(1.02);
+}
+
+.playlists-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.playlist-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1C1C1C;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.playlist-entry.active {
+    border-color: #FF6500;
+    background: rgba(255, 101, 0, 0.1);
+}
+
+.playlist-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.playlist-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.playlist-url {
+    font-size: 11px;
+    color: #64748B;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.add-playlist-box {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.update-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1C1C1C;
+    padding: 12px 14px;
+    border-radius: 8px;
+}
+
+.text-highlight {
+    color: #34D399;
+    font-weight: 800;
+}
+
+.text-muted {
+    font-size: 12px;
+    color: #94A3B8;
+}
+
+.btn-group {
+    display: flex;
+    gap: 8px;
+}
+
+/* ==========================================
+   7. TOAST MESSAGE
+   ========================================== */
+.toast {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18, 18, 18, 0.95);
+    border: 1.5px solid #FF6500;
+    border-radius: 24px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #F8FAFC;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+    z-index: 60;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Triệt tiêu hoàn toàn mọi thanh cuộn (cả dọc và ngang) trên toàn bộ ứng dụng TV */
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+    width: 0px !important;
+    height: 0px !important;
+    display: none !important;
+    background: transparent !important;
+}
+
+::-webkit-scrollbar:horizontal,
+*::-webkit-scrollbar:horizontal,
+::-webkit-scrollbar:vertical,
+*::-webkit-scrollbar:vertical {
+    display: none !important;
+    height: 0px !important;
+    width: 0px !important;
+    background: transparent !important;
+    -webkit-appearance: none !important;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-corner {
+    display: none !important;
+    background: transparent !important;
+}
+
+/* ==========================================================================
+   8. GIAO DIỆN PHÓNG TO 1.5 LẦN DÀNH CHO TV SAMSUNG (1080p & 4K UHD)
+   Tự động kích hoạt trên TV (>=1400px rộng hoặc >=800px cao) để giao diện to rõ,
+   dễ đọc từ khoảng cách sofa 3 mét
+   ========================================================================== */
+@media (min-width: 1400px), (min-height: 800px) {
+    .overlay-container {
+        padding: 16px 28px 12px 28px;
+    }
+
+    .overlay-header {
+        height: 56px;
+        margin-bottom: 12px;
+    }
+
+    .brand-tv, .brand-play {
+        font-size: 32px;
+    }
+
+    .badge-iptv {
+        font-size: 13px;
+        padding: 3px 8px;
+    }
+
+    .badge-chip {
+        font-size: 15px;
+        padding: 5px 12px;
+        border-radius: 8px;
+    }
+
+    .digital-clock {
+        font-size: 24px;
+    }
+
+    .overlay-body {
+        height: calc(100% - 116px);
+        gap: 12px;
+    }
+
+    .glass-panel {
+        border-radius: 14px;
+        padding: 12px;
+    }
+
+    .sidebar-nav {
+        width: 76px;
+        gap: 38px;
+        padding-top: 54px;
+    }
+
+    .sidebar-btn {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        flex-shrink: 0;
+    }
+
+    .sidebar-btn .svg-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .col-categories {
+        width: 300px;
+    }
+
+    .col-header-title {
+        font-size: 18px;
+        padding: 10px 14px;
+    }
+
+    .col-header-row .col-header-title {
+        font-size: 18px;
+    }
+
+    .col-header-count {
+        font-size: 16px;
+    }
+
+    .cat-item {
+        padding: 13px 16px;
+        font-size: 18px;
+        border-radius: 10px;
+    }
+
+    .cat-item-count {
+        font-size: 15px;
+        padding: 3px 10px;
+        border-radius: 8px;
+    }
+
+    .ch-card {
+        height: 72px;
+        min-height: 72px;
+        padding: 0 16px;
+        border-radius: 12px;
+        gap: 6px;
+    }
+
+    .ch-card-num {
+        font-size: 20px;
+        width: 44px;
+        min-width: 44px;
+    }
+
+    .ch-card-logo {
+        width: 58px;
+        height: 42px;
+        border-radius: 8px;
+        margin: 0 14px 0 8px;
+    }
+
+    .ch-card-name {
+        font-size: 20px;
+    }
+
+    .badge-fhd, .badge-sources-count, .badge-live-playing {
+        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
+
+    .star-fav {
+        font-size: 20px;
+    }
+
+    .col-spotlight {
+        width: 420px;
+    }
+
+    .spotlight-logo-box {
+        height: 110px;
+    }
+
+    .spotlight-logo {
+        max-width: 160px;
+        max-height: 80px;
+    }
+
+    .spotlight-channel-name {
+        font-size: 24px;
+    }
+
+    .spotlight-tags {
+        font-size: 15px;
+        gap: 8px;
+    }
+
+    .epg-section-header {
+        font-size: 16px;
+        padding: 8px 12px;
+    }
+
+    .epg-title {
+        font-size: 16px;
+    }
+
+    .epg-timeline {
+        gap: 8px;
+    }
+
+    .epg-item {
+        padding: 10px 14px;
+        border-radius: 8px;
+    }
+
+    .epg-time {
+        font-size: 15px;
+    }
+
+    .epg-name {
+        font-size: 17px;
+    }
+
+    .overlay-footer {
+        height: 42px;
+        gap: 24px;
+        margin-top: 8px;
+    }
+
+    .nav-hint {
+        font-size: 15px;
+        gap: 8px;
+    }
+
+    .key-pill {
+        font-size: 14px;
+        padding: 3px 9px;
+        border-radius: 6px;
+    }
+
+    .quick-banner {
+        bottom: 35px;
+        left: 40px;
+        right: 40px;
+        border-radius: 18px;
+        padding: 18px 30px;
+    }
+
+    .quick-num {
+        font-size: 36px;
+        width: 46px;
+    }
+
+    .quick-logo {
+        width: 64px;
+        height: 46px;
+    }
+
+    .quick-name {
+        font-size: 28px;
+    }
+
+    .quick-program {
+        font-size: 22px;
+        margin: 8px 0;
+    }
+
+    .quick-tech-info, .quick-hint {
+        font-size: 17px;
+    }
+
+    .modal-card {
+        width: 980px;
+        max-width: 92vw;
+    }
+
+    .modal-title {
+        font-size: 24px;
+    }
+
+    .modal-subtitle {
+        font-size: 16px;
+    }
+
+    .modal-body {
+        padding: 20px 28px;
+        gap: 12px;
+        font-size: 17px;
+    }
+
+    .source-item {
+        height: 68px;
+        font-size: 19px;
+        padding: 0 18px;
+    }
+
+    .source-name {
+        font-size: 19px;
+    }
+
+    .match-source-chip {
+        height: 74px;
+        min-height: 74px;
+        max-height: 74px;
+        padding: 10px 18px;
+        border-radius: 12px;
+        margin-bottom: 8px;
+    }
+
+    .match-source-chip .match-source-text {
+        font-size: 18px;
+        line-height: 1.35;
+    }
+
+    .match-source-chip .match-source-icon {
+        font-size: 16px;
+    }
+
+    .form-input {
+        height: 52px;
+        font-size: 18px;
+        padding: 0 16px;
+    }
+
+    .action-btn {
+        height: 52px;
+        font-size: 17px;
+        padding: 0 24px;
+    }
+    /* Standings Bảng xếp hạng trên TV 1080p */
+    .spotlight-standings-box {
+        padding: 10px 14px;
+        border-radius: 14px;
+        margin-top: 10px;
+    }
+
+    .epg-box-header .epg-title {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
+    .epg-box-header .epg-source {
+        font-size: 14px;
+    }
+
+    .standings-table-header {
+        font-size: 16px;
+        font-weight: 800;
+        padding: 10px 6px;
+        color: #E2E8F0;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .standings-table-header .st-col-rank {
+        width: 36px;
+        font-size: 16px;
+    }
+
+    .standings-table-header .st-col-team {
+        margin-left: 10px;
+        font-size: 16px;
+    }
+
+    .standings-table-header .st-col-played {
+        width: 46px;
+        font-size: 16px;
+    }
+
+    .standings-table-header .st-col-pts {
+        width: 50px;
+        font-size: 16px;
+        color: #FF6500;
+    }
+
+    .standings-list-scroll {
+        gap: 4px;
+        padding-top: 8px;
+    }
+
+    .standing-row {
+        height: 44px;
+        min-height: 44px;
+        font-size: 18px;
+        font-weight: 600;
+        padding: 0 10px;
+        border-radius: 8px;
+    }
+
+    .standing-row.highlight {
+        background: rgba(255, 101, 0, 0.28);
+        border: 2px solid #FF6500;
+        color: #FFFFFF;
+        font-weight: 800;
+        box-shadow: 0 0 14px rgba(255, 101, 0, 0.35);
+    }
+
+    .standing-row .st-col-rank {
+        width: 36px;
+        font-size: 17px;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .standing-row .st-logo {
+        width: 28px;
+        height: 28px;
+        object-fit: contain;
+        margin-right: 10px;
+        margin-left: 2px;
+    }
+
+    .standing-row .st-col-team {
+        flex: 1;
+        font-size: 18px;
+        font-weight: 600;
+        margin-left: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .standing-row .st-col-played {
+        width: 46px;
+        text-align: center;
+        font-size: 17px;
+    }
+
+    .standing-row .st-col-pts {
+        width: 50px;
+        text-align: center;
+        font-size: 19px;
+        font-weight: 800;
+        color: #FF6500;
+    }
+}
+/* ==========================================
+   BẢNG XẾP HẠNG STANDINGS & CHIP NGUỒN PHÁT
+   ========================================== */
+.spotlight-sources-container {
+    margin-top: 8px;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sources-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #FF6500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.spotlight-sources-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 85px;
+    overflow-y: auto;
+}
+
+.src-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #F8FAFC;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.src-chip-btn:hover, .src-chip-btn.focused {
+    background: #F1F3F5 !important;
+    color: #111827 !important;
+    border-color: #FF6500 !important;
+    box-shadow: 0 2px 8px rgba(255, 101, 0, 0.4);
+}
+
+.src-chip-btn.active {
+    background: rgba(255, 101, 0, 0.2);
+    border-color: #FF6500;
+    color: #FF8533;
+}
+
+.spotlight-standings-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.standings-table-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 4px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #94A3B8;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.12);
+    text-transform: uppercase;
+}
+
+.st-col-rank {
+    width: 28px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.st-col-team {
+    flex: 1;
+    margin-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.st-col-played {
+    width: 34px;
+    text-align: center;
+}
+
+.st-col-pts {
+    width: 38px;
+    text-align: center;
+    color: #FF6500;
+    font-weight: 800;
+}
+
+.standings-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 4px;
+}
+
+.standing-row {
+    height: 34px;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 14px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.1s ease;
+}
+
+.standing-row.highlight {
+    background: rgba(255, 101, 0, 0.22);
+    border: 1.5px solid #FF6500;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.standing-row .st-logo {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    margin-right: 6px;
+    margin-left: 2px;
+}

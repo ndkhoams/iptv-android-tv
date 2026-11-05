@@ -95,9 +95,12 @@ class SportsStandingsManager(private val context: Context) {
             } catch (e: Exception) {}
         }
 
-        // 2. Nếu chưa có trên đĩa, tải thethao-data.json từ GitHub / CDN
+        // 2. Nếu chưa có trên đĩa, tải thethao-data.json (ưu tiên Armbian Hub nội bộ 10.0.0.222:8080)
         try {
-            val dataUrls = GitHubCdnHelper.buildFallbackUrls("https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now")
+            val dataUrls = mutableListOf<String>().apply {
+                add("http://10.0.0.222:8080/data/thethao-data.json?_ts=$now")
+                addAll(GitHubCdnHelper.buildFallbackUrls("https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now"))
+            }
             for (u in dataUrls) {
                 try {
                     val req = Request.Builder()

@@ -49,22 +49,15 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
 
-def is_port_bindable(port, host='0.0.0.0'):
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((host, port))
-            return True
-    except (OSError, PermissionError):
-        return False
-
-def find_available_port(start=8150, host='0.0.0.0', max_tries=100):
-    p = start
-    for _ in range(max_tries):
-        if is_port_bindable(p, host):
-            return p
-        p += 1
-    return start
+def bind_server(start=8150, max_tries=100):
+    for host in ['127.0.0.1', '0.0.0.0']:
+        for port in range(start, start + max_tries):
+            try:
+                server = HTTPServer((host, port), CORSRequestHandler)
+                return server, host, port
+            except (OSError, PermissionError):
+                continue
+    raise RuntimeError("Khong the bind vao bat ky cong nao tu 8150 tro len. Vui long kiem tra Windows Defender hoac tat phan mem dang dung port.")
 
 def get_browser_cmd(url):
     chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -91,14 +84,11 @@ def get_browser_cmd(url):
         return ["start", url]
 
 def main():
-    host = '0.0.0.0'
-    port = find_available_port(8150, host)
     try:
-        server = HTTPServer((host, port), CORSRequestHandler)
-    except (OSError, PermissionError):
-        host = '127.0.0.1'
-        port = find_available_port(8150, host)
-        server = HTTPServer((host, port), CORSRequestHandler)
+        server, host, port = bind_server(8150, 100)
+    except Exception as e:
+        print(f"\n[LOI PORT] {e}")
+        return
     
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()

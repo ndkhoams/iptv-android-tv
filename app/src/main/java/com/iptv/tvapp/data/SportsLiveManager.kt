@@ -1212,8 +1212,11 @@ class SportsLiveManager(private val context: Context) {
             .build()
 
         // 1. Tải thethao-data.json (chứa sẵn live_events, source_groups, fixtures, standings do Armbian tính toán)
-        // Tự động phân giải danh sách CDN dự phòng (Fastly -> jsDelivr -> Statically -> URL gốc)
-        val dataUrls = GitHubCdnHelper.buildFallbackUrls("https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now")
+        // Ưu tiên số 1: Máy chủ nội bộ Armbian Hub (10.0.0.222:8080) siêu tốc (< 2ms) giống Samsung Tizen TV
+        val dataUrls = mutableListOf<String>().apply {
+            add("http://10.0.0.222:8080/data/thethao-data.json?_ts=$now")
+            addAll(GitHubCdnHelper.buildFallbackUrls("https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json?_ts=$now"))
+        }
 
         val dataTempFile = File(context.cacheDir, "thethao_data_cache.tmp")
         for (u in dataUrls) {
@@ -1242,9 +1245,12 @@ class SportsLiveManager(private val context: Context) {
             }
         }
 
-        // 2. Nếu không tải được thethao-data.json, mới fallback tải thethao.m3u
+        // 2. Nếu không tải được thethao-data.json, mới fallback tải thethao.m3u (ưu tiên Armbian Hub nội bộ)
         val timestampedBaseUrl = if (baseSportsUrl.contains("?")) "$baseSportsUrl&_ts=$now" else "$baseSportsUrl?_ts=$now"
-        val m3uUrls = GitHubCdnHelper.buildFallbackUrls(timestampedBaseUrl)
+        val m3uUrls = mutableListOf<String>().apply {
+            add("http://10.0.0.222:8080/data/thethao.m3u?_ts=$now")
+            addAll(GitHubCdnHelper.buildFallbackUrls(timestampedBaseUrl))
+        }
         val m3uTempFile = File(context.cacheDir, "thethao_sports_cache.tmp")
         for (u in m3uUrls) {
             try {

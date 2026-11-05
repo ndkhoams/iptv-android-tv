@@ -25,3 +25,7 @@ scratch/
 .antigravity_chat_sync/
 
 *.bat
+
+backup_armbian*/
+*.tar.gz
+*.tar.zst

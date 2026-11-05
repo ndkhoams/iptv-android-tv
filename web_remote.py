@@ -1050,7 +1050,7 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
             with state_lock:
                 now = time.time()
                 # Consider connected if last report was within 15 seconds
-                is_connected = (now - current_tv_state.get("lastSeen", 0)) < 15
+                is_connected = (now - current_tv_state.get("lastSeen", 0)) < 35
                 resp_data = dict(current_tv_state)
                 resp_data["tvConnected"] = is_connected
             

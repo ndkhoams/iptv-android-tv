@@ -1,7 +1,7 @@
 {
-    "version": "2.2.7",
-    "versionCode": 227,
-    "releaseDate": "2026-11-03",
-    "changelog": "Tối ưu giao diện Tizen TV: Bỏ khối nguồn phát thừa ở cột thông tin phải, hiển thị tên trận đấu ngắn gọn 2 đội, phóng to chữ bảng xếp hạng standings rõ nét trên TV 55 inch.",
+    "version": "2.2.10",
+    "versionCode": 228,
+    "releaseDate": "2026-11-04",
+    "changelog": "Sửa nhận định giờ thi đấu Champions League, giãn rộng khoảng cách icon sidebar menu trái không đè viền, tối ưu phản hồi D-Pad 60 FPS mượt như Apple TV.",
     "downloadUrl": "http://10.0.0.222:8080/data/TVplay.wgt"
 }
