@@ -11,18 +11,12 @@ android {
         applicationId "com.iptv.tvapp"
         minSdk 21
         targetSdk 34
-        versionCode 74
-        versionName "2.1.16"
+        versionCode 75
+        versionName "2.1.17"
 
-        multiDexEnabled true
+        multiDexEnabled false
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        // Chỉ đóng gói kiến trúc ARM cho Android TV (armeabi-v7a cho Mi Box 3c/box 32-bit, arm64-v8a cho box 64-bit)
-        // Loại bỏ hoàn toàn x86/x86_64 giúp giảm hơn 50MB dung lượng APK (từ ~97MB xuống còn ~45MB)
-        ndk {
-            abiFilters "armeabi-v7a", "arm64-v8a"
-        }
     }
 
     packaging {
@@ -53,10 +47,14 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.tvAppSign
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         release {
             signingConfig signingConfigs.tvAppSign
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -87,17 +85,14 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
-    implementation 'androidx.multidex:multidex:2.0.1'
 
     // Leanback support for Android TV
     implementation 'androidx.leanback:leanback:1.0.0'
 
-    // LibVLC for deinterlacing live TV & IPTV (Khử hoàn toàn xé hình/răng cưa 1080i)
-    implementation 'org.videolan.android:libvlc-all:3.5.1'
-
-    // ExoPlayer (Support Android 5.0+, API 21)
+    // ExoPlayer (Support Android 5.0+, API 21, HLS, DASH, RTSP, ClearKey DRM)
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.19.1'
+    implementation 'com.google.android.exoplayer:exoplayer-dash:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
 
     // Kotlin Coroutines

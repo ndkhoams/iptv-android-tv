@@ -198,15 +198,10 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getString(KEY_DEFAULT_STARTUP_NAME, null)
         set(value) = prefs.edit().putString(KEY_DEFAULT_STARTUP_NAME, value).apply()
 
-    // Trình phát video: VLC hoặc EXOPLAYER
-    // Mặc định: VLC tối ưu phần cứng cho Android TV thật; ExoPlayer cho máy ảo giả lập (LDPlayer/BlueStacks)
+    // Trình phát video: ExoPlayer thuần SurfaceView tối ưu giải mã phần cứng cho Android TV & Mi Box 3c
     var playerEngine: String
-        get() {
-            val defaultEngine = if (com.iptv.tvapp.util.DeviceUtils.isEmulator) ENGINE_EXOPLAYER else ENGINE_VLC
-            val v = prefs.getString(KEY_PLAYER_ENGINE, defaultEngine) ?: defaultEngine
-            return if (v == ENGINE_EXOPLAYER) ENGINE_EXOPLAYER else ENGINE_VLC
-        }
-        set(value) = prefs.edit().putString(KEY_PLAYER_ENGINE, value).apply()
+        get() = ENGINE_EXOPLAYER
+        set(value) = prefs.edit().putString(KEY_PLAYER_ENGINE, ENGINE_EXOPLAYER).apply()
 
     // Thuật toán khử xé hình / deinterlace cho luồng 1080i (Mặc định: yadif - sắc nét như PC)
     var deinterlaceMode: String

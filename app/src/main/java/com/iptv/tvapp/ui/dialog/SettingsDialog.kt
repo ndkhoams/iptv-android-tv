@@ -166,18 +166,22 @@ class SettingsDialog(
         window?.let { w ->
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             w.setBackgroundDrawableResource(R.color.fpt_bg_dark)
-            w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
     }
 
     private fun showSoftKeyboard(view: View) {
+        view.isFocusableInTouchMode = true
         view.requestFocus()
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(view, InputMethodManager.SHOW_FORCED)
+        imm?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
     }
 
     private fun initFocusNavigation() {
-        // Khắc phục bẫy focus của bàn phím TV trên trường nhập văn bản
+        // Khắc phục bẫy focus của bàn phím TV: chỉ mở khi người dùng bấm OK/Enter
+        binding.etNewPlaylistName.setOnFocusChangeListener { v, hasFocus ->
+            if (!hasFocus) v.isFocusableInTouchMode = false
+        }
         binding.etNewPlaylistName.setOnKeyListener { v, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
@@ -205,6 +209,9 @@ class SettingsDialog(
             showSoftKeyboard(v)
         }
 
+        binding.etNewPlaylistUrl.setOnFocusChangeListener { v, hasFocus ->
+            if (!hasFocus) v.isFocusableInTouchMode = false
+        }
         binding.etNewPlaylistUrl.setOnKeyListener { v, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (keyCode) {
@@ -336,11 +343,13 @@ class SettingsDialog(
     private fun initUdpxySettings() {
         binding.etUdpxyServer.setText(prefs.udpxyServer)
 
-        binding.etUdpxyServer.setOnFocusChangeListener { _, hasFocus ->
+        binding.etUdpxyServer.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
                 binding.scrollViewSettingsLeft.post {
                     binding.scrollViewSettingsLeft.smoothScrollTo(0, binding.layoutUdpxySection.top)
                 }
+            } else {
+                v.isFocusableInTouchMode = false
             }
         }
         binding.etUdpxyServer.setOnClickListener { v ->
@@ -397,20 +406,11 @@ class SettingsDialog(
     }
 
     private fun initPlayerEngineSettings() {
-        if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
-            binding.rbPlayerExo.isChecked = true
-        } else {
-            binding.rbPlayerVlc.isChecked = true
-        }
+        binding.rbPlayerVlc.isChecked = true
     }
 
     private fun initDeinterlaceSettings() {
-        when (prefs.deinterlaceMode) {
-            PreferencesHelper.DEINTERLACE_LINEAR -> binding.rbDeinterlaceLinear.isChecked = true
-            PreferencesHelper.DEINTERLACE_BLEND -> binding.rbDeinterlaceBlend.isChecked = true
-            PreferencesHelper.DEINTERLACE_OFF -> binding.rbDeinterlaceOff.isChecked = true
-            else -> binding.rbDeinterlaceYadif.isChecked = true
-        }
+        // Deinterlace được xử lý tự động bởi phần cứng VPU Mi Box 3c qua ExoPlayer SurfaceView
     }
 
     private fun initBootSettings() {
@@ -429,26 +429,9 @@ class SettingsDialog(
     }
 
     private fun saveSettings() {
-        val selectedEngine = if (binding.rbPlayerExo.isChecked) {
-            PreferencesHelper.ENGINE_EXOPLAYER
-        } else {
-            PreferencesHelper.ENGINE_VLC
-        }
-
+        val selectedEngine = PreferencesHelper.ENGINE_EXOPLAYER
         if (selectedEngine != prefs.playerEngine) {
             prefs.playerEngine = selectedEngine
-            hasChangedEngine = true
-        }
-
-        val selectedDeinterlace = when {
-            binding.rbDeinterlaceLinear.isChecked -> PreferencesHelper.DEINTERLACE_LINEAR
-            binding.rbDeinterlaceBlend.isChecked -> PreferencesHelper.DEINTERLACE_BLEND
-            binding.rbDeinterlaceOff.isChecked -> PreferencesHelper.DEINTERLACE_OFF
-            else -> PreferencesHelper.DEINTERLACE_YADIF
-        }
-
-        if (selectedDeinterlace != prefs.deinterlaceMode) {
-            prefs.deinterlaceMode = selectedDeinterlace
             hasChangedEngine = true
         }
 

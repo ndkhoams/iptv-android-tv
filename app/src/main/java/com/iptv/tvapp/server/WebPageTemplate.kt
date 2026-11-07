@@ -222,12 +222,8 @@ object WebPageTemplate {
             <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Lựa chọn trình phát giải mã phần cứng cho Android TV.</p>
             <div>
                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
-                    <input type="radio" name="playerEngine" value="VLC" id="engineVlc" onchange="updateDecoderSettings()">
-                    <span><strong style="color:#10b981;">LibVLC</strong> (Phần cứng MediaCodec - Mượt mà 60fps, Không xanh màn)</span>
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
-                    <input type="radio" name="playerEngine" value="EXOPLAYER" id="engineExo" onchange="updateDecoderSettings()">
-                    <span><strong>ExoPlayer</strong> (Google MediaCodec - Nhẹ máy chuẩn Android TV)</span>
+                    <input type="radio" name="playerEngine" value="EXOPLAYER" id="engineExo" checked onchange="updateDecoderSettings()">
+                    <span><strong style="color:#10b981;">ExoPlayer SurfaceView</strong> (Phần cứng VPU Mi Box 3c - Khử xé hình 1080i, Siêu nhẹ 0% CPU)</span>
                 </label>
             </div>
         </div>

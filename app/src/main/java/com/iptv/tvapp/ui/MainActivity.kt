@@ -70,10 +70,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.videolan.libvlc.LibVLC
-import org.videolan.libvlc.Media
-import org.videolan.libvlc.MediaPlayer as VlcMediaPlayer
-import org.videolan.libvlc.interfaces.IMedia
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -90,8 +86,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var standingsAdapter: StandingsAdapter
 
     private var player: ExoPlayer? = null
-    private var libVLC: LibVLC? = null
-    private var vlcPlayer: VlcMediaPlayer? = null
     private var webServer: TvWebServer? = null
     private var multicastLock: WifiManager.MulticastLock? = null
 
@@ -481,9 +475,6 @@ class MainActivity : AppCompatActivity() {
         binding.rootView.setOnClickListener {
             toggleOverlay()
         }
-        binding.vlcVideoLayout.setOnClickListener {
-            toggleOverlay()
-        }
         binding.playerView.setOnClickListener {
             toggleOverlay()
         }
@@ -517,11 +508,7 @@ class MainActivity : AppCompatActivity() {
                 refreshChannelsState()
             },
             onEngineChanged = {
-                if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-                    initVlcPlayer()
-                } else {
-                    initExoPlayer()
-                }
+                initExoPlayer()
                 applyPlayerVisibility()
                 currentPlayingChannel?.let { playChannel(it) }
             },
@@ -812,23 +799,6 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun releaseVlcPlayer() {
-        try {
-            vlcPlayer?.apply {
-                stop()
-                try {
-                    if (vlcVout.areViewsAttached()) {
-                        detachViews()
-                    }
-                } catch (e: Exception) {}
-                release()
-            }
-            vlcPlayer = null
-            libVLC?.release()
-            libVLC = null
-        } catch (e: Exception) {}
-    }
-
     private fun releaseExoPlayer() {
         try {
             binding.playerView.player = null
@@ -839,124 +809,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlayer() {
-        // Tối ưu giải phóng RAM cho Mi Box 3c (1GB): Chỉ khởi tạo duy nhất Engine được chọn, giải phóng Engine còn lại
-        if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
-            releaseVlcPlayer()
-            initExoPlayer()
-        } else {
-            releaseExoPlayer()
-            initVlcPlayer()
-        }
+        initExoPlayer()
         applyPlayerVisibility()
     }
 
     private fun applyPlayerVisibility() {
-        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            binding.vlcVideoLayout.visibility = View.VISIBLE
-            binding.playerView.visibility = View.GONE
-        } else {
-            binding.vlcVideoLayout.visibility = View.GONE
-            binding.playerView.visibility = View.VISIBLE
-        }
-    }
-
-    private fun initVlcPlayer() {
-        try {
-            try {
-                vlcPlayer?.apply {
-                    stop()
-                    try {
-                        if (vlcVout.areViewsAttached()) {
-                            detachViews()
-                        }
-                    } catch (e: Exception) {}
-                    release()
-                }
-                vlcPlayer = null
-                libVLC?.release()
-                libVLC = null
-            } catch (e: Exception) {}
-
-            val deinterlaceVal = if (prefs.deinterlaceMode != PreferencesHelper.DEINTERLACE_OFF) "1" else "0"
-            val options = arrayListOf(
-                "-vv",
-                // 1. Tối ưu bộ giải mã phần cứng cho Amlogic / Mali-450: Ưu tiên MediaCodec NDK
-                "--codec=mediacodec_ndk,mediacodec_jni,all",
-                "--avcodec-hw=any",
-                "--http-user-agent=${prefs.httpUserAgent}",
-                // 2. Chống xé hình/răng cưa phần cứng với thuật toán chọn lọc (Mặc định Yadif sắc nét như PC)
-                "--deinterlace=$deinterlaceVal",
-                "--deinterlace-mode=${prefs.deinterlaceMode}",
-                // 3. Tối ưu bộ nhớ đệm (1.5s cân bằng giữa khởi động nhanh và chống tràn đệm/khựng hình)
-                "--network-caching=1500",
-                "--live-caching=1500",
-                "--file-caching=1500",
-                // 4. Giữ toàn vẹn khung hình và đồng bộ chuẩn A/V Master Clock (loại bỏ desync và noise)
-                "--no-audio-time-stretch",
-                // 5. Bật thống kê lưu lượng để đo chính xác bitrate thời gian thực
-                "--stats",
-                "--no-video-title-show",
-                // 6. Luôn ưu tiên luồng chất lượng 1080p cao nhất trong adaptive streaming
-                "--adaptive-logic=highest",
-                "--adaptive-maxwidth=0",
-                "--adaptive-maxheight=0"
-            )
-            libVLC = LibVLC(this, options)
-            vlcPlayer = VlcMediaPlayer(libVLC).apply {
-                setEventListener { event ->
-                    runOnUiThread {
-                        when (event.type) {
-                            VlcMediaPlayer.Event.Buffering -> {
-                                // Tuyệt đối không hiện vòng xoay giữa màn hình khi đang phát luồng
-                                if (vlcPlayer?.isPlaying != true) {
-                                    binding.layoutQuickBuffering.visibility = View.VISIBLE
-                                }
-                            }
-                            VlcMediaPlayer.Event.Vout -> {
-                                if (event.voutCount > 0) {
-                                    // Khi video của kênh mới đã thực sự giải mã và xuất hình lên Surface
-                                    binding.vlcVideoLayout.visibility = View.VISIBLE
-                                    binding.layoutBuffering.visibility = View.GONE
-                                    binding.layoutQuickBuffering.visibility = View.GONE
-                                    binding.tvErrorMessage.visibility = View.GONE
-                                    updateDynamicTelemetry()
-                                }
-                            }
-                            VlcMediaPlayer.Event.Playing -> {
-                                currentMatchFallbackCount = 0
-                                binding.tvErrorMessage.visibility = View.GONE
-                                binding.layoutBuffering.visibility = View.GONE
-                                binding.layoutQuickBuffering.visibility = View.GONE
-                                updateDynamicTelemetry()
-                                // Dự phòng cho kênh chỉ có tiếng (Radio / Audio-only) không có track video
-                                binding.rootView.postDelayed({
-                                    if (vlcPlayer?.isPlaying == true) {
-                                        binding.vlcVideoLayout.visibility = View.VISIBLE
-                                        binding.layoutBuffering.visibility = View.GONE
-                                        binding.layoutQuickBuffering.visibility = View.GONE
-                                    }
-                                }, 1200L)
-                            }
-                            VlcMediaPlayer.Event.EncounteredError -> {
-                                if (!tryFallbackMatchStream("VLC Error")) {
-                                    binding.layoutBuffering.visibility = View.GONE
-                                    binding.layoutQuickBuffering.visibility = View.GONE
-                                    binding.tvErrorMessage.visibility = View.VISIBLE
-                                    val mg = currentPlayingMatchGroup
-                                    if (mg != null && mg.sources.size > 1) {
-                                        binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC.\nBấm ▶ (Phím Phải) để đổi nguồn khác (còn ${mg.sources.size - 1} nguồn)"
-                                    } else {
-                                        binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        binding.playerView.visibility = View.VISIBLE
     }
 
     private fun initExoPlayer() {
@@ -1122,7 +980,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (targetChannel != null) {
-                    binding.vlcVideoLayout.post {
+                    binding.playerView.post {
                         if (!isFinishing && !isDestroyed) {
                             playChannel(targetChannel)
                             // Tự động phát kênh mặc định ngay, ẩn giao diện cài đặt/danh mục để xem toàn màn hình
@@ -1578,7 +1436,7 @@ class MainActivity : AppCompatActivity() {
             channel.streamUrl.contains(".m3u8", ignoreCase = true) -> "HLS / CDN"
             else -> "HTTP Stream"
         }
-        val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) "ExoPlayer" else "LibVLC (MediaCodec)"
+        val engineName = "ExoPlayer (Hardware Surface)"
         binding.tvSpotlightStreamInfo.text = "Giao thức: $protocol • $engineName"
 
         // Lịch phát sóng EPG: Nếu là trận bóng đá trực tiếp, hiển thị lịch thi đấu chuyên biệt
@@ -1680,8 +1538,6 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickBufferingText.text = "Đang tải luồng..."
         binding.layoutQuickBuffering.visibility = View.VISIBLE
 
-        val isVlc = prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER
-
         // Nếu là trận đấu thể thao trực tiếp từ web (Xôi Lạc, Cà Khịa, StreamFree), giải mã link m3u8 động
         if (targetChannel.streamUrl.contains("/truc-tiep/") || targetChannel.streamUrl.startsWith("streamfree://")) {
             binding.tvQuickBufferingText.text = "Đang kết nối luồng trực tiếp..."
@@ -1691,24 +1547,15 @@ class MainActivity : AppCompatActivity() {
                     playlistManager.sportsLiveManager.resolveLiveStreamUrl(targetChannel.streamUrl)
                 }
                 if (currentPlayingChannel?.id == targetChannel.id) {
-                    val streamUriString = normalizeStreamUrl(resolved, isVlc)
-                    if (isVlc) {
-                        playWithVlc(streamUriString)
-                    } else {
-                        playWithExoPlayer(streamUriString)
-                    }
+                    val streamUriString = normalizeStreamUrl(resolved)
+                    playWithExoPlayer(streamUriString)
                 }
             }
             return
         }
 
-        val streamUriString = normalizeStreamUrl(targetChannel.streamUrl, isVlc)
-
-        if (isVlc) {
-            playWithVlc(streamUriString)
-        } else {
-            playWithExoPlayer(streamUriString)
-        }
+        val streamUriString = normalizeStreamUrl(targetChannel.streamUrl)
+        playWithExoPlayer(streamUriString)
     }
 
     private fun parseStreamUrlAndHeaders(rawUrl: String): Pair<String, Map<String, String>> {
@@ -1728,7 +1575,7 @@ class MainActivity : AppCompatActivity() {
         return Pair(cleanUrl, headersMap)
     }
 
-    private fun normalizeStreamUrl(rawUrl: String, isVlc: Boolean): String {
+    private fun normalizeStreamUrl(rawUrl: String): String {
         val (cleanUrl, headers) = parseStreamUrlAndHeaders(rawUrl)
         val trimmed = cleanUrl.trim()
         val udpxy = prefs.udpxyServer.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
@@ -1749,23 +1596,12 @@ class MainActivity : AppCompatActivity() {
             trimmed
         }
 
-        val finalClean = if (isVlc) {
-            // LibVLC chuẩn Multicast: BẮT BUỘC phải có '@' trước IP Multicast (ví dụ: udp://@225.1.2.249:30120)
-            when {
-                effectiveUrl.startsWith("udp://@", ignoreCase = true) -> effectiveUrl
-                effectiveUrl.startsWith("udp://", ignoreCase = true) -> "udp://@" + effectiveUrl.substring(6)
-                effectiveUrl.startsWith("rtp://@", ignoreCase = true) -> effectiveUrl
-                effectiveUrl.startsWith("rtp://", ignoreCase = true) -> "rtp://@" + effectiveUrl.substring(6)
-                else -> effectiveUrl
-            }
-        } else {
-            // ExoPlayer: Chuẩn Java URI không chấp nhận '@' trong host name
-            when {
-                effectiveUrl.startsWith("udp://@", ignoreCase = true) -> "udp://" + effectiveUrl.substring(7)
-                effectiveUrl.startsWith("rtp://@", ignoreCase = true) -> "udp://" + effectiveUrl.substring(7)
-                effectiveUrl.startsWith("rtp://", ignoreCase = true) -> "udp://" + effectiveUrl.substring(6)
-                else -> effectiveUrl
-            }
+        // ExoPlayer: Chuẩn Java URI không chấp nhận '@' trong host name
+        val finalClean = when {
+            effectiveUrl.startsWith("udp://@", ignoreCase = true) -> "udp://" + effectiveUrl.substring(7)
+            effectiveUrl.startsWith("rtp://@", ignoreCase = true) -> "udp://" + effectiveUrl.substring(7)
+            effectiveUrl.startsWith("rtp://", ignoreCase = true) -> "udp://" + effectiveUrl.substring(6)
+            else -> effectiveUrl
         }
 
         return if (headers.isNotEmpty()) {
@@ -1773,74 +1609,6 @@ class MainActivity : AppCompatActivity() {
             "$finalClean|$hStr"
         } else {
             finalClean
-        }
-    }
-
-    private fun playWithVlc(streamUriString: String) {
-        try {
-            player?.pause()
-            binding.playerView.visibility = View.GONE
-
-            binding.vlcVideoLayout.visibility = View.VISIBLE
-            binding.layoutQuickBuffering.visibility = View.VISIBLE
-
-            val vlc = libVLC ?: return
-            val vp = vlcPlayer ?: return
-
-            val isEmu = DeviceUtils.isEmulator
-            try {
-                if (!vp.vlcVout.areViewsAttached()) {
-                    vp.attachViews(binding.vlcVideoLayout, null, false, isEmu)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
-            val (cleanUrl, headers) = parseStreamUrlAndHeaders(streamUriString)
-            vp.stop()
-            val media = Media(vlc, Uri.parse(cleanUrl)).apply {
-                if (!isEmu) {
-                    // Tối ưu giải mã phần cứng cho Amlogic Mi Box 3c (MediaCodec NDK)
-                    setHWDecoderEnabled(true, false)
-                    addOption(":codec=mediacodec_ndk,mediacodec_jni,all")
-                    addOption(":avcodec-hw=any")
-                } else {
-                    // Trên máy ảo (LDPlayer/BlueStacks): Sử dụng Software Decoding của CPU máy tính, tránh đen màn hình
-                    setHWDecoderEnabled(false, false)
-                    addOption(":codec=all")
-                }
-
-                val userAgent = headers["User-Agent"] ?: headers["user-agent"] ?: prefs.httpUserAgent
-                addOption(":http-user-agent=$userAgent")
-
-                val referer = headers["Referer"] ?: headers["referer"]
-                if (!referer.isNullOrBlank()) {
-                    addOption(":http-referrer=$referer")
-                }
-
-                if (prefs.deinterlaceMode != PreferencesHelper.DEINTERLACE_OFF) {
-                    addOption(":deinterlace=1")
-                    addOption(":deinterlace-mode=${prefs.deinterlaceMode}")
-                } else {
-                    addOption(":deinterlace=0")
-                }
-                addOption(":network-caching=1500")
-                addOption(":live-caching=1500")
-                addOption(":file-caching=1500")
-                addOption(":no-audio-time-stretch")
-                // BẮT BUỘC LUÔN PHÁT ĐỘ PHÂN GIẢI 1080/CAO NHẤT DÙ MÀN HÌNH MÁY LÀ 720P
-                addOption(":adaptive-logic=highest")
-                addOption(":adaptive-maxwidth=0")
-                addOption(":adaptive-maxheight=0")
-            }
-            vp.media = media
-            media.release()
-            vp.play()
-        } catch (e: Exception) {
-            binding.layoutBuffering.visibility = View.GONE
-            binding.layoutQuickBuffering.visibility = View.GONE
-            binding.tvErrorMessage.visibility = View.VISIBLE
-            binding.tvErrorDetail.text = "Không thể phát qua VLC: ${e.localizedMessage}"
         }
     }
 
@@ -1969,23 +1737,8 @@ class MainActivity : AppCompatActivity() {
         lastRxBytes = currentBytes
         lastRxTime = now
 
-        // 2. Dự phòng: Kiểm tra thống kê trực tiếp từ LibVLC Media Stats nếu có
-        if (sampledMbps == 0f && prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            try {
-                vlcPlayer?.media?.let { media ->
-                    val stats = media.stats
-                    if (stats != null) {
-                        val vlcMbps = (stats.inputBitrate * 8f) / 1_000_000f
-                        if (vlcMbps in 0.1f..150.0f) {
-                            sampledMbps = vlcMbps
-                        }
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-
-        // 3. Dự phòng: Kiểm tra định dạng ExoPlayer
-        if (sampledMbps == 0f && prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) {
+        // 2. Dự phòng: Kiểm tra định dạng ExoPlayer
+        if (sampledMbps == 0f) {
             val vf = player?.videoFormat
             if (vf != null && vf.bitrate > 0) {
                 val exoMbps = vf.bitrate / 1_000_000f
@@ -1995,7 +1748,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 4. Cập nhật bitrate với bộ lọc làm mượt (Exponential Moving Average)
+        // 3. Cập nhật bitrate với bộ lọc làm mượt (Exponential Moving Average)
         if (sampledMbps > 0.1f) {
             currentMeasuredBitrateMbps = if (currentMeasuredBitrateMbps > 0.1f) {
                 currentMeasuredBitrateMbps * 0.6f + sampledMbps * 0.4f
@@ -2018,100 +1771,39 @@ class MainActivity : AppCompatActivity() {
         var aSampleRate = ""
 
         try {
-            if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-                vlcPlayer?.currentVideoTrack?.let { vt ->
-                    if (vt.width > 0) width = vt.width
-                    if (vt.height > 0) height = vt.height
-                    if (vt.frameRateDen > 0 && vt.frameRateNum > 0) {
-                        fps = Math.round(vt.frameRateNum.toFloat() / vt.frameRateDen.toFloat())
-                    }
-                    bitrateBps = vt.bitrate
-                    vCodec = when (vt.codec?.lowercase()) {
-                        "h264", "avc1" -> "H.264"
-                        "hevc", "h265" -> "H.265"
-                        "mpgv", "mp2v" -> "MPEG-2"
-                        else -> vt.codec?.uppercase() ?: "H.264"
-                    }
+            // ExoPlayer
+            player?.videoFormat?.let { vf ->
+                if (vf.width > 0) width = vf.width
+                if (vf.height > 0) height = vf.height
+                if (vf.frameRate > 0) {
+                    fps = Math.round(vf.frameRate)
                 }
-                vlcPlayer?.media?.let { media ->
-                    val trackCount = media.trackCount
-                    val curAudioId = vlcPlayer?.audioTrack ?: -1
-                    for (i in 0 until trackCount) {
-                        val track = media.getTrack(i)
-                        if (track is IMedia.VideoTrack) {
-                            if (width <= 0 && track.width > 0) width = track.width
-                            if (height <= 0 && track.height > 0) height = track.height
-                            if (fps <= 0 && track.frameRateDen > 0 && track.frameRateNum > 0) {
-                                fps = Math.round(track.frameRateNum.toFloat() / track.frameRateDen.toFloat())
-                            }
-                            if (bitrateBps <= 0 && track.bitrate > 0) bitrateBps = track.bitrate
-                            if (vCodec.isEmpty()) {
-                                vCodec = when (track.codec?.lowercase()) {
-                                    "h264", "avc1" -> "H.264"
-                                    "hevc", "h265" -> "H.265"
-                                    "mpgv", "mp2v" -> "MPEG-2"
-                                    else -> track.codec?.uppercase() ?: "H.264"
-                                }
-                            }
-                        }
-                        if (track is IMedia.AudioTrack) {
-                            if (curAudioId == -1 || track.id == curAudioId || aChannels.isEmpty()) {
-                                aChannels = when (track.channels) {
-                                    2 -> "Stereo 2.0"
-                                    6 -> "5.1 Surround"
-                                    1 -> "Mono"
-                                    else -> if (track.channels > 0) "${track.channels}.0" else "Stereo 2.0"
-                                }
-                                if (track.rate > 0) {
-                                    aSampleRate = "${track.rate / 1000}kHz"
-                                }
-                                aCodec = when (track.codec?.lowercase()) {
-                                    "mp4a", "aac" -> "AAC"
-                                    "ac3" -> "Dolby AC3"
-                                    "eac3" -> "Dolby Digital+"
-                                    "mpga" -> "MPEG Audio"
-                                    else -> track.codec?.uppercase() ?: "AAC"
-                                }
-                                if (track.id == curAudioId) break
-                            }
-                        }
-                    }
+                bitrateBps = if (vf.bitrate > 0) vf.bitrate else vf.peakBitrate
+                vCodec = when {
+                    vf.sampleMimeType?.contains("hevc", ignoreCase = true) == true -> "H.265"
+                    vf.sampleMimeType?.contains("avc", ignoreCase = true) == true -> "H.264"
+                    else -> "H.264"
                 }
-            } else {
-                // ExoPlayer
-                player?.videoFormat?.let { vf ->
-                    if (vf.width > 0) width = vf.width
-                    if (vf.height > 0) height = vf.height
-                    if (vf.frameRate > 0) {
-                        fps = Math.round(vf.frameRate)
-                    }
-                    bitrateBps = if (vf.bitrate > 0) vf.bitrate else vf.peakBitrate
-                    vCodec = when {
-                        vf.sampleMimeType?.contains("hevc", ignoreCase = true) == true -> "H.265"
-                        vf.sampleMimeType?.contains("avc", ignoreCase = true) == true -> "H.264"
-                        else -> "H.264"
-                    }
+            }
+            player?.videoSize?.let { vs ->
+                if (vs.width > 0 && width <= 0) width = vs.width
+                if (vs.height > 0 && height <= 0) height = vs.height
+            }
+            player?.audioFormat?.let { af ->
+                aChannels = when (af.channelCount) {
+                    2 -> "Stereo 2.0"
+                    6 -> "5.1 Surround"
+                    1 -> "Mono"
+                    else -> if (af.channelCount > 0) "${af.channelCount}.0" else "Stereo 2.0"
                 }
-                player?.videoSize?.let { vs ->
-                    if (vs.width > 0 && width <= 0) width = vs.width
-                    if (vs.height > 0 && height <= 0) height = vs.height
+                if (af.sampleRate > 0) {
+                    aSampleRate = "${af.sampleRate / 1000}kHz"
                 }
-                player?.audioFormat?.let { af ->
-                    aChannels = when (af.channelCount) {
-                        2 -> "Stereo 2.0"
-                        6 -> "5.1 Surround"
-                        1 -> "Mono"
-                        else -> if (af.channelCount > 0) "${af.channelCount}.0" else "Stereo 2.0"
-                    }
-                    if (af.sampleRate > 0) {
-                        aSampleRate = "${af.sampleRate / 1000}kHz"
-                    }
-                    aCodec = when {
-                        af.sampleMimeType?.contains("mp4a", ignoreCase = true) == true -> "AAC"
-                        af.sampleMimeType?.contains("ac3", ignoreCase = true) == true -> "Dolby AC3"
-                        af.sampleMimeType?.contains("eac3", ignoreCase = true) == true -> "Dolby Digital+"
-                        else -> "AAC"
-                    }
+                aCodec = when {
+                    af.sampleMimeType?.contains("mp4a", ignoreCase = true) == true -> "AAC"
+                    af.sampleMimeType?.contains("ac3", ignoreCase = true) == true -> "Dolby AC3"
+                    af.sampleMimeType?.contains("eac3", ignoreCase = true) == true -> "Dolby Digital+"
+                    else -> "AAC"
                 }
             }
         } catch (e: Exception) {
@@ -2202,21 +1894,12 @@ class MainActivity : AppCompatActivity() {
         binding.tvQuickAudioBitrate.text = "Âm thanh: $audioDetails"
 
         binding.tvSpotlightResolution.text = resBadge
-        val engineName = if (prefs.playerEngine == PreferencesHelper.ENGINE_EXOPLAYER) "ExoPlayer" else "LibVLC (MediaCodec)"
+        val engineName = "ExoPlayer (Hardware Surface)"
         binding.tvSpotlightStreamInfo.text = "$resDim • $bitrateStr • $resBadge | Âm thanh: $audioDetails | $engineName"
     }
 
     private fun playWithExoPlayer(streamUriString: String) {
         try {
-            vlcPlayer?.apply {
-                stop()
-                try {
-                    if (vlcVout.areViewsAttached()) {
-                        detachViews()
-                    }
-                } catch (e: Exception) {}
-            }
-            binding.vlcVideoLayout.visibility = View.GONE
             binding.playerView.visibility = View.VISIBLE
 
             val (cleanUrl, headers) = parseStreamUrlAndHeaders(streamUriString)
@@ -3126,9 +2809,7 @@ class MainActivity : AppCompatActivity() {
                 loadEpgData()
             }
             if (engineChanged) {
-                if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-                    initVlcPlayer()
-                }
+                initExoPlayer()
                 applyPlayerVisibility()
                 currentPlayingChannel?.let { playChannel(it) }
             }
@@ -3231,53 +2912,23 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            vlcPlayer?.let { vp ->
-                try {
-                    if (!vp.vlcVout.areViewsAttached()) {
-                        vp.attachViews(binding.vlcVideoLayout, null, false, DeviceUtils.isEmulator)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
     }
 
     override fun onResume() {
         super.onResume()
-        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            if (currentPlayingChannel != null && vlcPlayer?.isPlaying == false) {
-                vlcPlayer?.play()
-            }
-        } else {
-            if (currentPlayingChannel != null && player?.isPlaying == false) {
-                player?.play()
-            }
+        if (currentPlayingChannel != null && player?.isPlaying == false) {
+            player?.play()
         }
     }
 
     override fun onPause() {
         super.onPause()
-        vlcPlayer?.pause()
         player?.pause()
     }
 
     override fun onStop() {
         super.onStop()
         stopTelemetryUpdates()
-        if (prefs.playerEngine != PreferencesHelper.ENGINE_EXOPLAYER) {
-            vlcPlayer?.let { vp ->
-                try {
-                    vp.stop()
-                    if (vp.vlcVout.areViewsAttached()) {
-                        vp.detachViews()
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
         player?.pause()
     }
 
@@ -3462,7 +3113,6 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {}
         multicastLock = null
 
-        releaseVlcPlayer()
         releaseExoPlayer()
     }
 }
