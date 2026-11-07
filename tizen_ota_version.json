@@ -1,7 +1,7 @@
 {
-    "version": "2.2.10",
-    "versionCode": 228,
-    "releaseDate": "2026-11-04",
-    "changelog": "Sửa nhận định giờ thi đấu Champions League, giãn rộng khoảng cách icon sidebar menu trái không đè viền, tối ưu phản hồi D-Pad 60 FPS mượt như Apple TV.",
-    "downloadUrl": "http://10.0.0.222:8080/data/TVplay.wgt"
+  "version": "2.2.11",
+  "versionCode": 229,
+  "releaseDate": "2026-11-07",
+  "changelog": "Tích hợp nguồn thể thao Xôi Chè TV (xoiche.live) với bình luận viên và luồng dự phòng, bổ sung tính năng Auto-Fallback tự động chuyển luồng tiếp theo khi gặp sự cố tín hiệu.",
+  "downloadUrl": "http://10.0.0.222:8080/data/TVplay.wgt"
 }

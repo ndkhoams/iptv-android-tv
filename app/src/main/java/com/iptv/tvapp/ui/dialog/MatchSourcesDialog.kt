@@ -135,6 +135,7 @@ class MatchSourcesDialog(
                     group.contains("Giờ Vàng") || name.contains("Giờ Vàng") -> "⏰ Giờ Vàng"
                     group.contains("Sao Kê") || name.contains("Sao Kê") -> "📜 Sao Kê"
                     group.contains("Xôi Gấc") || name.contains("Xôi Gấc") -> "🍧 Xôi Gấc"
+                    group.contains("Xôi Chè") || name.contains("Xôi Chè") -> "🍧 Xôi Chè"
                     else -> group.ifBlank { "⚽ Trực tiếp" }
                 }
 

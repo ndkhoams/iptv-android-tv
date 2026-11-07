@@ -1135,7 +1135,7 @@ class SportsLiveManager(private val context: Context) {
         // 5. Xóa giờ thi đấu HH:mm
         s = s.replace(Regex("""\b\d{1,2}:\d{2}\b"""), "")
         // 6. Xóa tên nhà cung cấp / website (có hoặc không có dấu gạch ngang, có hoặc không có chữ TV)
-        s = s.replace(Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm)(?:\s+TV)?\b"""), "")
+        s = s.replace(Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm|Xôi Chè)(?:\s+TV)?\b"""), "")
         // 7. Xóa các từ phụ trợ kỹ thuật và tiền tố CLB
         s = s.replace(Regex("""(?i)\b(CLB|FC|CF|S\.S\.|AC|AS|FK|RC|CA|Stade|Olympique|Calcio|hls|geo|hd|fhd|sd|4k|live)\b\.?"""), "")
         // 8. Cắt các ký tự phân cách ở đầu và cuối chuỗi

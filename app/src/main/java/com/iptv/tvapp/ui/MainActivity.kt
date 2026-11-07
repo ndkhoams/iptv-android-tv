@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
 
     private var currentAppMode = AppMode.TV
     private var currentDisplayingLeague: String? = null
+    private var currentMatchFallbackCount = 0
     private val tvCategories = mutableListOf<Category>()
     private val sportsCategoriesList = mutableListOf<Category>()
     private val allCategories = mutableListOf<Category>()
@@ -922,6 +923,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                             VlcMediaPlayer.Event.Playing -> {
+                                currentMatchFallbackCount = 0
                                 binding.tvErrorMessage.visibility = View.GONE
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.layoutQuickBuffering.visibility = View.GONE
@@ -936,6 +938,9 @@ class MainActivity : AppCompatActivity() {
                                 }, 1200L)
                             }
                             VlcMediaPlayer.Event.EncounteredError -> {
+                                if (tryFallbackMatchStream("VLC Error")) {
+                                    return@setEventListener
+                                }
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.layoutQuickBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.VISIBLE
@@ -1014,6 +1019,7 @@ class MainActivity : AppCompatActivity() {
                                 binding.tvErrorMessage.visibility = View.GONE
                             }
                             Player.STATE_READY -> {
+                                currentMatchFallbackCount = 0
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.layoutQuickBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
@@ -1042,6 +1048,9 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
+                        if (tryFallbackMatchStream("ExoPlayer ${error.errorCodeName}")) {
+                            return
+                        }
                         binding.layoutBuffering.visibility = View.GONE
                         binding.layoutQuickBuffering.visibility = View.GONE
                         binding.tvErrorMessage.visibility = View.VISIBLE
@@ -1598,7 +1607,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun playChannel(channel: Channel) {
+        private fun tryFallbackMatchStream(errorMsg: String): Boolean {
+        val playing = currentPlayingChannel ?: return false
+        val isSports = (currentAppMode == AppMode.SPORTS)
+        if (!isSports) return false
+
+        val mg = currentPlayingMatchGroup ?: playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: return false
+        if (mg.sources.size <= 1) return false
+
+        if (currentMatchFallbackCount >= mg.sources.size) {
+            return false
+        }
+
+        val curIdx = mg.sources.indexOfFirst { it.streamUrl == playing.streamUrl || it.id == playing.id }
+        val nextIdx = if (curIdx >= 0) (curIdx + 1) % mg.sources.size else 0
+        val nextSource = mg.sources[nextIdx]
+
+        currentMatchFallbackCount++
+        showBottomNotification("⚠️ Luồng gặp sự cố. Tự chuyển (${nextIdx + 1}/${mg.sources.size}): ${nextSource.name}")
+
+        binding.root.postDelayed({
+            playChannel(nextSource, isFallback = true)
+        }, 600)
+        return true
+    }
+
+    private fun playChannel(channel: Channel, isFallback: Boolean = false) {
+        if (!isFallback) {
+            currentMatchFallbackCount = 0
+        }
         if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
             refreshSportsMatchesManually()
             return
@@ -2239,7 +2276,7 @@ class MainActivity : AppCompatActivity() {
 
         // 3. Tên Nguồn
         var sourceName = ""
-        val sourceList = listOf("Chuối Chiên", "Gà Vàng", "Xôi Lạc", "Cà Khịa", "Bia Ôm", "S8 TV", "Cola TV", "Phá Làng", "Vua Sân Cỏ", "Khô Gà", "Giờ Vàng", "Sao Kê", "Xôi Gấc")
+        val sourceList = listOf("Chuối Chiên", "Gà Vàng", "Xôi Lạc", "Cà Khịa", "Bia Ôm", "S8 TV", "Cola TV", "Phá Làng", "Vua Sân Cỏ", "Khô Gà", "Giờ Vàng", "Sao Kê", "Xôi Gấc", "Xôi Chè")
         for (sm in sourceList) {
             if (raw.contains(sm, ignoreCase = true) || channel.groupTitle.contains(sm, ignoreCase = true)) {
                 sourceName = sm
