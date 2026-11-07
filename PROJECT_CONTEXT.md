@@ -1,6 +1,6 @@
 # HỒ SƠ DỰ ÁN & BÀN GIAO NGỮ CẢNH (MASTER CONTEXT HANDOVER)
 > **Tài liệu ghi nhớ ngữ cảnh làm việc đồng bộ giữa Máy Nhà & Máy Công Ty**  
-> Cập nhật lần cuối: **03/11/2026** - Phiên bản hệ thống: **v2.2.7**
+> Cập nhật lần cuối: **07/11/2026** - Phiên bản hệ thống: Android TV **v2.1.19** & Samsung Tizen **v2.2.12**
 
 ---
 
@@ -67,6 +67,18 @@
 - Khởi chạy web server xem trước giao diện Tizen trên Windows.
 - Tự động dò tìm cổng khả dụng bắt đầu từ `8150` bằng hàm `is_port_bindable()` để tránh đụng độ dải cổng `8041 - 8140` bị Windows Hyper-V/NAT chiếm quyền (`WinError 10013`).
 - Tích hợp cơ chế fallback về `127.0.0.1` nếu Windows Firewall chặn lắng nghe `0.0.0.0`.
+
+### D. Cập nhật Android TV (v2.1.19) & Tizen (v2.2.12)
+- **Sửa triệt để lỗi thêm / upload Playlist ngoài:**
+  - Gỡ bỏ điều kiện `name.contains("FPT IPTV")` trong `PreferencesHelper.kt` khiến danh sách ngoài bị ghi đè thành link nội bộ.
+  - Tự động lọc trùng (Deduplicate) giữ duy nhất 1 bản ghi `FPT IPTV (UDP)`, tự động gộp các danh sách trùng lặp trước đó.
+  - Sửa hàm xóa an toàn bằng `removeAt` và bắt lỗi rỗng.
+- **Phím Sang Phải (► / D-pad Right) mở danh sách Playlist .m3u:**
+  - Khi xem TV toàn màn hình hoặc duyệt danh sách kênh: Bấm phím **Sang Phải (►)** sẽ mở hộp thoại `QuickPlaylistDialog`.
+  - Hiển thị cả tên danh sách và đường link / file M3U thu nhỏ bên dưới.
+- **Tối ưu hóa Mi Box 3c (1GB RAM):**
+  - Loại bỏ hoàn toàn LibVLC; dùng thuần ExoPlayer SurfaceView giải mã phần cứng 1080i Yadif.
+  - Trì hoãn EPG 10s sau khởi động, tải thể thao Lazy Load.
 
 ---
 
