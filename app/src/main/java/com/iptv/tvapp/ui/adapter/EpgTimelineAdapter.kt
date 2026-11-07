@@ -58,6 +58,7 @@ class EpgTimelineAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         init {
+            binding.root.nextFocusLeftId = R.id.rvChannels
             binding.root.setOnClickListener {
                 val pos = adapterPosition
                 if (pos != RecyclerView.NO_POSITION && pos < programs.size) {

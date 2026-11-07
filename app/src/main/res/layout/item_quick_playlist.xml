@@ -49,7 +49,7 @@
             android:id="@+id/tvPlaylistUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="asset://builtin_playlist.m3u"
+            android:text="https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
             android:textColor="#94A3B8"
             android:duplicateParentState="true"
             android:textSize="10sp"

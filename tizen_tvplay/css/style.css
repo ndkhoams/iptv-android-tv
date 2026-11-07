@@ -1957,3 +1957,28 @@ body.avplay-active,
     margin-right: 6px;
     margin-left: 2px;
 }
+
+.standing-row.focused {
+    background: #FF6500 !important;
+    border: 1.5px solid #FFA500 !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 10px rgba(255, 101, 0, 0.6);
+}
+
+.standing-row.focused span {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+}
+
+.epg-item.focused {
+    background: #FF6500 !important;
+    border: 1.5px solid #FFA500 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 10px rgba(255, 101, 0, 0.6);
+}
+
+.epg-item.focused .epg-time,
+.epg-item.focused .epg-name {
+    color: #FFFFFF !important;
+}

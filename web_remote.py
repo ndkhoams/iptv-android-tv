@@ -42,7 +42,7 @@ def get_playlists():
             {
                 "id": "pl_ktv",
                 "name": "Kênh Truyền Hình (KTV)",
-                "url": f"http://10.0.0.222:{PORT}/data/ktv.m3u",
+                "url": "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u",
                 "isSelected": True
             },
             {
@@ -79,7 +79,7 @@ def get_active_playlist():
         playlists[0]["isSelected"] = True
         save_playlists(playlists)
         return playlists[0]
-    return {"id": "pl_ktv", "name": "KTV", "url": f"http://10.0.0.222:{PORT}/data/ktv.m3u", "isSelected": True}
+    return {"id": "pl_ktv", "name": "KTV", "url": "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u", "isSelected": True}
 
 # Shared state
 state_lock = Lock()

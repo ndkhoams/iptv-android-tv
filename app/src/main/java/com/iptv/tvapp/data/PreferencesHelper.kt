@@ -34,10 +34,10 @@ class PreferencesHelper(context: Context) {
                 }
             }
 
-            // Danh sách mặc định ban đầu: FPT IPTV (UDP) tích hợp sẵn trong APK
+            // Danh sách mặc định ban đầu: KTV Playlist
             val defaultSource = PlaylistSource(
                 id = BUILTIN_PLAYLIST_ID,
-                name = "FPT IPTV (UDP)",
+                name = BUILTIN_PLAYLIST_NAME,
                 url = BUILTIN_PLAYLIST_URL,
                 isSelected = true
             )
@@ -64,20 +64,22 @@ class PreferencesHelper(context: Context) {
         }
 
         // Tự động làm sạch & chuẩn hóa danh sách:
-        // 1. Chỉ giữ lại DUY NHẤT 1 playlist FPT IPTV (UDP) tích hợp sẵn (loại bỏ trùng lặp)
+        // 1. Chỉ giữ lại DUY NHẤT 1 playlist KTV mặc định (loại bỏ trùng lặp và tự động cập nhật từ bản cũ)
         // 2. Không bao giờ ghi đè hoặc can thiệp vào playlist ngoài do người dùng thêm/tải lên
         val cleanedList = mutableListOf<PlaylistSource>()
         val seenIds = mutableSetOf<String>()
         var builtinItem: PlaylistSource? = null
 
         for (item in list) {
-            val isBuiltin = item.id == BUILTIN_PLAYLIST_ID || item.url == BUILTIN_PLAYLIST_URL || item.id == "default_ktv"
+            val isBuiltin = item.id == BUILTIN_PLAYLIST_ID || item.url == BUILTIN_PLAYLIST_URL ||
+                            item.id == "builtin_fpt_udp" || item.url == "asset://builtin_playlist.m3u" ||
+                            item.id == "default_ktv"
 
             if (isBuiltin) {
                 if (builtinItem == null) {
                     builtinItem = PlaylistSource(
                         id = BUILTIN_PLAYLIST_ID,
-                        name = "FPT IPTV (UDP)",
+                        name = BUILTIN_PLAYLIST_NAME,
                         url = BUILTIN_PLAYLIST_URL,
                         isSelected = item.isSelected
                     )
@@ -102,10 +104,10 @@ class PreferencesHelper(context: Context) {
             }
         }
 
-        // Đảm bảo luôn có 1 playlist FPT IPTV (UDP) tích hợp sẵn ở đầu danh sách
+        // Đảm bảo luôn có 1 playlist KTV mặc định ở đầu danh sách
         val finalBuiltin = builtinItem ?: PlaylistSource(
             id = BUILTIN_PLAYLIST_ID,
-            name = "FPT IPTV (UDP)",
+            name = BUILTIN_PLAYLIST_NAME,
             url = BUILTIN_PLAYLIST_URL,
             isSelected = cleanedList.none { it.isSelected }
         )
@@ -514,8 +516,9 @@ class PreferencesHelper(context: Context) {
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 
-        const val BUILTIN_PLAYLIST_ID = "builtin_fpt_udp"
-        const val BUILTIN_PLAYLIST_URL = "asset://builtin_playlist.m3u"
+        const val BUILTIN_PLAYLIST_ID = "builtin_ktv"
+        const val BUILTIN_PLAYLIST_NAME = "KTV Playlist"
+        const val BUILTIN_PLAYLIST_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
         const val DEFAULT_UDPXY_SERVER = "10.0.0.222:4022"
     }
 }

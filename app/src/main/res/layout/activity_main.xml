@@ -690,6 +690,7 @@
                             android:clipChildren="true"
                             android:clipToPadding="true"
                             android:overScrollMode="never"
+                            android:descendantFocusability="afterDescendants"
                             android:focusable="false"
                             android:focusableInTouchMode="false" />
 
@@ -780,6 +781,7 @@
                             android:clipChildren="true"
                             android:clipToPadding="true"
                             android:overScrollMode="never"
+                            android:descendantFocusability="afterDescendants"
                             android:focusable="false"
                             android:focusableInTouchMode="false" />
 

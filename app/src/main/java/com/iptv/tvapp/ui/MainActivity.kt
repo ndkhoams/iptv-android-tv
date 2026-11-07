@@ -720,7 +720,49 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                // 3. Dự phòng focusSearch mặc định
+                // 3. Phím Lên/Xuống khi đang trong EPG Timeline
+                val epgHolder = binding.rvSpotlightEpg.findContainingViewHolder(focused)
+                if (epgHolder != null) {
+                    val currentPos = epgHolder.adapterPosition
+                    if (currentPos != RecyclerView.NO_POSITION) {
+                        val targetPos = if (isDown) currentPos + 1 else currentPos - 1
+                        if (targetPos in 0 until epgTimelineAdapter.itemCount) {
+                            binding.rvSpotlightEpg.scrollToPosition(targetPos)
+                            binding.rvSpotlightEpg.post {
+                                val vh = binding.rvSpotlightEpg.findViewHolderForAdapterPosition(targetPos)
+                                if (vh != null) {
+                                    vh.itemView.requestFocus()
+                                } else {
+                                    binding.rvSpotlightEpg.layoutManager?.findViewByPosition(targetPos)?.requestFocus()
+                                }
+                            }
+                            return
+                        }
+                    }
+                }
+
+                // 4. Phím Lên/Xuống khi đang trong Bảng xếp hạng
+                val standingHolder = binding.rvSpotlightStandings.findContainingViewHolder(focused)
+                if (standingHolder != null) {
+                    val currentPos = standingHolder.adapterPosition
+                    if (currentPos != RecyclerView.NO_POSITION) {
+                        val targetPos = if (isDown) currentPos + 1 else currentPos - 1
+                        if (targetPos in 0 until standingsAdapter.itemCount) {
+                            binding.rvSpotlightStandings.scrollToPosition(targetPos)
+                            binding.rvSpotlightStandings.post {
+                                val vh = binding.rvSpotlightStandings.findViewHolderForAdapterPosition(targetPos)
+                                if (vh != null) {
+                                    vh.itemView.requestFocus()
+                                } else {
+                                    binding.rvSpotlightStandings.layoutManager?.findViewByPosition(targetPos)?.requestFocus()
+                                }
+                            }
+                            return
+                        }
+                    }
+                }
+
+                // 5. Dự phòng focusSearch mặc định
                 val next = focused.focusSearch(direction)
                 if (next != null && next != focused) {
                     next.requestFocus(direction)
@@ -728,6 +770,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             View.FOCUS_LEFT -> {
+                // Từ Spotlight (EPG / Bảng xếp hạng) -> quay lại Danh sách kênh
+                if (binding.layoutSpotlightCol.hasFocus() || isDescendantOf(focused, binding.layoutSpotlightCol)) {
+                    focusFirstVisibleChannel()
+                    return
+                }
+
                 // Từ rvChannels -> nhảy sang Danh mục tương ứng
                 if (binding.rvChannels.findContainingViewHolder(focused) != null || binding.rvChannels.hasFocus()) {
                     val targetCat = findHorizontallyAlignedCategoryView(focused)
@@ -783,12 +831,24 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                // Từ rvChannels -> nếu đang ở chế độ TV thì mở danh sách playlist .m3u
+                // Từ rvChannels:
+                // Ở chế độ TV: ấn sang phải để tương tác với EPG
+                // Ở chế độ Thể thao: ấn sang phải để tương tác với Bảng xếp hạng
                 if (binding.rvChannels.findContainingViewHolder(focused) != null || binding.rvChannels.hasFocus()) {
                     if (currentAppMode == AppMode.TV) {
-                        showQuickPlaylistDialog()
-                        return
+                        if (focusSpotlightEpg()) {
+                            return
+                        }
+                    } else if (currentAppMode == AppMode.SPORTS) {
+                        if (focusSpotlightStandings()) {
+                            return
+                        }
                     }
+                }
+
+                // Nếu đang trong Spotlight thì giữ nguyên focus tại Spotlight
+                if (binding.layoutSpotlightCol.hasFocus() || isDescendantOf(focused, binding.layoutSpotlightCol)) {
+                    return
                 }
 
                 val next = focused.focusSearch(View.FOCUS_RIGHT)
@@ -2404,8 +2464,15 @@ class MainActivity : AppCompatActivity() {
                                 return true
                             }
                         }
-                    } else if (currentAppMode == AppMode.TV && (binding.rvChannels.hasFocus() || (currentFocus?.let { binding.rvChannels.findContainingViewHolder(it) } != null))) {
-                        showQuickPlaylistDialog()
+                    } else if (binding.rvChannels.hasFocus() || (currentFocus?.let { binding.rvChannels.findContainingViewHolder(it) } != null)) {
+                        if (currentAppMode == AppMode.TV) {
+                            focusSpotlightEpg()
+                            return true
+                        } else if (currentAppMode == AppMode.SPORTS) {
+                            focusSpotlightStandings()
+                            return true
+                        }
+                    } else if (binding.layoutSpotlightCol.hasFocus() || isDescendantOf(currentFocus, binding.layoutSpotlightCol)) {
                         return true
                     }
                 } else {
@@ -2564,7 +2631,9 @@ class MainActivity : AppCompatActivity() {
             focused.id == R.id.rvSpotlightStandings ||
             focused.id == R.id.rvSpotlightEpg ||
             focused.id == R.id.layoutStandingItem ||
-            (focused.parent != null && (focused.parent == binding.rvSpotlightStandings || focused.parent == binding.rvSpotlightEpg))
+            focused.id == R.id.layoutEpgItem ||
+            (focused.parent != null && (focused.parent == binding.rvSpotlightStandings || focused.parent == binding.rvSpotlightEpg)) ||
+            isDescendantOf(focused, binding.layoutSpotlightCol)
         )
 
         if (isSpotlightFocused) {
@@ -2722,9 +2791,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun focusFirstVisibleChannel() {
-        val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
-        val first = lm?.findFirstVisibleItemPosition() ?: 0
-        val targetPos = if (first != RecyclerView.NO_POSITION && first in currentCategoryChannels.indices) first else 0
+        val targetPos = currentFocusedChannel?.let { ch ->
+            currentCategoryChannels.indexOfFirst { it.streamUrl == ch.streamUrl }.takeIf { it != -1 }
+        } ?: run {
+            val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
+            val first = lm?.findFirstVisibleItemPosition() ?: 0
+            if (first != RecyclerView.NO_POSITION && first in currentCategoryChannels.indices) first else 0
+        }
         binding.rvChannels.post {
             val vh = binding.rvChannels.findViewHolderForAdapterPosition(targetPos)
             if (vh != null) {
@@ -2738,6 +2811,62 @@ class MainActivity : AppCompatActivity() {
                     }, 60)
                 }
             }
+        }
+    }
+
+    private fun focusSpotlightEpg(): Boolean {
+        if (binding.rvSpotlightEpg.visibility == View.VISIBLE && epgTimelineAdapter.itemCount > 0) {
+            val currPos = epgTimelineAdapter.getCurrentPlayingPosition().let { if (it >= 0) it else 0 }
+            val vh = binding.rvSpotlightEpg.findViewHolderForAdapterPosition(currPos)
+            if (vh != null) {
+                vh.itemView.requestFocus()
+                return true
+            }
+            val view = binding.rvSpotlightEpg.layoutManager?.findViewByPosition(currPos)
+                ?: binding.rvSpotlightEpg.getChildAt(0)
+            if (view != null) {
+                view.requestFocus()
+                return true
+            }
+            binding.rvSpotlightEpg.scrollToPosition(currPos)
+            binding.rvSpotlightEpg.post {
+                val target = binding.rvSpotlightEpg.layoutManager?.findViewByPosition(currPos)
+                    ?: binding.rvSpotlightEpg.findViewHolderForAdapterPosition(currPos)?.itemView
+                    ?: binding.rvSpotlightEpg.getChildAt(0)
+                target?.requestFocus()
+            }
+            return true
+        } else {
+            showBottomNotification("Chưa có lịch phát sóng EPG cho kênh này")
+            return false
+        }
+    }
+
+    private fun focusSpotlightStandings(): Boolean {
+        if (binding.rvSpotlightStandings.visibility == View.VISIBLE && standingsAdapter.itemCount > 0) {
+            val highlightIdx = standingsAdapter.getHighlightedIndex().let { if (it >= 0) it else 0 }
+            val vh = binding.rvSpotlightStandings.findViewHolderForAdapterPosition(highlightIdx)
+            if (vh != null) {
+                vh.itemView.requestFocus()
+                return true
+            }
+            val view = binding.rvSpotlightStandings.layoutManager?.findViewByPosition(highlightIdx)
+                ?: binding.rvSpotlightStandings.getChildAt(0)
+            if (view != null) {
+                view.requestFocus()
+                return true
+            }
+            binding.rvSpotlightStandings.scrollToPosition(highlightIdx)
+            binding.rvSpotlightStandings.post {
+                val target = binding.rvSpotlightStandings.layoutManager?.findViewByPosition(highlightIdx)
+                    ?: binding.rvSpotlightStandings.findViewHolderForAdapterPosition(highlightIdx)?.itemView
+                    ?: binding.rvSpotlightStandings.getChildAt(0)
+                target?.requestFocus()
+            }
+            return true
+        } else {
+            showBottomNotification("Chưa có dữ liệu bảng xếp hạng cho trận đấu này")
+            return false
         }
     }
 

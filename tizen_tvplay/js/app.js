@@ -92,7 +92,7 @@
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
     var APP_VERSION = "2.2.12";
-    var DEFAULT_M3U_URL = "http://10.0.0.222:8080/data/ktv.m3u";
+    var DEFAULT_M3U_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
     var SPORTS_DATA_URLS = [
@@ -400,6 +400,11 @@
                 playlists = playlists.filter(function (p) {
                     return p.id !== 'pl_backup' && p.id !== 'pl_local' &&
                            p.name !== 'Dự phòng Fastly' && p.name !== 'Offline Nội bộ';
+                });
+                playlists.forEach(function (p) {
+                    if (p.id === 'pl_ktv' || p.url === 'http://10.0.0.222:8080/data/ktv.m3u') {
+                        p.url = DEFAULT_M3U_URL;
+                    }
                 });
                 if (playlists.length === 0) {
                     playlists = [{ id: "pl_ktv", name: "KTV Playlist", url: DEFAULT_M3U_URL, isSelected: true }];
@@ -1301,6 +1306,28 @@
                     chip.scrollIntoView({ block: 'nearest', behavior: 'auto' });
                 } else {
                     chip.classList.remove('focused');
+                }
+            });
+
+            var epgItems = spotlightEpgContentEl.querySelectorAll('.epg-item');
+            epgItems.forEach(function (item, idx) {
+                if (focusedColumn === 'spotlight' && idx === selectedSpotlightSourceIdx) {
+                    item.classList.add('focused');
+                    item.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                } else {
+                    item.classList.remove('focused');
+                }
+            });
+        }
+
+        var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
+        if (standingRows.length > 0) {
+            standingRows.forEach(function (row, idx) {
+                if (focusedColumn === 'spotlight' && idx === selectedSpotlightSourceIdx) {
+                    row.classList.add('focused');
+                    row.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                } else {
+                    row.classList.remove('focused');
                 }
             });
         }
@@ -2922,9 +2949,16 @@
                         updateFocusView();
                         updateSpotlight();
                     } else if (focusedColumn === 'spotlight') {
-                        var curMatch = categories[selectedCatIdx].channels[selectedChIdx];
-                        if (curMatch && curMatch.sources && curMatch.sources[selectedSpotlightSourceIdx]) {
-                            playMatchSource(curMatch, curMatch.sources[selectedSpotlightSourceIdx]);
+                        if (currentAppMode === APP_MODE_TV) {
+                            var currentCat = categories[selectedCatIdx];
+                            if (currentCat && currentCat.channels[selectedChIdx]) {
+                                handleChannelClick(currentCat.channels[selectedChIdx]);
+                            }
+                        } else {
+                            var curMatch = categories[selectedCatIdx].channels[selectedChIdx];
+                            if (curMatch && curMatch.sources && curMatch.sources[selectedSpotlightSourceIdx]) {
+                                playMatchSource(curMatch, curMatch.sources[selectedSpotlightSourceIdx]);
+                            }
                         }
                     } else {
                         var currentCat = categories[selectedCatIdx];
@@ -2954,8 +2988,7 @@
                             renderChannels();
                         }
                     } else if (focusedColumn === 'spotlight') {
-                        var curM = categories[selectedCatIdx].channels[selectedChIdx];
-                        if (curM && curM.sources && selectedSpotlightSourceIdx > 0) {
+                        if (selectedSpotlightSourceIdx > 0) {
                             selectedSpotlightSourceIdx--;
                             updateFocusView();
                         }
@@ -2989,8 +3022,19 @@
                             renderChannels();
                         }
                     } else if (focusedColumn === 'spotlight') {
-                        var curMatch2 = categories[selectedCatIdx].channels[selectedChIdx];
-                        if (curMatch2 && curMatch2.sources && selectedSpotlightSourceIdx < curMatch2.sources.length - 1) {
+                        var maxLenSpotlight = 0;
+                        if (currentAppMode === APP_MODE_TV) {
+                            var epgItems = spotlightEpgContentEl ? spotlightEpgContentEl.querySelectorAll('.epg-item') : [];
+                            maxLenSpotlight = epgItems.length;
+                        } else if (currentAppMode === APP_MODE_SPORTS) {
+                            var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
+                            maxLenSpotlight = standingRows.length;
+                        }
+                        if (maxLenSpotlight === 0) {
+                            var curMatch2 = categories[selectedCatIdx].channels[selectedChIdx];
+                            if (curMatch2 && curMatch2.sources) maxLenSpotlight = curMatch2.sources.length;
+                        }
+                        if (selectedSpotlightSourceIdx < maxLenSpotlight - 1) {
                             selectedSpotlightSourceIdx++;
                             updateFocusView();
                         }
@@ -3041,11 +3085,43 @@
                         updateFocusView();
                         updateSpotlight();
                     } else if (focusedColumn === 'channels') {
-                        var curItem = categories[selectedCatIdx].channels[selectedChIdx];
-                        if (curItem && curItem.isMatch && curItem.sources && curItem.sources.length > 0) {
-                            openMatchSourcesModal(curItem);
-                        } else if (currentAppMode === APP_MODE_TV) {
-                            openQuickPlaylistModal();
+                        if (currentAppMode === APP_MODE_TV) {
+                            var epgItems = spotlightEpgContentEl ? spotlightEpgContentEl.querySelectorAll('.epg-item') : [];
+                            if (epgItems.length > 0) {
+                                focusedColumn = 'spotlight';
+                                var curIdx = 0;
+                                for (var i = 0; i < epgItems.length; i++) {
+                                    if (epgItems[i].classList.contains('current')) {
+                                        curIdx = i;
+                                        break;
+                                    }
+                                }
+                                selectedSpotlightSourceIdx = curIdx;
+                                updateFocusView();
+                            } else {
+                                showNotification("Chưa có lịch phát sóng EPG cho kênh này");
+                            }
+                        } else if (currentAppMode === APP_MODE_SPORTS) {
+                            var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
+                            if (standingRows.length > 0) {
+                                focusedColumn = 'spotlight';
+                                var curIdx = 0;
+                                for (var i = 0; i < standingRows.length; i++) {
+                                    if (standingRows[i].classList.contains('highlight')) {
+                                        curIdx = i;
+                                        break;
+                                    }
+                                }
+                                selectedSpotlightSourceIdx = curIdx;
+                                updateFocusView();
+                            } else {
+                                var curItem = categories[selectedCatIdx].channels[selectedChIdx];
+                                if (curItem && curItem.isMatch && curItem.sources && curItem.sources.length > 0) {
+                                    openMatchSourcesModal(curItem);
+                                } else {
+                                    showNotification("Chưa có dữ liệu bảng xếp hạng cho trận đấu này");
+                                }
+                            }
                         }
                     }
                 }

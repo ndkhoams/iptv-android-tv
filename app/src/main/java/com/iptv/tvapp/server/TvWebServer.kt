@@ -478,7 +478,7 @@ class TvWebServer(
                             } catch (e: Exception) {}
                         }
                         if (list.isEmpty()) {
-                            list.add(PlaylistSource(PreferencesHelper.BUILTIN_PLAYLIST_ID, "FPT IPTV (UDP)", PreferencesHelper.BUILTIN_PLAYLIST_URL, true))
+                            list.add(PlaylistSource(PreferencesHelper.BUILTIN_PLAYLIST_ID, PreferencesHelper.BUILTIN_PLAYLIST_NAME, PreferencesHelper.BUILTIN_PLAYLIST_URL, true))
                         } else if (list.none { it.isSelected }) {
                             list[0].isSelected = true
                         }
