@@ -1579,21 +1579,18 @@ class MainActivity : AppCompatActivity() {
         val (cleanUrl, headers) = parseStreamUrlAndHeaders(rawUrl)
         val trimmed = cleanUrl.trim()
         val udpxy = prefs.udpxyServer.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
+        val effectiveUdpxy = if (udpxy.isNotBlank()) udpxy else PreferencesHelper.DEFAULT_UDPXY_SERVER
 
-        // Nếu đã cấu hình máy chủ udpxy (server:port), tự động chuyển đổi luồng multicast sang HTTP proxy
-        val effectiveUrl = if (udpxy.isNotBlank()) {
-            when {
-                trimmed.startsWith("udp://@", ignoreCase = true) -> "http://$udpxy/udp/" + trimmed.substring(7)
-                trimmed.startsWith("udp://", ignoreCase = true) -> "http://$udpxy/udp/" + trimmed.substring(6)
-                trimmed.startsWith("rtp://@", ignoreCase = true) -> "http://$udpxy/rtp/" + trimmed.substring(7)
-                trimmed.startsWith("rtp://", ignoreCase = true) -> "http://$udpxy/rtp/" + trimmed.substring(6)
-                trimmed.matches(Regex("(?i)^http://[^/]+/(udp|rtp)/.*")) -> {
-                    trimmed.replaceFirst(Regex("(?i)^http://[^/]+/(udp|rtp)/"), "http://$udpxy/$1/")
-                }
-                else -> trimmed
+        // Nếu là luồng multicast (udp://, rtp://), tự động chuyển đổi sang HTTP proxy qua máy chủ udpxy
+        val effectiveUrl = when {
+            trimmed.startsWith("udp://@", ignoreCase = true) -> "http://$effectiveUdpxy/udp/" + trimmed.substring(7)
+            trimmed.startsWith("udp://", ignoreCase = true) -> "http://$effectiveUdpxy/udp/" + trimmed.substring(6)
+            trimmed.startsWith("rtp://@", ignoreCase = true) -> "http://$effectiveUdpxy/rtp/" + trimmed.substring(7)
+            trimmed.startsWith("rtp://", ignoreCase = true) -> "http://$effectiveUdpxy/rtp/" + trimmed.substring(6)
+            trimmed.matches(Regex("(?i)^http://[^/]+/(udp|rtp)/.*")) -> {
+                trimmed.replaceFirst(Regex("(?i)^http://[^/]+/(udp|rtp)/"), "http://$effectiveUdpxy/$1/")
             }
-        } else {
-            trimmed
+            else -> trimmed
         }
 
         // ExoPlayer: Chuẩn Java URI không chấp nhận '@' trong host name

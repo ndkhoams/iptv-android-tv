@@ -215,7 +215,10 @@ class PreferencesHelper(context: Context) {
 
     // ===== CÀI ĐẶT MÁY CHỦ UDPXY (SERVER:PORT) =====
     var udpxyServer: String
-        get() = prefs.getString(KEY_UDPXY_SERVER, DEFAULT_UDPXY_SERVER) ?: DEFAULT_UDPXY_SERVER
+        get() {
+            val s = prefs.getString(KEY_UDPXY_SERVER, null)
+            return if (s.isNullOrBlank()) DEFAULT_UDPXY_SERVER else s.trim()
+        }
         set(value) = prefs.edit().putString(KEY_UDPXY_SERVER, value.trim()).apply()
 
     // ===== ĐƯỜNG DẪN FILE THỂ THAO TRỰC TIẾP (THETHAO.M3U TỪ GITHUB / ARMBIAN) =====

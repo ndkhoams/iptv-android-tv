@@ -11,8 +11,11 @@ import com.iptv.tvapp.model.PlaylistSource
 import com.iptv.tvapp.util.NetworkUtils
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedInputStream
 import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.ServerSocket
@@ -70,14 +73,27 @@ class TvWebServer(
         threadPool.shutdownNow()
     }
 
+    private fun readHeaderLine(input: InputStream): String? {
+        val baos = ByteArrayOutputStream()
+        var c = input.read()
+        if (c == -1) return null
+        while (c != -1 && c != '\n'.code) {
+            if (c != '\r'.code) {
+                baos.write(c)
+            }
+            c = input.read()
+        }
+        return baos.toString("ISO-8859-1")
+    }
+
     private fun handleClient(socket: Socket) {
         try {
-            socket.soTimeout = 6000 // 6s timeout so abandoned connections never block threads
+            socket.soTimeout = 30000 // 30s timeout cho upload file M3U lớn
             socket.use { s ->
-                val reader = BufferedReader(InputStreamReader(s.getInputStream(), Charsets.UTF_8))
+                val rawInput = BufferedInputStream(s.getInputStream(), 32768)
                 val output = s.getOutputStream()
 
-                val requestLine = reader.readLine() ?: return
+                val requestLine = readHeaderLine(rawInput) ?: return
                 val parts = requestLine.split(" ")
                 if (parts.size < 2) return
 
@@ -88,24 +104,24 @@ class TvWebServer(
 
                 // Đọc Headers để tìm Content-Length
                 var contentLength = 0
-                var headerLine = reader.readLine()
+                var headerLine = readHeaderLine(rawInput)
                 while (!headerLine.isNullOrBlank()) {
                     if (headerLine.startsWith("Content-Length:", ignoreCase = true)) {
                         contentLength = headerLine.substringAfter(":").trim().toIntOrNull() ?: 0
                     }
-                    headerLine = reader.readLine()
+                    headerLine = readHeaderLine(rawInput)
                 }
 
-                // Đọc Body nếu là POST hoặc có Content-Length
+                // Đọc chính xác contentLength BYTES từ stream (tránh lỗi reader.read(char) bị kẹt do ký tự tiếng Việt nhiều byte)
                 val body = if (contentLength > 0) {
-                    val buffer = CharArray(contentLength)
-                    var readTotal = 0
-                    while (readTotal < contentLength) {
-                        val count = reader.read(buffer, readTotal, contentLength - readTotal)
+                    val bodyBytes = ByteArray(contentLength)
+                    var readBytes = 0
+                    while (readBytes < contentLength) {
+                        val count = rawInput.read(bodyBytes, readBytes, contentLength - readBytes)
                         if (count == -1) break
-                        readTotal += count
+                        readBytes += count
                     }
-                    String(buffer, 0, readTotal)
+                    String(bodyBytes, 0, readBytes, Charsets.UTF_8)
                 } else ""
 
                 routeRequest(method, path, queryString, body, output)
@@ -121,7 +137,8 @@ class TvWebServer(
             return
         }
 
-        when {
+        try {
+            when {
             method == "GET" && (path == "/" || path.startsWith("/index")) -> {
                 sendResponse(output, "text/html; charset=utf-8", WebPageTemplate.getHtml())
             }
@@ -527,6 +544,14 @@ class TvWebServer(
                 output.write((header + resp).toByteArray(Charsets.UTF_8))
                 output.flush()
             }
+        }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val resp = JSONObject().apply {
+                put("success", false)
+                put("error", e.localizedMessage ?: "Lỗi xử lý yêu cầu")
+            }
+            sendResponse(output, "application/json; charset=utf-8", resp.toString())
         }
     }
 
