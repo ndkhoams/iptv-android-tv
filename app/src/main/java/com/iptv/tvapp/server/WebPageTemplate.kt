@@ -767,6 +767,7 @@ object WebPageTemplate {
                     var itemClass = item.isSelected ? 'playlist-item selected' : 'playlist-item';
                     var selBadge = item.isSelected ? ' ✓ (Đang phát)' : '';
                     var selectBtn = !item.isSelected ? '<button class="btn-sm btn-select" onclick="selectPlaylist(\'' + item.id + '\')">Chọn</button>' : '';
+                    var deleteBtn = (list.length > 1) ? '<button class="btn-sm btn-delete" onclick="deletePlaylist(\'' + item.id + '\')">Xóa</button>' : '';
                     html += '<div class="' + itemClass + '">' +
                         '<div class="playlist-info">' +
                             '<div class="playlist-name">' + item.name + selBadge + '</div>' +
@@ -774,7 +775,7 @@ object WebPageTemplate {
                         '</div>' +
                         '<div class="playlist-actions">' +
                             selectBtn +
-                            '<button class="btn-sm btn-delete" onclick="deletePlaylist(\'' + item.id + '\')">Xóa</button>' +
+                            deleteBtn +
                         '</div>' +
                     '</div>';
                 }
@@ -850,7 +851,7 @@ object WebPageTemplate {
                             setTimeout(fetchStatus, 600);
                         }
                     } else {
-                        showToast('Lỗi tải file lên TV!');
+                        showToast('Lỗi: ' + (data.error || 'Không thể tải file lên TV!'));
                     }
                 }).catch(function() {
                     showToast('Lỗi đường truyền khi tải file!');

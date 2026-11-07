@@ -3043,6 +3043,8 @@
                         var curItem = categories[selectedCatIdx].channels[selectedChIdx];
                         if (curItem && curItem.isMatch && curItem.sources && curItem.sources.length > 0) {
                             openMatchSourcesModal(curItem);
+                        } else if (currentAppMode === APP_MODE_TV) {
+                            openQuickPlaylistModal();
                         }
                     }
                 }

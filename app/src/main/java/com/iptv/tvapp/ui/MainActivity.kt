@@ -782,6 +782,14 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                // Từ rvChannels -> nếu đang ở chế độ TV thì mở danh sách playlist .m3u
+                if (binding.rvChannels.findContainingViewHolder(focused) != null || binding.rvChannels.hasFocus()) {
+                    if (currentAppMode == AppMode.TV) {
+                        showQuickPlaylistDialog()
+                        return
+                    }
+                }
+
                 val next = focused.focusSearch(View.FOCUS_RIGHT)
                 if (next != null && next != focused) {
                     next.requestFocus(View.FOCUS_RIGHT)
@@ -2395,6 +2403,9 @@ class MainActivity : AppCompatActivity() {
                                 return true
                             }
                         }
+                    } else if (currentAppMode == AppMode.TV && (binding.rvChannels.hasFocus() || binding.rvChannels.findContainingViewHolder(currentFocus) != null)) {
+                        showQuickPlaylistDialog()
+                        return true
                     }
                 } else {
                     handleRemoteRightFullscreen()
@@ -2540,9 +2551,8 @@ class MainActivity : AppCompatActivity() {
                 showBottomNotification("Không có danh sách nguồn phát khác cho kênh này")
             }
         } else {
-            // Mục Xem TV: Nhấn Dpad Phải mở danh mục kênh
-            showOverlay()
-            focusPlayingChannel()
+            // Mục Xem TV: Nhấn phím sang phải (►) mở hộp thoại chọn danh sách file .m3u
+            showQuickPlaylistDialog()
         }
     }
 
@@ -2748,10 +2758,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun showQuickPlaylistDialog() {
         if (isFinishing || isDestroyed) return
+        if (activeCustomDialog?.isShowing == true) {
+            activeCustomDialog?.dismiss()
+            return
+        }
         resetOverlayTimer()
         val dialog = QuickPlaylistDialog(
             context = this,
             onPlaylistSelected = {
+                hideOverlay()
                 loadPlaylist(forceRefresh = false)
                 loadEpgData()
             },

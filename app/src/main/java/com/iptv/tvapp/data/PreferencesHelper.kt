@@ -63,59 +63,73 @@ class PreferencesHelper(context: Context) {
             e.printStackTrace()
         }
 
-        // Tự động nâng cấp danh sách: Thay thế KTV cũ và tích hợp FPT IPTV (UDP)
+        // Tự động làm sạch & chuẩn hóa danh sách:
+        // 1. Chỉ giữ lại DUY NHẤT 1 playlist FPT IPTV (UDP) tích hợp sẵn (loại bỏ trùng lặp)
+        // 2. Không bao giờ ghi đè hoặc can thiệp vào playlist ngoài do người dùng thêm/tải lên
         val cleanedList = mutableListOf<PlaylistSource>()
-        var hasBuiltin = false
+        val seenIds = mutableSetOf<String>()
+        var builtinItem: PlaylistSource? = null
+
         for (item in list) {
-            if (item.url == BUILTIN_PLAYLIST_URL || item.id == BUILTIN_PLAYLIST_ID || item.name.contains("FPT IPTV")) {
-                cleanedList.add(item.copy(name = "FPT IPTV (UDP)", url = BUILTIN_PLAYLIST_URL))
-                hasBuiltin = true
-            } else if (item.url == DEFAULT_OLD_KTV_URL || item.name == "KTV Playlist") {
-                // Thay thế KTV cũ bằng FPT IPTV (UDP) builtin
-                cleanedList.add(
-                    PlaylistSource(
+            val isBuiltin = item.id == BUILTIN_PLAYLIST_ID || item.url == BUILTIN_PLAYLIST_URL
+            val isOldKtv = item.url == DEFAULT_OLD_KTV_URL || item.name == "KTV Playlist"
+
+            if (isBuiltin || isOldKtv) {
+                if (builtinItem == null) {
+                    builtinItem = PlaylistSource(
                         id = BUILTIN_PLAYLIST_ID,
                         name = "FPT IPTV (UDP)",
                         url = BUILTIN_PLAYLIST_URL,
                         isSelected = item.isSelected
                     )
-                )
-                hasBuiltin = true
+                } else if (item.isSelected) {
+                    builtinItem.isSelected = true
+                }
             } else {
-                cleanedList.add(item)
+                // Playlist ngoài của người dùng: Giữ nguyên vẹn 100% URL, Tên và Trạng thái
+                var safeId = item.id.trim()
+                if (safeId.isBlank() || safeId == BUILTIN_PLAYLIST_ID || seenIds.contains(safeId)) {
+                    safeId = UUID.randomUUID().toString()
+                }
+                seenIds.add(safeId)
+                cleanedList.add(
+                    PlaylistSource(
+                        id = safeId,
+                        name = item.name.trim().ifBlank { "Danh sách IPTV" },
+                        url = item.url.trim(),
+                        isSelected = item.isSelected
+                    )
+                )
             }
         }
 
-        // Nếu chưa có playlist FPT IPTV (UDP), bổ sung lên đầu danh sách
-        if (!hasBuiltin) {
-            cleanedList.add(
-                0,
-                PlaylistSource(
-                    id = BUILTIN_PLAYLIST_ID,
-                    name = "FPT IPTV (UDP)",
-                    url = BUILTIN_PLAYLIST_URL,
-                    isSelected = cleanedList.none { it.isSelected }
-                )
-            )
-        }
+        // Đảm bảo luôn có 1 playlist FPT IPTV (UDP) tích hợp sẵn ở đầu danh sách
+        val finalBuiltin = builtinItem ?: PlaylistSource(
+            id = BUILTIN_PLAYLIST_ID,
+            name = "FPT IPTV (UDP)",
+            url = BUILTIN_PLAYLIST_URL,
+            isSelected = cleanedList.none { it.isSelected }
+        )
+        cleanedList.add(0, finalBuiltin)
 
-        // Nếu danh sách rỗng (do lỗi hoặc xoá hết), tạo lại 1 danh sách mặc định để app luôn chạy được
-        if (cleanedList.isEmpty()) {
-            cleanedList.add(
-                PlaylistSource(
-                    id = BUILTIN_PLAYLIST_ID,
-                    name = "FPT IPTV (UDP)",
-                    url = BUILTIN_PLAYLIST_URL,
-                    isSelected = true
-                )
-            )
-        }
-
-        // Đảm bảo luôn có ít nhất 1 danh sách được chọn (nếu chưa có thì chọn danh sách đầu tiên)
-        if (cleanedList.none { it.isSelected }) {
+        // Đảm bảo chỉ có DUY NHẤT 1 playlist được chọn (isSelected = true)
+        val selectedCount = cleanedList.count { it.isSelected }
+        if (selectedCount == 0) {
             cleanedList[0].isSelected = true
+        } else if (selectedCount > 1) {
+            var foundFirst = false
+            for (p in cleanedList) {
+                if (p.isSelected) {
+                    if (!foundFirst) {
+                        foundFirst = true
+                    } else {
+                        p.isSelected = false
+                    }
+                }
+            }
         }
 
+        // Tự động lưu lại nếu danh sách sau khi dọn dẹp khác với danh sách thô ban đầu
         if (cleanedList != list) {
             savePlaylists(cleanedList)
         }

@@ -379,8 +379,16 @@ class TvWebServer(
             }
             method == "POST" && path == "/api/playlist/add" -> {
                 val json = JSONObject(body)
-                val name = json.getString("name").trim()
-                val url = json.getString("url").trim()
+                val name = json.optString("name", "").trim()
+                val url = json.optString("url", "").trim()
+                if (name.isBlank() || url.isBlank()) {
+                    val resp = JSONObject().apply {
+                        put("success", false)
+                        put("error", "Vui lòng nhập tên và đường link M3U")
+                    }
+                    sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                    return
+                }
                 val selectImmediately = json.optBoolean("selectImmediately", true)
                 val list = prefs.getPlaylists()
                 val newId = UUID.randomUUID().toString()
@@ -404,7 +412,18 @@ class TvWebServer(
                 if (name.isBlank()) {
                     name = filename.substringBeforeLast(".")
                 }
-                val content = json.getString("content")
+                if (name.isBlank()) {
+                    name = "Playlist Tải Lên"
+                }
+                val content = json.optString("content", "")
+                if (content.isBlank()) {
+                    val resp = JSONObject().apply {
+                        put("success", false)
+                        put("error", "File M3U rỗng hoặc không hợp lệ")
+                    }
+                    sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                    return
+                }
                 val newId = UUID.randomUUID().toString()
                 val targetFile = File(context.filesDir, "playlist_${newId.replace("-", "_")}.m3u")
                 targetFile.writeText(content, Charsets.UTF_8)
@@ -420,38 +439,57 @@ class TvWebServer(
 
                 val resp = JSONObject().apply {
                     put("success", true)
+                    put("id", newId)
                     put("name", name)
                 }
                 sendResponse(output, "application/json; charset=utf-8", resp.toString())
             }
             method == "POST" && path == "/api/playlist/select" -> {
                 val json = JSONObject(body)
-                val id = json.getString("id")
-                prefs.setActivePlaylist(id)
-                mainHandler.post { onPlaylistChanged() }
-                val resp = JSONObject().apply { put("success", true) }
-                sendResponse(output, "application/json; charset=utf-8", resp.toString())
-            }
-            method == "POST" && path == "/api/playlist/delete" -> {
-                val json = JSONObject(body)
-                val id = json.getString("id")
-                val list = prefs.getPlaylists()
-                if (list.size > 1) {
-                    val removed = list.firstOrNull { it.id == id }
-                    list.removeAll { it.id == id }
-                    if (removed != null && removed.url.startsWith("file://")) {
-                        try {
-                            val f = File(removed.url.removePrefix("file://"))
-                            if (f.exists()) f.delete()
-                        } catch (e: Exception) {}
-                    }
-                    if (list.none { it.isSelected }) {
-                        list[0].isSelected = true
-                    }
-                    prefs.savePlaylists(list)
+                val id = json.optString("id", "")
+                if (id.isNotBlank()) {
+                    prefs.setActivePlaylist(id)
                     mainHandler.post { onPlaylistChanged() }
                     val resp = JSONObject().apply { put("success", true) }
                     sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                } else {
+                    val resp = JSONObject().apply {
+                        put("success", false)
+                        put("error", "ID không hợp lệ")
+                    }
+                    sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                }
+            }
+            method == "POST" && path == "/api/playlist/delete" -> {
+                val json = JSONObject(body)
+                val id = json.optString("id", "")
+                val list = prefs.getPlaylists()
+                if (list.size > 1) {
+                    val index = list.indexOfFirst { it.id == id }
+                    if (index != -1) {
+                        val removed = list.removeAt(index)
+                        if (removed.url.startsWith("file://")) {
+                            try {
+                                val f = File(removed.url.removePrefix("file://"))
+                                if (f.exists()) f.delete()
+                            } catch (e: Exception) {}
+                        }
+                        if (list.isEmpty()) {
+                            list.add(PlaylistSource(PreferencesHelper.BUILTIN_PLAYLIST_ID, "FPT IPTV (UDP)", PreferencesHelper.BUILTIN_PLAYLIST_URL, true))
+                        } else if (list.none { it.isSelected }) {
+                            list[0].isSelected = true
+                        }
+                        prefs.savePlaylists(list)
+                        mainHandler.post { onPlaylistChanged() }
+                        val resp = JSONObject().apply { put("success", true) }
+                        sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                    } else {
+                        val resp = JSONObject().apply {
+                            put("success", false)
+                            put("error", "Không tìm thấy danh sách cần xóa")
+                        }
+                        sendResponse(output, "application/json; charset=utf-8", resp.toString())
+                    }
                 } else {
                     val resp = JSONObject().apply {
                         put("success", false)

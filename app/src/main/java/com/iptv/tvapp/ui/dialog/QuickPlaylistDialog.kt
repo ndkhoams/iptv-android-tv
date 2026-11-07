@@ -94,11 +94,13 @@ class QuickPlaylistDialog(
                     v.scaleY = 1.0f
                     if (hasFocus) {
                         binding.tvPlaylistName.setTextColor(Color.parseColor("#111827"))
+                        binding.tvPlaylistUrl.setTextColor(Color.parseColor("#334155"))
                         val pos = adapterPosition
                         if (pos != RecyclerView.NO_POSITION && !items[pos].isSelected) {
                             binding.tvRadioIcon.setTextColor(Color.parseColor("#475569"))
                         }
                     } else {
+                        binding.tvPlaylistUrl.setTextColor(Color.parseColor("#94A3B8"))
                         val pos = adapterPosition
                         if (pos != RecyclerView.NO_POSITION) {
                             if (items[pos].isSelected) {
@@ -117,7 +119,9 @@ class QuickPlaylistDialog(
 
             fun bind(item: PlaylistSource) {
                 binding.tvPlaylistName.text = item.name
+                binding.tvPlaylistUrl.text = item.url
                 val isFocused = binding.root.hasFocus()
+                binding.tvPlaylistUrl.setTextColor(if (isFocused) Color.parseColor("#334155") else Color.parseColor("#94A3B8"))
                 if (item.isSelected) {
                     binding.tvRadioIcon.text = "◉"
                     binding.tvRadioIcon.setTextColor(Color.parseColor("#FF6500"))
