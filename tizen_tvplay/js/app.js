@@ -91,7 +91,7 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.11";
+    var APP_VERSION = "2.2.12";
     var DEFAULT_M3U_URL = "http://10.0.0.222:8080/data/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
@@ -2125,10 +2125,11 @@
                     serverResponded = true;
                     try {
                         var ota = JSON.parse(xhr.responseText);
-                        if (ota && ota.version && compareVersions(ota.version, APP_VERSION) > 0 && ota.bundleUrl) {
+                        var targetBundleUrl = (ota && ota.bundleUrl) ? ota.bundleUrl : "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/tizen_tvplay/js/app.js";
+                        if (ota && ota.version && compareVersions(ota.version, APP_VERSION) > 0 && targetBundleUrl) {
                             if (otaStatusTextEl) otaStatusTextEl.textContent = "Tìm thấy bản mới v" + ota.version + "! Đang tải mã nguồn...";
                             if (manual) showToast("Tìm thấy bản cập nhật mới v" + ota.version + "!");
-                            downloadOtaBundle(ota.bundleUrl, ota.version);
+                            downloadOtaBundle(targetBundleUrl, ota.version);
                         } else {
                             if (otaStatusTextEl) otaStatusTextEl.textContent = "Bạn đang dùng phiên bản mới nhất (v" + APP_VERSION + ")";
                             if (manual) showToast("Ứng dụng đang ở phiên bản mới nhất (v" + APP_VERSION + ")!");

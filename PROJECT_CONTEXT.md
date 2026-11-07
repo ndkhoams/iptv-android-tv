@@ -68,11 +68,15 @@
 - Tự động dò tìm cổng khả dụng bắt đầu từ `8150` bằng hàm `is_port_bindable()` để tránh đụng độ dải cổng `8041 - 8140` bị Windows Hyper-V/NAT chiếm quyền (`WinError 10013`).
 - Tích hợp cơ chế fallback về `127.0.0.1` nếu Windows Firewall chặn lắng nghe `0.0.0.0`.
 
-### D. Cập nhật Android TV (v2.1.19) & Tizen (v2.2.12)
+### D. Cập nhật Android TV (v2.1.20) & Tizen (v2.2.12)
 - **Sửa triệt để lỗi thêm / upload Playlist ngoài:**
-  - Gỡ bỏ điều kiện `name.contains("FPT IPTV")` trong `PreferencesHelper.kt` khiến danh sách ngoài bị ghi đè thành link nội bộ.
-  - Tự động lọc trùng (Deduplicate) giữ duy nhất 1 bản ghi `FPT IPTV (UDP)`, tự động gộp các danh sách trùng lặp trước đó.
-  - Sửa hàm xóa an toàn bằng `removeAt` và bắt lỗi rỗng.
+  - Gỡ bỏ hoàn toàn `isOldKtv` và `DEFAULT_OLD_KTV_URL` trong `PreferencesHelper.kt` khiến các playlist người dùng thêm mang tên "KTV Playlist" hoặc đường dẫn `ktv.m3u` bị lầm tưởng là playlist mặc định đời cũ và tự động gộp/xóa mất.
+  - Cho phép để trống ô "Tên danh sách" khi dán link URL trên Web Remote: tự động trích xuất tên file từ URL hoặc đặt tên mặc định "Danh sách IPTV".
+  - Bổ sung `escapeHtml` hiển thị an toàn trên Web Remote.
+  - Tự động làm mới `QuickPlaylistDialog` trên TV ngay khi có thay đổi playlist từ Web Remote.
+- **Sửa lỗi cập nhật OTA trên Samsung Tizen TV:**
+  - Khôi phục trường `bundleUrl` trong `tizen_ota_version.json` để TV có thể tải mã nguồn JavaScript trực tiếp từ CDN GitHub.
+  - Bổ sung cơ chế fallback tự động trong hàm `checkOtaUpdate()` trên Tizen.
 - **Phím Sang Phải (► / D-pad Right) mở danh sách Playlist .m3u:**
   - Khi xem TV toàn màn hình hoặc duyệt danh sách kênh: Bấm phím **Sang Phải (►)** sẽ mở hộp thoại `QuickPlaylistDialog`.
   - Hiển thị cả tên danh sách và đường link / file M3U thu nhỏ bên dưới.

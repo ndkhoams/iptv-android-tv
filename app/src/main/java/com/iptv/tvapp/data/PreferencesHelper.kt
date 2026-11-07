@@ -71,10 +71,9 @@ class PreferencesHelper(context: Context) {
         var builtinItem: PlaylistSource? = null
 
         for (item in list) {
-            val isBuiltin = item.id == BUILTIN_PLAYLIST_ID || item.url == BUILTIN_PLAYLIST_URL
-            val isOldKtv = item.url == DEFAULT_OLD_KTV_URL || item.name == "KTV Playlist"
+            val isBuiltin = item.id == BUILTIN_PLAYLIST_ID || item.url == BUILTIN_PLAYLIST_URL || item.id == "default_ktv"
 
-            if (isBuiltin || isOldKtv) {
+            if (isBuiltin) {
                 if (builtinItem == null) {
                     builtinItem = PlaylistSource(
                         id = BUILTIN_PLAYLIST_ID,
@@ -515,7 +514,6 @@ class PreferencesHelper(context: Context) {
         const val MODE_LAST_WATCHED = "LAST_WATCHED"
         const val MODE_FIXED_CHANNEL = "FIXED_CHANNEL"
 
-        const val DEFAULT_OLD_KTV_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u"
         const val BUILTIN_PLAYLIST_ID = "builtin_fpt_udp"
         const val BUILTIN_PLAYLIST_URL = "asset://builtin_playlist.m3u"
         const val DEFAULT_UDPXY_SERVER = "10.0.0.222:4022"

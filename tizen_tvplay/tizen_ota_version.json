@@ -1,7 +1,8 @@
 {
-  "version": "2.2.11",
-  "versionCode": 229,
+  "version": "2.2.12",
+  "versionCode": 230,
   "releaseDate": "2026-11-07",
-  "changelog": "Tích hợp nguồn thể thao Xôi Chè TV (xoiche.live) với bình luận viên và luồng dự phòng, bổ sung tính năng Auto-Fallback tự động chuyển luồng tiếp theo khi gặp sự cố tín hiệu.",
+  "changelog": "Đồng bộ danh sách phát M3U với Web Remote, mở nhanh bảng chọn playlist bằng phím Sang Phải trong chế độ TV, hỗ trợ cập nhật OTA trực tiếp.",
+  "bundleUrl": "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/tizen_tvplay/js/app.js",
   "downloadUrl": "http://10.0.0.222:8080/data/TVplay.wgt"
 }

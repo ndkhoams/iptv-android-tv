@@ -179,8 +179,8 @@ object WebPageTemplate {
         <div class="form-card">
             <h3>+ Dán Link M3U Mới Từ Điện Thoại</h3>
             <div class="form-group">
-                <label>Tên danh sách</label>
-                <input type="text" id="newPlName" class="form-input" placeholder="Ví dụ: Kênh Thể Thao, Kênh VN...">
+                <label>Tên danh sách (tùy chọn)</label>
+                <input type="text" id="newPlName" class="form-input" placeholder="Để trống sẽ tự động lấy theo link URL">
             </div>
             <div class="form-group">
                 <label>Đường link URL (M3U / M3U8)</label>
@@ -752,6 +752,11 @@ object WebPageTemplate {
         }
 
         /* ========== TAB PLAYLISTS ========== */
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         function loadPlaylists() {
             var container = document.getElementById('playlistsContainer');
             fetch('/api/playlists?t=' + Date.now(), { cache: 'no-store' })
@@ -770,8 +775,8 @@ object WebPageTemplate {
                     var deleteBtn = (list.length > 1) ? '<button class="btn-sm btn-delete" onclick="deletePlaylist(\'' + item.id + '\')">Xóa</button>' : '';
                     html += '<div class="' + itemClass + '">' +
                         '<div class="playlist-info">' +
-                            '<div class="playlist-name">' + item.name + selBadge + '</div>' +
-                            '<div class="playlist-url">' + item.url + '</div>' +
+                            '<div class="playlist-name">' + escapeHtml(item.name) + selBadge + '</div>' +
+                            '<div class="playlist-url">' + escapeHtml(item.url) + '</div>' +
                         '</div>' +
                         '<div class="playlist-actions">' +
                             selectBtn +
@@ -789,9 +794,18 @@ object WebPageTemplate {
             var name = document.getElementById('newPlName').value.trim();
             var url = document.getElementById('newPlUrl').value.trim();
             var selectNow = document.getElementById('newPlSelectNow') ? document.getElementById('newPlSelectNow').checked : true;
-            if (!name || !url) {
-                showToast('Vui lòng nhập tên và link M3U!');
+            if (!url) {
+                showToast('Vui lòng nhập link M3U!');
                 return;
+            }
+            if (!name) {
+                try {
+                    var u = new URL(url);
+                    var p = u.pathname.split('/').pop();
+                    name = p ? decodeURIComponent(p).replace(/\.[^/.]+$/, "") : "Danh sách IPTV";
+                } catch(e) {
+                    name = "Danh sách IPTV";
+                }
             }
             showToast('Đang thêm playlist...');
             fetch('/api/playlist/add', {

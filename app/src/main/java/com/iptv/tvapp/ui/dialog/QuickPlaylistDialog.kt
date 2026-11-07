@@ -61,6 +61,18 @@ class QuickPlaylistDialog(
         }
     }
 
+    fun refreshPlaylists() {
+        if (!isShowing) return
+        val playlists = prefs.getPlaylists()
+        val adapter = QuickPlaylistAdapter(playlists) { selected ->
+            prefs.setActivePlaylist(selected.id)
+            Toast.makeText(context, "Đã chuyển sang: ${selected.name}", Toast.LENGTH_SHORT).show()
+            onPlaylistSelected(selected)
+            dismiss()
+        }
+        binding.rvQuickPlaylists.adapter = adapter
+    }
+
     private class QuickPlaylistAdapter(
         private val items: List<PlaylistSource>,
         private val onClick: (PlaylistSource) -> Unit

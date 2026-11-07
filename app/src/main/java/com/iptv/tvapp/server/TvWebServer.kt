@@ -379,15 +379,18 @@ class TvWebServer(
             }
             method == "POST" && path == "/api/playlist/add" -> {
                 val json = JSONObject(body)
-                val name = json.optString("name", "").trim()
+                var name = json.optString("name", "").trim()
                 val url = json.optString("url", "").trim()
-                if (name.isBlank() || url.isBlank()) {
+                if (url.isBlank()) {
                     val resp = JSONObject().apply {
                         put("success", false)
-                        put("error", "Vui lòng nhập tên và đường link M3U")
+                        put("error", "Vui lòng nhập đường link M3U")
                     }
                     sendResponse(output, "application/json; charset=utf-8", resp.toString())
                     return
+                }
+                if (name.isBlank()) {
+                    name = url.substringAfterLast("/").substringBefore("?").substringBeforeLast(".").ifBlank { "Danh sách IPTV" }
                 }
                 val selectImmediately = json.optBoolean("selectImmediately", true)
                 val list = prefs.getPlaylists()

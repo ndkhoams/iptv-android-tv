@@ -503,6 +503,7 @@ class MainActivity : AppCompatActivity() {
             onPlaylistChanged = {
                 loadPlaylist(forceRefresh = true)
                 activeSettingsDialog?.refreshPlaylists()
+                (activeCustomDialog as? QuickPlaylistDialog)?.refreshPlaylists()
             },
             onChannelsUpdated = {
                 refreshChannelsState()
