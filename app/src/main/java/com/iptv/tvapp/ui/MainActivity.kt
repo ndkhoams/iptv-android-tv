@@ -938,17 +938,16 @@ class MainActivity : AppCompatActivity() {
                                 }, 1200L)
                             }
                             VlcMediaPlayer.Event.EncounteredError -> {
-                                if (tryFallbackMatchStream("VLC Error")) {
-                                    return@setEventListener
-                                }
-                                binding.layoutBuffering.visibility = View.GONE
-                                binding.layoutQuickBuffering.visibility = View.GONE
-                                binding.tvErrorMessage.visibility = View.VISIBLE
-                                val mg = currentPlayingMatchGroup
-                                if (mg != null && mg.sources.size > 1) {
-                                    binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC.\nBấm ▶ (Phím Phải) để đổi nguồn khác (còn ${mg.sources.size - 1} nguồn)"
-                                } else {
-                                    binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
+                                if (!tryFallbackMatchStream("VLC Error")) {
+                                    binding.layoutBuffering.visibility = View.GONE
+                                    binding.layoutQuickBuffering.visibility = View.GONE
+                                    binding.tvErrorMessage.visibility = View.VISIBLE
+                                    val mg = currentPlayingMatchGroup
+                                    if (mg != null && mg.sources.size > 1) {
+                                        binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC.\nBấm ▶ (Phím Phải) để đổi nguồn khác (còn ${mg.sources.size - 1} nguồn)"
+                                    } else {
+                                        binding.tvErrorDetail.text = "Lỗi phát kênh qua VLC. Bấm ▲ ▼ để đổi kênh."
+                                    }
                                 }
                             }
                         }
