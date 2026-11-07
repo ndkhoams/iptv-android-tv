@@ -2403,7 +2403,7 @@ class MainActivity : AppCompatActivity() {
                                 return true
                             }
                         }
-                    } else if (currentAppMode == AppMode.TV && (binding.rvChannels.hasFocus() || binding.rvChannels.findContainingViewHolder(currentFocus) != null)) {
+                    } else if (currentAppMode == AppMode.TV && (binding.rvChannels.hasFocus() || (currentFocus?.let { binding.rvChannels.findContainingViewHolder(it) } != null))) {
                         showQuickPlaylistDialog()
                         return true
                     }
