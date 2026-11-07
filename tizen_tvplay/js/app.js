@@ -340,48 +340,7 @@
     // 4. QUẢN LÝ CÀI ĐẶT & UDPXY & PLAYLISTS & REAL IP
     // ==========================================
     function updateTvIpBadge() {
-        var badge = document.getElementById('header-ip-badge');
-        if (!badge) return;
-
-        // 1. Tizen SystemInfo API (Lấy IP thật trên TV)
-        if (window.tizen && window.tizen.systeminfo) {
-            try {
-                tizen.systeminfo.getPropertyValue("WIFI_NETWORK", function (wifi) {
-                    if (wifi && wifi.ipAddress && wifi.ipAddress !== "0.0.0.0") {
-                        badge.textContent = "🌐 TV: " + wifi.ipAddress;
-                    }
-                });
-                tizen.systeminfo.getPropertyValue("ETHERNET_NETWORK", function (eth) {
-                    if (eth && eth.ipAddress && eth.ipAddress !== "0.0.0.0") {
-                        badge.textContent = "🌐 TV: " + eth.ipAddress;
-                    }
-                });
-            } catch (e) {}
-        }
-
-        // 2. Kiểm tra qua hostname nếu chạy qua HTTP Server
-        var host = window.location.hostname;
-        if (host && host !== "127.0.0.1" && host !== "localhost") {
-            badge.textContent = "🌐 TV: " + host;
-        } else {
-            // Lấy LAN IP từ server preview
-            try {
-                var xhr = new XMLHttpRequest();
-                xhr.open('GET', '/api/my_ip', true);
-                xhr.onload = function () {
-                    if (xhr.status === 200 && xhr.responseText.trim()) {
-                        badge.textContent = "🌐 TV: " + xhr.responseText.trim();
-                    }
-                };
-                xhr.send();
-            } catch (e) {}
-        }
-        // Lên lịch cập nhật lại sau 2s và 5s để đảm bảo lấy được IP khi mạng vừa kết nối
-        if (!window.__web_remote_timer_set__) {
-            window.__web_remote_timer_set__ = true;
-            setTimeout(updateTvIpBadge, 2000);
-            setTimeout(updateTvIpBadge, 5000);
-        }
+        // Đã lược bỏ hiển thị IP của TV và CPU/RAM trên thanh header
     }
 
     function loadSettings() {
