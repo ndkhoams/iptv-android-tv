@@ -453,6 +453,9 @@ class MainActivity : AppCompatActivity() {
 
         binding.navModeSports.setOnClickListener {
             resetOverlayTimer()
+            if (currentAppMode != AppMode.SPORTS && sportsCategoriesList.isEmpty()) {
+                showBottomNotification("⚽ Đang tải danh sách trận đấu trực tiếp hôm nay...")
+            }
             switchAppMode(AppMode.SPORTS, focusCategories = true)
         }
 
@@ -1129,7 +1132,11 @@ class MainActivity : AppCompatActivity() {
             // Lazy Loading: Chỉ kích hoạt tải mạng trực tiếp thể thao khi người dùng lần đầu chọn chế độ Thể Thao
             if (!hasLoadedSportsOnce) {
                 hasLoadedSportsOnce = true
-                fetchSportsInBackground(forceRefresh = false, showNotification = false)
+                val isFirstLoadEmpty = sportsCategoriesList.isEmpty()
+                if (isFirstLoadEmpty) {
+                    showBottomNotification("⚽ Đang tải danh sách trận đấu trực tiếp hôm nay...")
+                }
+                fetchSportsInBackground(forceRefresh = false, showNotification = isFirstLoadEmpty)
                 startPeriodicSportsRefresh()
             }
         }
@@ -1165,8 +1172,13 @@ class MainActivity : AppCompatActivity() {
         } else {
             currentCategoryChannels.clear()
             channelAdapter.submitList(emptyList())
-            binding.tvCategoryHeader.text = if (mode == AppMode.TV) "Xem TV" else "Trực tiếp Thể thao"
-            binding.tvChannelCount.text = getString(R.string.channels_count, 0)
+            if (mode == AppMode.SPORTS) {
+                binding.tvCategoryHeader.text = "⚽ Đang tải trận đấu trực tiếp..."
+                binding.tvChannelCount.text = "Vui lòng chờ giây lát"
+            } else {
+                binding.tvCategoryHeader.text = if (mode == AppMode.TV) "Xem TV" else "Trực tiếp Thể thao"
+                binding.tvChannelCount.text = getString(R.string.channels_count, 0)
+            }
         }
 
         if (focusCategories) {

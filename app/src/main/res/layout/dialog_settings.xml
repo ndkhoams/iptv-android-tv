@@ -235,7 +235,7 @@
                         android:singleLine="true"
                         android:imeOptions="actionDone"
                         android:nextFocusUp="@+id/btnAddPlaylist"
-                        android:nextFocusDown="@+id/rbPlayerVlc"
+                        android:nextFocusDown="@+id/rbFirstChannel"
                         android:nextFocusRight="@+id/btnCloseSettings"
                         android:focusable="true"
                         android:focusableInTouchMode="false" />
@@ -249,78 +249,12 @@
                         android:textSize="10sp" />
                 </LinearLayout>
 
-                <!-- 3. TRÌNH PHÁT VIDEO (EXOPLAYER VPU HARDWARE SURFACE) -->
+                <!-- 3. CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="3. Trình Phát Video (ExoPlayer VPU Hardware Surface):"
-                    android:textColor="@color/fpt_orange"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <RadioGroup
-                    android:id="@+id/rgPlayerEngine"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:background="#181818"
-                    android:padding="8dp">
-
-                    <RadioButton
-                        android:id="@+id/rbPlayerVlc"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="ExoPlayer SurfaceView (Khử xé hình phần cứng VPU Mi Box 3c, 0% CPU)"
-                        android:textColor="#34D399"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:nextFocusUp="@+id/etUdpxyServer"
-                        android:nextFocusDown="@+id/rbFirstChannel"
-                        android:nextFocusRight="@+id/btnCloseSettings"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true" />
-
-                    <RadioButton
-                        android:id="@+id/rbPlayerExo"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:visibility="gone" />
-                </RadioGroup>
-
-                <RadioGroup
-                    android:id="@+id/rgDeinterlaceMode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone">
-
-                    <RadioButton
-                        android:id="@+id/rbDeinterlaceYadif"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-
-                    <RadioButton
-                        android:id="@+id/rbDeinterlaceLinear"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-
-                    <RadioButton
-                        android:id="@+id/rbDeinterlaceBlend"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-
-                    <RadioButton
-                        android:id="@+id/rbDeinterlaceOff"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-                </RadioGroup>
-
-                <!-- 4. CÀI ĐẶT KHỞI ĐỘNG CÙNG TV -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="4. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
+                    android:text="3. Cài Đặt Khởi Động &amp; Mở Kênh Tự Động:"
                     android:textColor="@color/fpt_orange"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -345,7 +279,7 @@
                             android:text="Mở kênh đầu tiên của danh sách (Mặc định)"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp"
-                            android:nextFocusUp="@+id/rbDeinterlaceOff"
+                            android:nextFocusUp="@+id/etUdpxyServer"
                             android:nextFocusDown="@+id/rbLastWatched"
                             android:nextFocusRight="@+id/btnCloseSettings"
                             android:focusable="true"
@@ -391,12 +325,12 @@
                         android:textSize="11sp" />
                 </LinearLayout>
 
-                <!-- 5. SAO LƯU & KHÔI PHỤC CẤU HÌNH -->
+                <!-- 4. SAO LƯU & KHÔI PHỤC CẤU HÌNH -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="5. Sao Lưu &amp; Khôi Phục Cấu Hình:"
+                    android:text="4. Sao Lưu &amp; Khôi Phục Cấu Hình:"
                     android:textColor="@color/fpt_orange"
                     android:textSize="14sp"
                     android:textStyle="bold" />
@@ -543,24 +477,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
-
-            <!-- Thông tin phiên bản & Web Remote -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="TV Play v2.0.1 (Android TV)"
-                android:textColor="@color/text_muted"
-                android:textSize="10sp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:layout_marginTop="2dp"
-                android:text="Web Remote: port 8080"
-                android:textColor="@color/text_muted"
-                android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
 

@@ -51,17 +51,17 @@
     <!-- Số trận đã đấu -->
     <TextView
         android:id="@+id/tvStandingPlayed"
-        android:layout_width="30dp"
+        android:layout_width="28dp"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="0"
         android:textColor="@color/text_secondary"
         android:textSize="11sp" />
 
-    <!-- Hiệu số bàn thắng bại (GD) -->
+    <!-- Hiệu số bàn thắng bại (GD) / Thắng-Bại NBA -->
     <TextView
         android:id="@+id/tvStandingGd"
-        android:layout_width="32dp"
+        android:layout_width="44dp"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="+0"

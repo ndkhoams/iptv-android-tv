@@ -162,20 +162,20 @@ class SportsStandingsManager(private val context: Context) {
     }
 
     private fun getNbaStandingsFallback(): List<StandingEntry> = listOf(
-        StandingEntry(1, "Boston Celtics", "Celtics", "https://a.espncdn.com/i/teamlogos/nba/500/bos.png", 6, "+9.2", 5),
-        StandingEntry(2, "Cleveland Cavaliers", "Cavaliers", "https://a.espncdn.com/i/teamlogos/nba/500/cle.png", 6, "+5.0", 5),
-        StandingEntry(3, "Oklahoma City Thunder", "Thunder", "https://a.espncdn.com/i/teamlogos/nba/500/okc.png", 6, "+7.5", 5),
-        StandingEntry(4, "Golden State Warriors", "Warriors", "https://a.espncdn.com/i/teamlogos/nba/500/gsw.png", 6, "+6.0", 4),
-        StandingEntry(5, "Los Angeles Lakers", "Lakers", "https://a.espncdn.com/i/teamlogos/nba/500/lal.png", 6, "+5.2", 4),
-        StandingEntry(6, "Denver Nuggets", "Nuggets", "https://a.espncdn.com/i/teamlogos/nba/500/den.png", 5, "+3.0", 3),
-        StandingEntry(7, "Dallas Mavericks", "Mavericks", "https://a.espncdn.com/i/teamlogos/nba/500/dal.png", 6, "+2.5", 4),
-        StandingEntry(8, "Phoenix Suns", "Suns", "https://a.espncdn.com/i/teamlogos/nba/500/phx.png", 6, "+2.0", 4),
-        StandingEntry(9, "New York Knicks", "Knicks", "https://a.espncdn.com/i/teamlogos/nba/500/nyk.png", 5, "+1.5", 3),
-        StandingEntry(10, "Minnesota Timberwolves", "Timberwolves", "https://a.espncdn.com/i/teamlogos/nba/500/min.png", 6, "+2.0", 3),
-        StandingEntry(11, "Milwaukee Bucks", "Bucks", "https://a.espncdn.com/i/teamlogos/nba/500/mil.png", 6, "-2.0", 2),
-        StandingEntry(12, "Miami Heat", "Heat", "https://a.espncdn.com/i/teamlogos/nba/500/mia.png", 5, "-1.5", 2),
-        StandingEntry(13, "LA Clippers", "Clippers", "https://a.espncdn.com/i/teamlogos/nba/500/lac.png", 5, "-3.0", 2),
-        StandingEntry(14, "Philadelphia 76ers", "76ers", "https://a.espncdn.com/i/teamlogos/nba/500/phi.png", 5, "-4.0", 1),
-        StandingEntry(15, "San Antonio Spurs", "Spurs", "https://a.espncdn.com/i/teamlogos/nba/500/sas.png", 5, "-5.0", 1)
+        StandingEntry(1, "Boston Celtics", "Celtics", "https://a.espncdn.com/i/teamlogos/nba/500/bos.png", 6, "5T-1B", 5),
+        StandingEntry(2, "Cleveland Cavaliers", "Cavaliers", "https://a.espncdn.com/i/teamlogos/nba/500/cle.png", 6, "5T-1B", 5),
+        StandingEntry(3, "Oklahoma City Thunder", "Thunder", "https://a.espncdn.com/i/teamlogos/nba/500/okc.png", 6, "5T-1B", 5),
+        StandingEntry(4, "Golden State Warriors", "Warriors", "https://a.espncdn.com/i/teamlogos/nba/500/gsw.png", 6, "4T-2B", 4),
+        StandingEntry(5, "Los Angeles Lakers", "Lakers", "https://a.espncdn.com/i/teamlogos/nba/500/lal.png", 6, "4T-2B", 4),
+        StandingEntry(6, "Denver Nuggets", "Nuggets", "https://a.espncdn.com/i/teamlogos/nba/500/den.png", 5, "3T-2B", 3),
+        StandingEntry(7, "Dallas Mavericks", "Mavericks", "https://a.espncdn.com/i/teamlogos/nba/500/dal.png", 6, "4T-2B", 4),
+        StandingEntry(8, "Phoenix Suns", "Suns", "https://a.espncdn.com/i/teamlogos/nba/500/phx.png", 6, "4T-2B", 4),
+        StandingEntry(9, "New York Knicks", "Knicks", "https://a.espncdn.com/i/teamlogos/nba/500/nyk.png", 5, "3T-2B", 3),
+        StandingEntry(10, "Minnesota Timberwolves", "Timberwolves", "https://a.espncdn.com/i/teamlogos/nba/500/min.png", 6, "3T-3B", 3),
+        StandingEntry(11, "Milwaukee Bucks", "Bucks", "https://a.espncdn.com/i/teamlogos/nba/500/mil.png", 6, "2T-4B", 2),
+        StandingEntry(12, "Miami Heat", "Heat", "https://a.espncdn.com/i/teamlogos/nba/500/mia.png", 5, "2T-3B", 2),
+        StandingEntry(13, "LA Clippers", "Clippers", "https://a.espncdn.com/i/teamlogos/nba/500/lac.png", 5, "2T-3B", 2),
+        StandingEntry(14, "Philadelphia 76ers", "76ers", "https://a.espncdn.com/i/teamlogos/nba/500/phi.png", 5, "1T-4B", 1),
+        StandingEntry(15, "San Antonio Spurs", "Spurs", "https://a.espncdn.com/i/teamlogos/nba/500/sas.png", 5, "1T-4B", 1)
     )
 }

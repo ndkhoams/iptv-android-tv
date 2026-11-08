@@ -291,7 +291,7 @@ class SettingsDialog(
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        binding.rbPlayerVlc.requestFocus()
+                        binding.rbFirstChannel.requestFocus()
                         true
                     }
                     KeyEvent.KEYCODE_DPAD_UP -> {
@@ -359,7 +359,7 @@ class SettingsDialog(
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
                 val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
                 imm?.hideSoftInputFromWindow(v.windowToken, 0)
-                binding.rbPlayerVlc.requestFocus()
+                binding.rbFirstChannel.requestFocus()
                 true
             } else false
         }
@@ -406,7 +406,7 @@ class SettingsDialog(
     }
 
     private fun initPlayerEngineSettings() {
-        binding.rbPlayerVlc.isChecked = true
+        // Mặc định luôn sử dụng ExoPlayer SurfaceView phần cứng
     }
 
     private fun initDeinterlaceSettings() {
