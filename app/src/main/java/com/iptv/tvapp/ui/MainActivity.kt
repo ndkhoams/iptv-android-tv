@@ -35,7 +35,6 @@ import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.Tracks
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import android.os.Handler
 import com.google.android.exoplayer2.Renderer
 import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
 import com.google.android.exoplayer2.video.MediaCodecVideoRenderer
