@@ -31,6 +31,7 @@ backup_armbian*/
 *.tar.gz
 *.tar.zst
 test_match.m3u
+film4k_channels.m3u
 *.wgt
 !TVplay.wgt
 web/thethao-data.json
