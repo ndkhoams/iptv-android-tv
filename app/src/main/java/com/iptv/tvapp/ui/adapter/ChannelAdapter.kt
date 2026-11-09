@@ -9,13 +9,18 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.iptv.tvapp.R
 import com.iptv.tvapp.databinding.ItemChannelBinding
 import com.iptv.tvapp.model.Channel
-import com.iptv.tvapp.util.FptLogoHelper
 
 class ChannelAdapter(
     private val onChannelClick: (Channel) -> Unit,
     private val onChannelLongClick: ((Channel) -> Unit)? = null,
     private val onChannelFocused: ((Channel) -> Unit)? = null
 ) : RecyclerView.Adapter<ChannelAdapter.ChannelViewHolder>() {
+
+    companion object {
+        private const val PAYLOAD_PLAY_STATE = 1
+        private const val VIEW_TYPE_EVEN = 0
+        private const val VIEW_TYPE_ODD = 1
+    }
 
     private val channels = mutableListOf<Channel>()
     private var playingChannel: Channel? = null
@@ -27,10 +32,49 @@ class ChannelAdapter(
         notifyDataSetChanged()
     }
 
+    private fun isChannelPlaying(channel: Channel): Boolean {
+        if (playingChannel == null && playingMatchKey == null) return false
+        if (channel.id == playingChannel?.id) return true
+        if (channel.streamUrl.startsWith("match://")) {
+            val key = channel.streamUrl.removePrefix("match://")
+            return key == playingMatchKey
+        }
+        if (channel.streamUrl == playingChannel?.streamUrl) {
+            return channel.name == playingChannel?.name || channel.id == playingChannel?.id
+        }
+        return false
+    }
+
+    private fun findPlayingIndex(targetChannel: Channel?, matchKey: String?): Int {
+        if (targetChannel == null && matchKey == null) return -1
+        return channels.indexOfFirst { ch ->
+            if (ch.id == targetChannel?.id) return@indexOfFirst true
+            if (ch.streamUrl.startsWith("match://") && matchKey != null) {
+                return@indexOfFirst ch.streamUrl.removePrefix("match://") == matchKey
+            }
+            if (targetChannel != null && ch.streamUrl == targetChannel.streamUrl) {
+                return@indexOfFirst ch.name == targetChannel.name || ch.id == targetChannel.id
+            }
+            false
+        }
+    }
+
     fun setPlayingChannel(channel: Channel?, matchKey: String? = null) {
+        val oldIndex = findPlayingIndex(playingChannel, playingMatchKey)
         playingChannel = channel
         playingMatchKey = matchKey
-        notifyDataSetChanged()
+        val newIndex = findPlayingIndex(channel, matchKey)
+
+        if (oldIndex != -1 && newIndex != -1 && oldIndex != newIndex) {
+            notifyItemChanged(oldIndex, PAYLOAD_PLAY_STATE)
+            notifyItemChanged(newIndex, PAYLOAD_PLAY_STATE)
+        } else if (oldIndex != -1 && newIndex == -1) {
+            notifyItemChanged(oldIndex, PAYLOAD_PLAY_STATE)
+        } else if (oldIndex == -1 && newIndex != -1) {
+            notifyItemChanged(newIndex, PAYLOAD_PLAY_STATE)
+        } else if (oldIndex != newIndex) {
+            notifyItemRangeChanged(0, channels.size, PAYLOAD_PLAY_STATE)
+        }
     }
 
     fun updateChannelItem(channel: Channel) {
@@ -41,15 +85,37 @@ class ChannelAdapter(
         }
     }
 
+    override fun getItemViewType(position: Int): Int {
+        return if (position % 2 == 1) VIEW_TYPE_ODD else VIEW_TYPE_EVEN
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChannelViewHolder {
         val binding = ItemChannelBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         )
+        // Gán Drawable background 1 lần duy nhất lúc tạo View, triệt tiêu re-inflate XML Drawable khi cuộn
+        if (viewType == VIEW_TYPE_ODD) {
+            binding.root.setBackgroundResource(R.drawable.selector_channel_item_odd)
+        } else {
+            binding.root.setBackgroundResource(R.drawable.selector_channel_item_even)
+        }
         return ChannelViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ChannelViewHolder, position: Int) {
         holder.bind(channels[position], position)
+    }
+
+    override fun onBindViewHolder(
+        holder: ChannelViewHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.isNotEmpty()) {
+            holder.updatePlayState(channels[position])
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     override fun getItemCount(): Int = channels.size
@@ -76,7 +142,7 @@ class ChannelAdapter(
                 }
             }
 
-            // TV Focus nhẹ mượt trên Mi Box 3c (Không chạy animation nặng, dùng selector drawable)
+            // TV Focus nhẹ mượt trên Mi Box 3c
             binding.root.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
                     val pos = adapterPosition
@@ -87,13 +153,13 @@ class ChannelAdapter(
             }
         }
 
-        fun bind(channel: Channel, position: Int) {
-            if (position % 2 == 1) {
-                binding.root.setBackgroundResource(R.drawable.selector_channel_item_odd)
-            } else {
-                binding.root.setBackgroundResource(R.drawable.selector_channel_item_even)
-            }
+        fun updatePlayState(channel: Channel) {
+            val isPlaying = isChannelPlaying(channel)
+            binding.tvNowPlaying.visibility = if (isPlaying) View.VISIBLE else View.GONE
+            binding.root.isSelected = isPlaying
+        }
 
+        fun bind(channel: Channel, position: Int) {
             if (channel.id == "action_refresh_sports" || channel.streamUrl == "action://refresh_sports") {
                 binding.tvChannelNumber.text = "🔄"
                 binding.ivChannelLogo.setImageResource(R.drawable.ic_tv_placeholder)
@@ -109,45 +175,23 @@ class ChannelAdapter(
             binding.tvChannelNumber.text = String.format("%02d", channel.number)
             binding.tvChannelName.text = channel.name
 
-            val isPlaying = when {
-                playingChannel == null -> false
-                channel.id == playingChannel?.id -> true
-                channel.streamUrl.startsWith("match://") -> {
-                    val key = channel.streamUrl.removePrefix("match://")
-                    key == playingMatchKey
-                }
-                channel.streamUrl == playingChannel?.streamUrl -> {
-                    channel.name == playingChannel?.name || channel.id == playingChannel?.id
-                }
-                else -> false
-            }
+            val isPlaying = isChannelPlaying(channel)
             binding.tvNowPlaying.visibility = if (isPlaying) View.VISIBLE else View.GONE
             binding.tvDefaultBadge.visibility = if (channel.isDefaultStartup) View.VISIBLE else View.GONE
             binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE
             binding.root.isSelected = isPlaying
 
-            // Phân giải chất lượng từ tên kênh: Kênh HD tại VN là FHD 1080i/1080p
-            val upperName = channel.name.uppercase()
-            when {
-                upperName.contains("4K") -> {
-                    binding.tvResolutionBadge.visibility = View.VISIBLE
-                    binding.tvResolutionBadge.text = "4K"
-                }
-                upperName.contains("720") -> {
-                    binding.tvResolutionBadge.visibility = View.VISIBLE
-                    binding.tvResolutionBadge.text = "720p"
-                }
-                upperName.contains("FHD") || upperName.contains("1080") || upperName.contains("HD") -> {
-                    binding.tvResolutionBadge.visibility = View.VISIBLE
-                    binding.tvResolutionBadge.text = "FHD"
-                }
-                else -> {
-                    binding.tvResolutionBadge.visibility = View.GONE
-                }
+            // Sử dụng dữ liệu độ phân giải đã được tiền tính toán (Pre-computed) - 0 allocations
+            val res = channel.getOrComputeResolution()
+            if (res.isNotEmpty()) {
+                binding.tvResolutionBadge.visibility = View.VISIBLE
+                binding.tvResolutionBadge.text = res
+            } else {
+                binding.tvResolutionBadge.visibility = View.GONE
             }
 
-            // Tự động phân giải CDN Logo FPT Play (Khống chế kích thước 100x60 và định dạng RGB_565 tiết kiệm 80% RAM)
-            val resolvedLogo = FptLogoHelper.getResolvedLogoUrl(channel.name, channel.logoUrl)
+            // Tự động phân giải CDN Logo FPT Play (đã cache URL, định dạng RGB_565 tiết kiệm 80% RAM)
+            val resolvedLogo = channel.getOrResolveLogo()
             if (resolvedLogo.isNotBlank()) {
                 Glide.with(binding.ivChannelLogo.context)
                     .load(resolvedLogo)

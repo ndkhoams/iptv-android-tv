@@ -342,7 +342,12 @@ class MainActivity : AppCompatActivity() {
                 updateSpotlight(channel, immediate = false)
             }
         )
+        val channelViewPool = RecyclerView.RecycledViewPool().apply {
+            setMaxRecycledViews(0, 25)
+            setMaxRecycledViews(1, 25)
+        }
         binding.rvChannels.apply {
+            setRecycledViewPool(channelViewPool)
             layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvChannels }) { focused, direction ->
                 when (direction) {
                     View.FOCUS_LEFT -> findHorizontallyAlignedCategoryView(focused)
@@ -1340,7 +1345,7 @@ class MainActivity : AppCompatActivity() {
             if (immediate) {
                 performHeavySpotlightUpdate(channel)
             } else {
-                spotlightHandler.postDelayed(spotlightRunnable, 120L)
+                spotlightHandler.postDelayed(spotlightRunnable, 150L)
             }
             return
         }
@@ -1373,7 +1378,7 @@ class MainActivity : AppCompatActivity() {
             if (immediate) {
                 performHeavySpotlightUpdate(channel)
             } else {
-                spotlightHandler.postDelayed(spotlightRunnable, 120L)
+                spotlightHandler.postDelayed(spotlightRunnable, 150L)
             }
             return
         }
@@ -1423,8 +1428,8 @@ class MainActivity : AppCompatActivity() {
         if (immediate) {
             performHeavySpotlightUpdate(channel)
         } else {
-            // Debounce 120ms khi duyệt nhanh phím D-pad: Giữ luồng UI 60fps mượt mà, triệt tiêu nghẽn phím
-            spotlightHandler.postDelayed(spotlightRunnable, 120L)
+            // Debounce 150ms khi duyệt nhanh phím D-pad: Giữ luồng UI 60fps mượt mà, triệt tiêu nghẽn phím
+            spotlightHandler.postDelayed(spotlightRunnable, 150L)
         }
     }
 
