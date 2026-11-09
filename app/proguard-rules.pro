@@ -3,6 +3,9 @@
 # 1. ExoPlayer 2.x & Media Codecs
 -keep class com.google.android.exoplayer2.** { *; }
 -dontwarn com.google.android.exoplayer2.**
+-keepclassmembers class * extends com.google.android.exoplayer2.video.MediaCodecVideoRenderer {
+    protected boolean codecNeedsSetOutputSurfaceWorkaround(java.lang.String);
+}
 
 # 2. Data Models (Serialized / Deserialized via JSON)
 -keep class com.iptv.tvapp.model.** { *; }

@@ -26,6 +26,11 @@ scratch/
 
 *.bat
 
+backup_armbian*.py
 backup_armbian*/
 *.tar.gz
 *.tar.zst
+test_match.m3u
+*.wgt
+!TVplay.wgt
+web/thethao-data.json

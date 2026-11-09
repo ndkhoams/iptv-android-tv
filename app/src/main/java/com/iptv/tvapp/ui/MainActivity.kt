@@ -35,7 +35,13 @@ import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.Tracks
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import android.os.Handler
+import com.google.android.exoplayer2.Renderer
+import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
+import com.google.android.exoplayer2.video.MediaCodecVideoRenderer
+import com.google.android.exoplayer2.video.VideoRendererEventListener
 import com.google.android.exoplayer2.video.VideoSize
+import java.util.ArrayList
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.extractor.ts.DefaultTsPayloadReaderFactory
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
@@ -890,8 +896,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initExoPlayer() {
-        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder
-        val renderersFactory = DefaultRenderersFactory(this).apply {
+        // 1. Tối ưu bộ giải mã: Bật Deinterlace & Dự phòng Decoder kết hợp Workaround chống xé hình cho Mi Box 3c / Amlogic
+        val renderersFactory = object : DefaultRenderersFactory(this) {
+            override fun buildVideoRenderers(
+                context: android.content.Context,
+                extensionRendererMode: Int,
+                mediaCodecSelector: MediaCodecSelector,
+                enableDecoderFallback: Boolean,
+                eventHandler: Handler,
+                eventListener: VideoRendererEventListener,
+                allowedVideoJoiningTimeMs: Long,
+                out: ArrayList<Renderer>
+            ) {
+                val customVideoRenderer = object : MediaCodecVideoRenderer(
+                    context,
+                    codecAdapterFactory,
+                    mediaCodecSelector,
+                    allowedVideoJoiningTimeMs,
+                    enableDecoderFallback,
+                    eventHandler,
+                    eventListener,
+                    DefaultRenderersFactory.MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY
+                ) {
+                    override fun codecNeedsSetOutputSurfaceWorkaround(name: String): Boolean {
+                        // Workaround chống xé hình (tearing) và màn hình đen cho Mi Box 3c, TX3 mini, Rockchip và Sony TV
+                        val hw = Build.HARDWARE.lowercase()
+                        val board = Build.BOARD.lowercase()
+                        val dev = Build.DEVICE.lowercase()
+                        val manu = Build.MANUFACTURER.lowercase()
+                        if (hw.contains("amlogic") || board.contains("meson") ||
+                            hw.contains("rockchip") || board.contains("rk3") ||
+                            manu.contains("sony") || dev.contains("mibox") || dev.contains("once")) {
+                            return true
+                        }
+                        return super.codecNeedsSetOutputSurfaceWorkaround(name)
+                    }
+                }
+                out.add(customVideoRenderer)
+            }
+        }.apply {
             setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             setEnableDecoderFallback(true) // Cho phép chuyển codec dự phòng nếu codec phần cứng lỗi 1080i
             setAllowedVideoJoiningTimeMs(5000L)
