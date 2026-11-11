@@ -6,7 +6,18 @@ param (
 )
 
 $LocalAgyDir = "$env:USERPROFILE\.gemini\antigravity"
-$DropboxSyncDir = Join-Path $PSScriptRoot ".antigravity_chat_sync"
+$candidateSyncDirs = @(
+    "D:\Dropbox\VS\antigr\.antigravity_chat_sync",
+    (Join-Path (Split-Path $PSScriptRoot -Parent) ".antigravity_chat_sync"),
+    (Join-Path $PSScriptRoot ".antigravity_chat_sync")
+)
+$DropboxSyncDir = $candidateSyncDirs[0]
+foreach ($dir in $candidateSyncDirs) {
+    if (Test-Path $dir) {
+        $DropboxSyncDir = $dir
+        break
+    }
+}
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "  ANTIGRAVITY CHAT SYNC (NHA <-> CONG TY)                 " -ForegroundColor Cyan
