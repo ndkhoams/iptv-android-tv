@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -19,6 +20,7 @@ import com.iptv.tvapp.model.Channel
 class MatchSourcesDialog(
     context: Context,
     private val matchGroup: SportsLiveManager.MatchGroup,
+    private val currentPlayingChannel: Channel? = null,
     private val onSourceSelected: (Channel) -> Unit
 ) : Dialog(context, R.style.TvDialogTheme) {
 
@@ -35,7 +37,7 @@ class MatchSourcesDialog(
         val timeStr = if (matchGroup.date.isNotBlank()) "${matchGroup.time} ${matchGroup.date}" else "${matchGroup.time} Hôm nay"
         binding.tvMatchSubtitle.text = "$timeStr$leagueStr • ${matchGroup.sources.size} nguồn phát trực tiếp"
 
-        val adapter = MatchSourcesAdapter(matchGroup.sources) { selectedChannel ->
+        val adapter = MatchSourcesAdapter(matchGroup.sources, currentPlayingChannel) { selectedChannel ->
             dismiss()
             onSourceSelected(selectedChannel)
         }
@@ -43,14 +45,27 @@ class MatchSourcesDialog(
         binding.rvMatchSources.layoutManager = LinearLayoutManager(context)
         binding.rvMatchSources.adapter = adapter
 
+        // Tìm vị trí của luồng đang phát để tự động cuộn tới và đặt D-pad focus
+        val playingIndex = matchGroup.sources.indexOfFirst { src ->
+            isSourcePlaying(src, currentPlayingChannel)
+        }
+        val targetIndex = if (playingIndex >= 0) playingIndex else 0
+
+        binding.rvMatchSources.scrollToPosition(targetIndex)
         binding.rvMatchSources.post {
-            binding.rvMatchSources.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
-                ?: binding.rvMatchSources.requestFocus()
+            val vh = binding.rvMatchSources.findViewHolderForAdapterPosition(targetIndex)
+            if (vh != null) {
+                vh.itemView.requestFocus()
+            } else {
+                binding.rvMatchSources.layoutManager?.findViewByPosition(targetIndex)?.requestFocus()
+                    ?: binding.rvMatchSources.requestFocus()
+            }
         }
     }
 
     private class MatchSourcesAdapter(
         private val sources: List<Channel>,
+        private val currentPlayingChannel: Channel?,
         private val onClick: (Channel) -> Unit
     ) : RecyclerView.Adapter<MatchSourcesAdapter.ViewHolder>() {
 
@@ -62,7 +77,9 @@ class MatchSourcesDialog(
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.bind(sources[position], position + 1)
+            val channel = sources[position]
+            val isPlaying = isSourcePlaying(channel, currentPlayingChannel)
+            holder.bind(channel, position + 1, isPlaying)
         }
 
         override fun getItemCount(): Int = sources.size
@@ -87,11 +104,29 @@ class MatchSourcesDialog(
                 }
             }
 
-            fun bind(channel: Channel, index: Int) {
-                binding.tvSourceIndex.text = String.format("%02d", index)
-                binding.tvSourceName.text = formatSourceTitle(channel)
+            fun bind(channel: Channel, index: Int, isPlaying: Boolean) {
+                itemView.isSelected = isPlaying
 
-                binding.tvSourceBadge.visibility = View.GONE
+                val orangeColor = ContextCompat.getColor(itemView.context, R.color.fpt_orange)
+                val numColorStateList = ContextCompat.getColorStateList(itemView.context, R.color.selector_fpt_channel_num)
+                val textColorStateList = ContextCompat.getColorStateList(itemView.context, R.color.selector_fpt_channel_text)
+
+                if (isPlaying) {
+                    binding.tvSourceIndex.text = "▶"
+                    binding.tvSourceIndex.setTextColor(orangeColor)
+                    binding.tvSourceName.text = "▶ " + formatSourceTitle(channel)
+                    binding.tvSourceName.setTextColor(orangeColor)
+                    binding.tvSourceBadge.visibility = View.VISIBLE
+                    binding.tvSourceBadge.text = "ĐANG PHÁT"
+                    binding.tvSourceBadge.setBackgroundResource(R.drawable.bg_fpt_badge)
+                    binding.tvSourceBadge.setTextColor(orangeColor)
+                } else {
+                    binding.tvSourceIndex.text = String.format("%02d", index)
+                    binding.tvSourceIndex.setTextColor(numColorStateList)
+                    binding.tvSourceName.text = formatSourceTitle(channel)
+                    binding.tvSourceName.setTextColor(textColorStateList)
+                    binding.tvSourceBadge.visibility = View.GONE
+                }
 
                 if (!channel.logoUrl.isNullOrBlank()) {
                     Glide.with(itemView.context)
@@ -131,19 +166,42 @@ class MatchSourcesDialog(
                     group.contains("Sao Kê") || name.contains("Sao Kê") -> "📜 Sao Kê"
                     group.contains("Xôi Gấc") || name.contains("Xôi Gấc") -> "🍧 Xôi Gấc"
                     group.contains("Xôi Chè") || name.contains("Xôi Chè") -> "🍧 Xôi Chè"
-                    group.contains("Film4k") || name.contains("Film4k") -> "🎬 Film4k"
+                    group.contains("SocoLive", ignoreCase = true) || name.contains("SocoLive", ignoreCase = true) -> "🐿️ SocoLive"
+                    group.contains("F4K Sport", ignoreCase = true) || group.contains("Film4k", ignoreCase = true) || name.contains("F4K Sport", ignoreCase = true) || name.contains("Film4k", ignoreCase = true) -> "🎬 F4K Sport"
                     else -> group.ifBlank { "⚽ Trực tiếp" }
                 }
 
                 return if (isNhaDai) {
                     "📺 Nguồn Nhà Đài"
                 } else if (!blv.isNullOrBlank() && !blv.equals("hls", ignoreCase = true)) {
-                    val blvText = if (blv.startsWith("BLV", ignoreCase = true) || sourcePrefix.contains("Film4k") || isNhaDai) blv else "BLV $blv"
+                    val blvText = if (blv.startsWith("BLV", ignoreCase = true) || sourcePrefix.contains("F4K Sport") || sourcePrefix.contains("Film4k") || isNhaDai) blv else "BLV $blv"
                     "$sourcePrefix • $blvText"
                 } else {
                     sourcePrefix
                 }
             }
+        }
+    }
+
+    companion object {
+        fun isSourcePlaying(source: Channel, playing: Channel?): Boolean {
+            if (playing == null) return false
+            if (source.id == playing.id) return true
+            val srcUrl = source.streamUrl.substringBefore('|').trim()
+            val playUrl = playing.streamUrl.substringBefore('|').trim()
+            if (srcUrl.isNotBlank() && srcUrl == playUrl) return true
+
+            // Khớp theo tên hoặc kênh TV360 cụ thể
+            val sName = source.name.lowercase().trim()
+            val pName = playing.name.lowercase().trim()
+            if (sName.isNotBlank() && pName.isNotBlank()) {
+                if (sName == pName) return true
+                val tv360Regex = Regex("""tv360\+\s*\d+""")
+                val sTv360 = tv360Regex.find(sName)?.value
+                val pTv360 = tv360Regex.find(pName)?.value
+                if (sTv360 != null && pTv360 != null && sTv360 == pTv360) return true
+            }
+            return false
         }
     }
 }

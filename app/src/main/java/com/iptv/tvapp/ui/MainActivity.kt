@@ -2104,7 +2104,7 @@ class MainActivity : AppCompatActivity() {
 
         // 3. Tên Nguồn
         var sourceName = ""
-        val sourceList = listOf("Chuối Chiên", "Gà Vàng", "Xôi Lạc", "Cà Khịa", "Bia Ôm", "S8 TV", "Cola TV", "Phá Làng", "Vua Sân Cỏ", "Khô Gà", "Giờ Vàng", "Sao Kê", "Xôi Gấc", "Xôi Chè")
+        val sourceList = listOf("Chuối Chiên", "Gà Vàng", "Xôi Lạc", "Cà Khịa", "Bia Ôm", "S8 TV", "Cola TV", "Phá Làng", "Vua Sân Cỏ", "Khô Gà", "Giờ Vàng", "Sao Kê", "Xôi Gấc", "Xôi Chè", "F4K Sport", "SocoLive")
         for (sm in sourceList) {
             if (raw.contains(sm, ignoreCase = true) || channel.groupTitle.contains(sm, ignoreCase = true)) {
                 sourceName = sm
@@ -2551,6 +2551,10 @@ class MainActivity : AppCompatActivity() {
                                 return true
                             }
                         } else {
+                            if (currentAppMode == AppMode.SPORTS) {
+                                navigateOverlay(View.FOCUS_RIGHT)
+                                return true
+                            }
                             return true
                         }
                     } else if (binding.layoutSpotlightCol.hasFocus() || isDescendantOf(currentFocus, binding.layoutSpotlightCol)) {
@@ -2686,26 +2690,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleRemoteRightFullscreen() {
         val playing = currentPlayingChannel
-        val isSports = (currentAppMode == AppMode.SPORTS)
-        if (isSports) {
-            // Mục Thể Thao: Nhấn Dpad Phải mở hộp thoại chọn nguồn phát trực tiếp của trận đấu
-            // Ưu tiên 1: currentPlayingMatchGroup nếu đã có sẵn và chứa kênh đang phát
-            val mg = if (currentPlayingMatchGroup != null && (playing == null || currentPlayingMatchGroup?.sources?.any { it.streamUrl == playing.streamUrl || it.id == playing.id } == true)) {
-                currentPlayingMatchGroup
-            } else {
-                playlistManager.sportsLiveManager.findMatchForChannel(playing)
-                    ?: currentPlayingMatchGroup
-            }
 
-            if (mg != null && mg.sources.isNotEmpty()) {
-                currentPlayingMatchGroup = mg
-                showMatchSourcesDialog(mg)
-            } else {
-                showBottomNotification("Không có danh sách nguồn phát khác cho kênh này")
+        // 1. Tìm MatchGroup của trận đấu đang phát (ưu tiên bất kể đang ở tab TV hay Thể Thao)
+        var mg = currentPlayingMatchGroup
+        if (mg == null || (playing != null && mg.sources.none { MatchSourcesDialog.isSourcePlaying(it, playing) })) {
+            mg = playlistManager.sportsLiveManager.findMatchForChannel(playing) ?: currentPlayingMatchGroup
+        }
+
+        // 2. Lấy bản ghi đầy đủ nhất nếu có trong matchGroupsMap (đầy đủ các luồng gom nhóm từ Live Events & F4K)
+        if (mg != null) {
+            val fullMg = playlistManager.sportsLiveManager.getMatch(mg.key)
+            if (fullMg != null && fullMg.sources.size > mg.sources.size) {
+                mg = fullMg
             }
-        } else {
+        }
+
+        // 3. Nếu là một trận đấu thể thao và có nguồn phát: Mở danh sách luồng phát
+        if (mg != null && mg.sources.isNotEmpty()) {
+            if (playing != null && mg.sources.none { MatchSourcesDialog.isSourcePlaying(it, playing) }) {
+                mg.sources.add(0, playing)
+            }
+            currentPlayingMatchGroup = mg
+            showMatchSourcesDialog(mg, playing)
+            return
+        }
+
+        // 4. Nếu không phải trận đấu thể thao:
+        if (currentAppMode == AppMode.TV) {
             // Mục Xem TV: Nhấn phím sang phải (►) mở hộp thoại chọn danh sách file .m3u
             showQuickPlaylistDialog()
+        } else {
+            showBottomNotification("Không có danh sách nguồn phát khác cho kênh này")
         }
     }
 
@@ -2930,10 +2945,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showMatchSourcesDialog(matchGroup: SportsLiveManager.MatchGroup) {
+    private fun showMatchSourcesDialog(matchGroup: SportsLiveManager.MatchGroup, playingChannel: Channel? = currentPlayingChannel) {
         if (isFinishing || isDestroyed) return
         resetOverlayTimer()
-        val dialog = MatchSourcesDialog(this, matchGroup) { selectedChannel ->
+        val dialog = MatchSourcesDialog(this, matchGroup, playingChannel) { selectedChannel ->
             currentPlayingMatchGroup = matchGroup
             playChannel(selectedChannel)
             hideHandler.postDelayed({ hideOverlay() }, 800)
