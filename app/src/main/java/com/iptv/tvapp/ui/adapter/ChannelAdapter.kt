@@ -258,7 +258,7 @@ class ChannelAdapter(
                 val cleanLgName = if (detectedLg != "OTHER") {
                     SportsLiveManager.LEAGUE_LABELS[detectedLg] ?: ""
                 } else {
-                    val rawGrp = channel.groupTitle.replace(Regex("""(?i)(?:LIVE EVENTS|Film4k|Xôi Chè|Gà Vàng|Tiếu Lâm|Chuối Chiên|Trực tiếp thể thao|Trực tiếp)\b"""), "").trim()
+                    val rawGrp = channel.groupTitle.replace(Regex("""(?i)(?:LIVE EVENTS|Film4k|F4K Sport|F4K|Xôi Chè|Gà Vàng|Tiếu Lâm|Chuối Chiên|Trực tiếp thể thao|Trực tiếp)\b"""), "").trim()
                     rawGrp.ifBlank { "Bóng đá Quốc tế" }
                 }
                 binding.tvLeagueName.text = cleanLgName.ifBlank { "Bóng đá Quốc tế" }

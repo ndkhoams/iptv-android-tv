@@ -384,8 +384,12 @@ class SportsLiveManager(private val context: Context) {
         const val DEFAULT_SPORTS_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao.m3u"
         private const val CHROME_UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-        val PRIORITY_LEAGUES = listOf("UCL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1")
-        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA", "RUGBY")
+        val PRIORITY_LEAGUES = listOf(
+            "UCL", "UEL", "UECL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1",
+            "WC_QUAL", "WORLD_CUP", "NATIONS_LEAGUE", "EURO", "COPA_AMERICA", "ASIAN_CUP", "AFC_CL",
+            "FA_CUP", "EFL_CUP"
+        )
+        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA", "RUGBY", "NFL", "NCAAF", "MMA")
 
         val ENGLISH_LOWER_CLUBS = listOf(
             "bristol rovers", "chesterfield", "colchester", "gillingham", "crewe", "newport county",
@@ -877,6 +881,8 @@ class SportsLiveManager(private val context: Context) {
             )
             matchesWithRefresh.add(refreshItem)
 
+            val validLiveItems = mutableListOf<Triple<MatchGroup, String, String>>()
+
             for (i in 0 until liveEventsArr.length()) {
                 val item = liveEventsArr.getJSONObject(i)
                 val key = item.optString("key")
@@ -1019,17 +1025,60 @@ class SportsLiveManager(private val context: Context) {
                         if (awayTeam.isNotBlank()) "$sportIcon $timePart $homeTeam vs $awayTeam" else "$sportIcon $timePart $homeTeam"
                     }
                     val leagueLogoUri = if (logo.isNotBlank()) logo else getLeagueLogoUri(league)
-                    matchesWithRefresh.add(
-                        Channel(
-                            id = "match_$key",
-                            name = matchName,
-                            logoUrl = leagueLogoUri,
-                            streamUrl = "match://$key",
-                            groupTitle = CATEGORY_LIVE_EVENTS,
-                            number = matchesWithRefresh.size
-                        )
-                    )
+                    validLiveItems.add(Triple(mg, matchName, leagueLogoUri))
                 }
+            }
+
+            // YÊU CẦU: Live Events CHỈ hiển thị những giải đấu ưu tiên như từ đầu mới làm app quy định
+            val priorityMatches = validLiveItems.filter {
+                it.first.league in PRIORITY_LEAGUES && !isYouthMatch(it.first.homeTeam, it.first.awayTeam) && !isWomenMatch(it.first.homeTeam, it.first.awayTeam)
+            }
+            val featuredMatches = validLiveItems.filter { it.first.league in FEATURED_SPORTS }
+            val otherMatches = validLiveItems.filter {
+                it.first.league !in PRIORITY_LEAGUES && it.first.league !in FEATURED_SPORTS &&
+                !isYouthMatch(it.first.homeTeam, it.first.awayTeam) && !isWomenMatch(it.first.homeTeam, it.first.awayTeam)
+            }
+
+            val livePriority = priorityMatches.filter { it.first.isOngoing }.sortedWith(
+                compareBy(
+                    { PRIORITY_LEAGUES.indexOf(it.first.league).let { idx -> if (idx < 0) 999 else idx } },
+                    { it.first.timestamp }
+                )
+            )
+            val upcomingPriority = priorityMatches.filter { !it.first.isOngoing }.sortedWith(
+                compareBy(
+                    { it.first.timestamp },
+                    { PRIORITY_LEAGUES.indexOf(it.first.league).let { idx -> if (idx < 0) 999 else idx } }
+                )
+            )
+
+            val liveOther = otherMatches.filter { it.first.isOngoing }.sortedBy { it.first.timestamp }
+            val upcomingOther = otherMatches.filter { !it.first.isOngoing }.sortedBy { it.first.timestamp }
+
+            val targetMatches = mutableListOf<Triple<MatchGroup, String, String>>()
+            if (livePriority.isNotEmpty() || upcomingPriority.isNotEmpty()) {
+                targetMatches.addAll(livePriority)
+                targetMatches.addAll(upcomingPriority)
+            } else {
+                targetMatches.addAll(liveOther)
+                targetMatches.addAll(upcomingOther)
+            }
+            targetMatches.addAll(featuredMatches.sortedBy { it.first.timestamp })
+
+            targetMatches.forEachIndexed { idx, item ->
+                val mg = item.first
+                val matchName = item.second
+                val leagueLogoUri = item.third
+                matchesWithRefresh.add(
+                    Channel(
+                        id = "match_${mg.key}",
+                        name = matchName,
+                        logoUrl = leagueLogoUri,
+                        streamUrl = "match://${mg.key}",
+                        groupTitle = CATEGORY_LIVE_EVENTS,
+                        number = idx + 1
+                    )
+                )
             }
 
             if (matchesWithRefresh.size > 1) {
@@ -1037,14 +1086,14 @@ class SportsLiveManager(private val context: Context) {
             }
         }
 
-        // 3. Danh mục theo nguồn phát (Chuối Chiên, Gà Vàng, Cola, ...)
+        // 3. Danh mục theo nguồn phát (Chuối Chiên, Gà Vàng, F4K Sport, Xôi Chè...)
         val sourceGroupsArr = root.optJSONArray("source_groups")
         if (sourceGroupsArr != null) {
             for (g in 0 until sourceGroupsArr.length()) {
                 val gObj = sourceGroupsArr.getJSONObject(g)
                 val gName = gObj.optString("name")
-                // Gộp Film4k và Live Events vào LIVE EVENTS chung, không tách thành mục riêng
-                if (gName.contains("Film4k", ignoreCase = true) || gName.contains("Live Events", ignoreCase = true)) {
+                // Loại bỏ Live Events khỏi source groups (đã có ở mục 2)
+                if (gName.contains("Live Events", ignoreCase = true)) {
                     continue
                 }
                 val chArr = gObj.optJSONArray("channels")
