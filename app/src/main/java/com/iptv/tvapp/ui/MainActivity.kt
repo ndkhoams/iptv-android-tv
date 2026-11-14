@@ -2009,7 +2009,7 @@ class MainActivity : AppCompatActivity() {
             var drmKid = effectiveChannel?.drmKeyId
             var drmKey = effectiveChannel?.drmKey
             if (drmKid.isNullOrBlank() || drmKey.isNullOrBlank()) {
-                val clearKeyFromManager = playlistManager.sportsLiveManager.getClearKeyForUrl(cleanUrl)
+                val clearKeyFromManager = SportsLiveManager.getClearKeyForUrl(cleanUrl)
                 if (clearKeyFromManager != null) {
                     drmKid = clearKeyFromManager.first
                     drmKey = clearKeyFromManager.second

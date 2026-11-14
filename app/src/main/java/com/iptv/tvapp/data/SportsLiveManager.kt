@@ -368,6 +368,9 @@ class SportsLiveManager(private val context: Context) {
         return list.minByOrNull { Math.abs(now - it.timestamp) }
     }
 
+    fun registerClearKey(url: String, keyId: String, key: String) = Companion.registerClearKey(url, keyId, key)
+    fun getClearKeyForUrl(url: String): Pair<String, String>? = Companion.getClearKeyForUrl(url)
+
     companion object {
         const val ACTION_REFRESH_SPORTS = "action_refresh_sports"
         const val CATEGORY_LIVE_EVENTS = "🔴 LIVE EVENTS"
