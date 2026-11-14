@@ -389,7 +389,7 @@ class SportsLiveManager(private val context: Context) {
             "WC_QUAL", "WORLD_CUP", "NATIONS_LEAGUE", "EURO", "COPA_AMERICA", "ASIAN_CUP", "AFC_CL",
             "FA_CUP", "EFL_CUP"
         )
-        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA", "RUGBY", "NFL", "NCAAF", "MMA")
+        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA")
 
         val ENGLISH_LOWER_CLUBS = listOf(
             "bristol rovers", "chesterfield", "colchester", "gillingham", "crewe", "newport county",
