@@ -984,8 +984,10 @@
                 var teamsUpper = cleanTeams.toUpperCase();
                 var isWimbledonFootball = teamsUpper.indexOf("AFC WIMBLEDON") >= 0 || teamsUpper.indexOf("WIMBLEDON FC") >= 0 || (teamsUpper.indexOf("WIMBLEDON") >= 0 && teamsUpper.indexOf("BLACKPOOL") >= 0);
                 if (isWimbledonFootball && lg === "TENNIS") lg = "OTHER";
-                var isRugby = lg === "RUGBY" || teamsUpper.indexOf("RUGBY") >= 0 || teamsUpper.indexOf("BÓNG BẦU DỤC") >= 0 || teamsUpper.indexOf("NATIONS CHAMPIONSHIP") >= 0 || teamsUpper.indexOf("AUTUMN NATIONS") >= 0 || (teamsUpper.indexOf("ITALY") >= 0 && teamsUpper.indexOf("ARGENTINA") >= 0) || (teamsUpper.indexOf("WALES") >= 0 && teamsUpper.indexOf("NEW ZEALAND") >= 0);
-                var sportIcon = (lg === "F1") ? "🏎️" : ((lg === "TENNIS") ? "🎾" : ((lg === "NBA") ? "🏀" : (isRugby ? "🏉" : (ongoing ? "🔴" : "⚽"))));
+                var sourcesText = (ev.sources || []).map(function(s){ return (s.name || "") + " " + (s.competition || ""); }).join(" ").toUpperCase();
+                var isAmericanFootball = lg === "NFL" || lg === "NCAAF" || teamsUpper.indexOf("NCAAF") >= 0 || teamsUpper.indexOf("NFL") >= 0 || teamsUpper.indexOf("AMERICAN FOOTBALL") >= 0 || teamsUpper.indexOf("BÓNG BẦU DỤC MỸ") >= 0 || sourcesText.indexOf("NCAAF") >= 0 || sourcesText.indexOf("🏈") >= 0 || (teamsUpper.indexOf("NCAA") >= 0 && teamsUpper.indexOf("SOCCER") < 0 && (teamsUpper.indexOf("FOOTBALL") >= 0 || sourcesText.indexOf("NCAAF") >= 0));
+                var isRugby = lg === "RUGBY" || teamsUpper.indexOf("RUGBY") >= 0 || teamsUpper.indexOf("BÓNG BẦU DỤC") >= 0 || teamsUpper.indexOf("NATIONS CHAMPIONSHIP") >= 0 || teamsUpper.indexOf("AUTUMN NATIONS") >= 0 || sourcesText.indexOf("RUGBY") >= 0 || sourcesText.indexOf("🏉") >= 0 || (teamsUpper.indexOf("ITALY") >= 0 && teamsUpper.indexOf("ARGENTINA") >= 0) || (teamsUpper.indexOf("WALES") >= 0 && teamsUpper.indexOf("NEW ZEALAND") >= 0);
+                var sportIcon = (lg === "F1") ? "🏎️" : ((lg === "TENNIS") ? "🎾" : ((lg === "NBA") ? "🏀" : (isAmericanFootball ? "🏈" : (isRugby ? "🏉" : (ongoing ? "🔴" : "⚽")))));
                 var timePart = ev.date ? ("[" + ev.time + " " + ev.date + "]") : ("[" + ev.time + "]");
                 var displayName = sportIcon + " " + timePart + " " + cleanTeams;
 
@@ -1623,66 +1625,14 @@
         var epgBox = document.getElementById('spotlight-epg-box');
 
         if (ch.isMatch || currentAppMode === APP_MODE_SPORTS) {
+            if (standingsBox) standingsBox.classList.add('hidden');
+            if (epgBox) epgBox.classList.remove('hidden');
+            if (spotlightEpgContentEl) {
+                spotlightEpgContentEl.innerHTML = "";
+                var titleHeader = document.getElementById('epg-box-title');
+                if (titleHeader) titleHeader.textContent = "CHI TIẾT TRẬN ĐẤU";
 
-            // 2. Render Bảng xếp hạng Standings nếu có
-            var targetLeague = (ch.matchData && ch.matchData.league) ? ch.matchData.league.toUpperCase() : "";
-            if (!targetLeague && ch.group) {
-                var grp = ch.group.toUpperCase();
-                if (grp.indexOf("LALIGA") >= 0) targetLeague = "LALIGA";
-                else if (grp.indexOf("EPL") >= 0) targetLeague = "EPL";
-                else if (grp.indexOf("SERIE") >= 0) targetLeague = "SERIE_A";
-                else if (grp.indexOf("BUNDESLIGA") >= 0) targetLeague = "BUNDESLIGA";
-                else if (grp.indexOf("LIGUE") >= 0) targetLeague = "LIGUE1";
-                else if (grp.indexOf("VLEAGUE") >= 0) targetLeague = "VLEAGUE";
-                else if (grp.indexOf("NBA") >= 0) targetLeague = "NBA";
-            }
-
-            if (sportsStandings && sportsStandings[targetLeague] && sportsStandings[targetLeague].length > 0) {
-                if (standingsBox) standingsBox.classList.remove('hidden');
-                if (epgBox) epgBox.classList.add('hidden');
-                if (standingsTitle) standingsTitle.textContent = "BẢNG XẾP HẠNG " + targetLeague;
-
-                if (standingsContent) {
-                    standingsContent.innerHTML = "";
-                    var sList = sportsStandings[targetLeague];
-                    var hLow = ch.matchData && ch.matchData.homeTeam ? ch.matchData.homeTeam.toLowerCase() : "";
-                    var aLow = ch.matchData && ch.matchData.awayTeam ? ch.matchData.awayTeam.toLowerCase() : "";
-
-                    var firstHighlightRow = null;
-                    sList.forEach(function (item) {
-                        var row = document.createElement('div');
-                        var tLow = (item.teamName || item.shortName || "").toLowerCase();
-                        var isHighlighted = (hLow && (hLow.indexOf(tLow) >= 0 || tLow.indexOf(hLow) >= 0)) ||
-                                            (aLow && (aLow.indexOf(tLow) >= 0 || tLow.indexOf(aLow) >= 0));
-
-                        row.className = 'standing-row' + (isHighlighted ? ' highlight' : '');
-                        row.innerHTML = '<span class="st-col-rank">' + item.rank + '</span>' +
-                                        (item.logoUrl ? '<img class="st-logo" src="' + item.logoUrl + '" onerror="this.style.display=\'none\'">' : '') +
-                                        '<span class="st-col-team">' + (item.shortName || item.teamName) + '</span>' +
-                                        '<span class="st-col-played">' + item.played + '</span>' +
-                                        '<span class="st-col-pts">' + item.points + '</span>';
-                        standingsContent.appendChild(row);
-                        if (isHighlighted && !firstHighlightRow) {
-                            firstHighlightRow = row;
-                        }
-                    });
-
-                    if (firstHighlightRow) {
-                        setTimeout(function () {
-                            firstHighlightRow.scrollIntoView({ block: 'center', behavior: 'auto' });
-                        }, 50);
-                    }
-                }
-            } else {
-                // Không có bảng xếp hạng: hiển thị thẻ chi tiết trận đấu trong EPG box
-                if (standingsBox) standingsBox.classList.add('hidden');
-                if (epgBox) epgBox.classList.remove('hidden');
-                if (spotlightEpgContentEl) {
-                    spotlightEpgContentEl.innerHTML = "";
-                    var titleHeader = document.getElementById('epg-box-title');
-                    if (titleHeader) titleHeader.textContent = "CHI TIẾT TRẬN ĐẤU";
-
-                    var md = ch.matchData;
+                var md = ch.matchData;
                     var card = document.createElement('div');
                     card.className = 'match-info-card';
 
@@ -2364,18 +2314,17 @@
         var promise = videoEl.play();
         if (promise !== undefined) {
             promise.catch(function (err) {
-                if (err && err.name === 'NotAllowedError') {
-                    videoEl.muted = true;
-                    videoEl.play().catch(function () {});
-                    showToast("Click chuột hoặc bấm phím để bật âm thanh");
-                    var unmute = function () {
-                        videoEl.muted = false;
-                        window.removeEventListener('keydown', unmute);
-                        window.removeEventListener('click', unmute);
-                    };
-                    window.addEventListener('keydown', unmute);
-                    window.addEventListener('click', unmute);
-                }
+                console.warn("[SafePlay] Play unmuted blocked, falling back to muted:", err);
+                videoEl.muted = true;
+                videoEl.play().catch(function () {});
+                showToast("Bấm phím bất kỳ để mở tiếng");
+                var unmute = function () {
+                    videoEl.muted = false;
+                    window.removeEventListener('keydown', unmute);
+                    window.removeEventListener('click', unmute);
+                };
+                window.addEventListener('keydown', unmute);
+                window.addEventListener('click', unmute);
             });
         }
     }
@@ -2520,10 +2469,13 @@
         if (window.Hls && Hls.isSupported() && (isHlsStream || streamUrl.indexOf("http") === 0)) {
             hls = new Hls({
                 enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 30,
+                lowLatencyMode: false,
+                backBufferLength: 60,
                 maxBufferLength: 30,
-                maxMaxBufferLength: 60
+                maxMaxBufferLength: 60,
+                xhrSetup: function (xhr, url) {
+                    xhr.withCredentials = false;
+                }
             });
 
             hls.loadSource(streamUrl);
@@ -2587,13 +2539,17 @@
         // Nếu kênh là kênh TV thông thường (id bắt đầu bằng 'tv_')
         if (channel.id && channel.id.indexOf('tv_') === 0) return null;
 
+        if (currentPlayingMatch && currentPlayingMatch.sources && currentPlayingMatch.sources.some(function(s) { return s.url === channel.url || s.id === channel.id; })) {
+            return currentPlayingMatch;
+        }
+
         var found = sportsLiveMatches.find(function (m) {
             if (m.id === channel.id) return true;
             if (m.url && channel.url && m.url === channel.url) return true;
             if (m.sources && m.sources.some(function (s) { return s.url === channel.url || s.id === channel.id; })) return true;
             return false;
         });
-        return found || null;
+        return found || currentPlayingMatch || null;
     }
 
     function isSportsPlayback(channel) {
@@ -3003,9 +2959,6 @@
                         if (currentAppMode === APP_MODE_TV) {
                             var epgItems = spotlightEpgContentEl ? spotlightEpgContentEl.querySelectorAll('.epg-item') : [];
                             maxLenSpotlight = epgItems.length;
-                        } else if (currentAppMode === APP_MODE_SPORTS) {
-                            var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
-                            maxLenSpotlight = standingRows.length;
                         }
                         if (maxLenSpotlight === 0) {
                             var curMatch2 = categories[selectedCatIdx].channels[selectedChIdx];
@@ -3079,25 +3032,10 @@
                                 showNotification("Chưa có lịch phát sóng EPG cho kênh này");
                             }
                         } else if (currentAppMode === APP_MODE_SPORTS) {
-                            var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
-                            if (standingRows.length > 0) {
-                                focusedColumn = 'spotlight';
-                                var curIdx = 0;
-                                for (var i = 0; i < standingRows.length; i++) {
-                                    if (standingRows[i].classList.contains('highlight')) {
-                                        curIdx = i;
-                                        break;
-                                    }
-                                }
-                                selectedSpotlightSourceIdx = curIdx;
-                                updateFocusView();
-                            } else {
-                                var curItem = categories[selectedCatIdx].channels[selectedChIdx];
-                                if (curItem && curItem.isMatch && curItem.sources && curItem.sources.length > 0) {
-                                    openMatchSourcesModal(curItem);
-                                } else {
-                                    showNotification("Chưa có dữ liệu bảng xếp hạng cho trận đấu này");
-                                }
+                            var curItem = categories[selectedCatIdx] && categories[selectedCatIdx].channels ? categories[selectedCatIdx].channels[selectedChIdx] : null;
+                            var matchObj = (curItem && curItem.isMatch && curItem.sources && curItem.sources.length > 0) ? curItem : findMatchForPlayingChannel(curItem);
+                            if (matchObj && matchObj.sources && matchObj.sources.length > 0) {
+                                openMatchSourcesModal(matchObj);
                             }
                         }
                     }
@@ -3193,7 +3131,7 @@
     function handleRemoteRightFullscreen() {
         var isSports = isSportsPlayback(currentPlayingChannel);
         if (isSports) {
-            var match = findMatchForPlayingChannel(currentPlayingChannel);
+            var match = (currentPlayingMatch && currentPlayingMatch.sources && currentPlayingMatch.sources.length > 0) ? currentPlayingMatch : findMatchForPlayingChannel(currentPlayingChannel);
             if (match && match.sources && match.sources.length > 0) {
                 currentPlayingMatch = match;
                 openMatchSourcesModal(match);
@@ -3454,7 +3392,7 @@
         if (quickNameEl) quickNameEl.textContent = channel.name;
         if (quickModeTagEl) {
             if (channel.isMatch) {
-                var lg = (channel.matchLeague || "TRỰC TIẾP").toUpperCase();
+                var lg = (channel.matchLeague && channel.matchLeague !== "TRỰC TIẾP" ? channel.matchLeague : "THỂ THAO").toUpperCase();
                 quickModeTagEl.textContent = lg;
             } else if (isSports) {
                 quickModeTagEl.textContent = "THỂ THAO";

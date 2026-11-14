@@ -60,5 +60,6 @@
         android:textColor="@color/fpt_orange"
         android:textSize="10sp"
         android:textStyle="bold"
-        android:text="FHD" />
+        android:text="FHD"
+        android:visibility="gone" />
 </LinearLayout>

@@ -51,7 +51,7 @@
         android:ellipsize="end"
         android:text="VTV1 (HD 8Mbps)" />
 
-    <!-- Huy hiệu Độ phân giải FHD / 4K -->
+    <!-- Huy hiệu Độ phân giải FHD / 4K (Đã ẩn vì có độ phân giải thật hiển thị bên OSD) -->
     <TextView
         android:id="@+id/tvResolutionBadge"
         android:layout_width="wrap_content"

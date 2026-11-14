@@ -90,13 +90,7 @@ class MatchSourcesDialog(
                 binding.tvSourceIndex.text = String.format("%02d", index)
                 binding.tvSourceName.text = formatSourceTitle(channel)
 
-                val upperName = channel.name.uppercase()
-                binding.tvSourceBadge.text = when {
-                    upperName.contains("4K") -> "4K"
-                    upperName.contains("FHD") -> "FHD"
-                    upperName.contains("720") -> "HD"
-                    else -> "HD"
-                }
+                binding.tvSourceBadge.visibility = View.GONE
 
                 if (!channel.logoUrl.isNullOrBlank()) {
                     Glide.with(itemView.context)
@@ -136,13 +130,14 @@ class MatchSourcesDialog(
                     group.contains("Sao Kê") || name.contains("Sao Kê") -> "📜 Sao Kê"
                     group.contains("Xôi Gấc") || name.contains("Xôi Gấc") -> "🍧 Xôi Gấc"
                     group.contains("Xôi Chè") || name.contains("Xôi Chè") -> "🍧 Xôi Chè"
+                    group.contains("Film4k") || name.contains("Film4k") -> "🎬 Film4k"
                     else -> group.ifBlank { "⚽ Trực tiếp" }
                 }
 
                 return if (isNhaDai) {
                     "📺 Nguồn Nhà Đài"
                 } else if (!blv.isNullOrBlank() && !blv.equals("hls", ignoreCase = true)) {
-                    val blvText = if (blv.startsWith("BLV", ignoreCase = true)) blv else "BLV $blv"
+                    val blvText = if (blv.startsWith("BLV", ignoreCase = true) || sourcePrefix.contains("Film4k") || isNhaDai) blv else "BLV $blv"
                     "$sourcePrefix • $blvText"
                 } else {
                     sourcePrefix

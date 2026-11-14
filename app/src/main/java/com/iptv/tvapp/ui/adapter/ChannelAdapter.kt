@@ -28,6 +28,9 @@ class ChannelAdapter(
         private const val VIEW_TYPE_REFRESH = 3
     }
 
+    var isSportsMode: Boolean = false
+    var channelMatchFinder: ((Channel) -> SportsLiveManager.MatchGroup?)? = null
+
     private val channels = mutableListOf<Channel>()
     private var playingChannel: Channel? = null
     private var playingMatchKey: String? = null
@@ -48,6 +51,10 @@ class ChannelAdapter(
         if (channel.streamUrl == playingChannel?.streamUrl) {
             return channel.name == playingChannel?.name || channel.id == playingChannel?.id
         }
+        if (playingMatchKey != null) {
+            val mg = channelMatchFinder?.invoke(channel)
+            if (mg != null && mg.key == playingMatchKey) return true
+        }
         return false
     }
 
@@ -60,6 +67,10 @@ class ChannelAdapter(
             }
             if (targetChannel != null && ch.streamUrl == targetChannel.streamUrl) {
                 return@indexOfFirst ch.name == targetChannel.name || ch.id == targetChannel.id
+            }
+            if (matchKey != null) {
+                val mg = channelMatchFinder?.invoke(ch)
+                if (mg != null && mg.key == matchKey) return@indexOfFirst true
             }
             false
         }
@@ -95,7 +106,7 @@ class ChannelAdapter(
         val channel = channels[position]
         return when {
             channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports" -> VIEW_TYPE_REFRESH
-            channel.streamUrl.startsWith("match://") -> VIEW_TYPE_MATCH_CARD
+            channel.streamUrl.startsWith("match://") || isSportsMode -> VIEW_TYPE_MATCH_CARD
             position % 2 == 1 -> VIEW_TYPE_ODD
             else -> VIEW_TYPE_EVEN
         }
@@ -130,8 +141,12 @@ class ChannelAdapter(
         val channel = channels[position]
         when (holder) {
             is MatchCardViewHolder -> {
-                val matchKey = channel.streamUrl.removePrefix("match://")
-                val mg = matchGroupProvider?.invoke(matchKey)
+                val mg = if (channel.streamUrl.startsWith("match://")) {
+                    val matchKey = channel.streamUrl.removePrefix("match://")
+                    matchGroupProvider?.invoke(matchKey)
+                } else {
+                    channelMatchFinder?.invoke(channel)
+                }
                 holder.bind(channel, mg, position)
             }
             is ChannelViewHolder -> {
@@ -205,29 +220,134 @@ class ChannelAdapter(
             binding.root.isSelected = isPlaying
 
             if (mg == null) {
-                binding.tvSportBadge.text = "⚽ Bóng đá"
-                binding.tvLeagueName.text = channel.groupTitle
-                binding.tvMatchTime.visibility = View.GONE
-                binding.tvMatchStatus.text = "TRỰC TIẾP"
-                binding.tvHomeName.text = channel.name
-                binding.tvAwayName.text = ""
-                binding.tvSourcesCount.text = "● Nhấn OK để xem trực tiếp"
+                val rawName = channel.name
+                val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(rawName)
+                val timeStr = timeMatch?.groupValues?.get(1) ?: "LIVE"
+                val dateMatch = Regex("""\b(\d{1,2}[/-]\d{1,2})\b""").find(rawName)
+                val dateStr = dateMatch?.groupValues?.get(1) ?: ""
+
+                // Làm sạch tên 2 đội bóng
+                val clean = rawName
+                    .replace(Regex("""[\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f9ff]"""), " ")
+                    .replace(Regex("""\[[^\]]*\]"""), " ")
+                    .replace(Regex("""\([^\)]*\)"""), " ")
+                    .replace(Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm|Xôi Chè|Film4k|TV360|Antsports)(?:\s+TV)?\b"""), " ")
+                    .replace(Regex("""\s+"""), " ")
+                    .trim()
+
+                val parts = clean.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
+                val homeTeam = if (parts.isNotEmpty()) parts[0].trim() else clean
+                val awayTeam = if (parts.size >= 2) parts[1].trim() else ""
+
+                val (sportIcon, sportName) = when {
+                    rawName.contains("F1", ignoreCase = true) || rawName.contains("Formula", ignoreCase = true) -> "🏎️" to "Đua xe F1"
+                    rawName.contains("Tennis", ignoreCase = true) -> "🎾" to "Quần vợt"
+                    rawName.contains("NBA", ignoreCase = true) -> "🏀" to "Bóng rổ"
+                    rawName.contains("Rugby", ignoreCase = true) || rawName.contains("🏉") -> "🏉" to "Bóng bầu dục"
+                    rawName.contains("NFL", ignoreCase = true) || rawName.contains("NCAAF", ignoreCase = true) || rawName.contains("American Football", ignoreCase = true) || rawName.contains("🏈") ||
+                        (rawName.contains("NCAA", ignoreCase = true) && !rawName.contains("soccer", ignoreCase = true) && !rawName.contains("bóng đá", ignoreCase = true)) -> "🏈" to "Bóng bầu dục Mỹ"
+                    rawName.contains("UFC", ignoreCase = true) || rawName.contains("Boxing", ignoreCase = true) || rawName.contains("MMA", ignoreCase = true) || rawName.contains("🥊") -> "🥊" to "Võ thuật"
+                    else -> "⚽" to "Bóng đá"
+                }
+                binding.tvSportBadge.text = "$sportIcon $sportName"
+                val detectedLg = SportsLiveManager.detectLeague(rawName, homeTeam, awayTeam)
+                val cleanLgName = if (detectedLg != "OTHER") {
+                    SportsLiveManager.LEAGUE_LABELS[detectedLg] ?: ""
+                } else {
+                    val rawGrp = channel.groupTitle.replace(Regex("""(?i)(?:LIVE EVENTS|Film4k|Xôi Chè|Gà Vàng|Tiếu Lâm|Chuối Chiên|Trực tiếp thể thao|Trực tiếp)\b"""), "").trim()
+                    rawGrp.ifBlank { "Bóng đá Quốc tế" }
+                }
+                binding.tvLeagueName.text = cleanLgName.ifBlank { "Bóng đá Quốc tế" }
+
+                val timeDisplay = if (dateStr.isNotBlank()) "⏰ $timeStr ($dateStr)" else "⏰ $timeStr"
+                binding.tvMatchTime.text = timeDisplay
+                binding.tvMatchTime.visibility = if (timeStr.isNotBlank() && timeStr != "LIVE") View.VISIBLE else View.GONE
+
+                val isOngoing = rawName.contains("LIVE", ignoreCase = true) || rawName.contains("ĐANG PHÁT", ignoreCase = true) || timeStr == "LIVE"
+                if (isOngoing) {
+                    binding.tvMatchStatus.text = "🔴 LIVE"
+                    binding.tvMatchStatus.setBackgroundResource(R.drawable.bg_fpt_badge_live)
+                } else {
+                    binding.tvMatchStatus.text = "SẮP ĐẤU"
+                    binding.tvMatchStatus.setBackgroundResource(R.drawable.bg_fpt_badge)
+                }
+
+                binding.tvHomeName.text = homeTeam
+                binding.tvAwayName.text = awayTeam
+                binding.tvVsBadge.visibility = if (awayTeam.isNotBlank()) View.VISIBLE else View.GONE
+                binding.tvAwayName.visibility = if (awayTeam.isNotBlank()) View.VISIBLE else View.GONE
+
+                val homeLogoUrl = TeamLogoHelper.getTeamLogoUrl(homeTeam, channel.logoUrl)
+                val homeInitial = TeamLogoHelper.getInitial(homeTeam)
+                binding.tvHomeInitial.text = homeInitial
+                if (!homeLogoUrl.isNullOrBlank()) {
+                    binding.ivHomeLogo.visibility = View.VISIBLE
+                    binding.tvHomeInitial.visibility = View.GONE
+                    Glide.with(binding.ivHomeLogo.context)
+                        .load(homeLogoUrl)
+                        .override(80, 80)
+                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .placeholder(R.drawable.ic_tv_placeholder)
+                        .error(R.drawable.ic_tv_placeholder)
+                        .into(binding.ivHomeLogo)
+                } else {
+                    binding.ivHomeLogo.setImageDrawable(null)
+                    binding.ivHomeLogo.visibility = View.GONE
+                    binding.tvHomeInitial.visibility = View.VISIBLE
+                }
+
+                val awayLogoUrl = if (awayTeam.isNotBlank()) TeamLogoHelper.getTeamLogoUrl(awayTeam, null) else null
+                val awayInitial = if (awayTeam.isNotBlank()) TeamLogoHelper.getInitial(awayTeam) else ""
+                binding.tvAwayInitial.text = awayInitial
+                if (!awayLogoUrl.isNullOrBlank()) {
+                    binding.ivAwayLogo.visibility = View.VISIBLE
+                    binding.tvAwayInitial.visibility = View.GONE
+                    Glide.with(binding.ivAwayLogo.context)
+                        .load(awayLogoUrl)
+                        .override(80, 80)
+                        .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .placeholder(R.drawable.ic_tv_placeholder)
+                        .error(R.drawable.ic_tv_placeholder)
+                        .into(binding.ivAwayLogo)
+                } else {
+                    binding.ivAwayLogo.setImageDrawable(null)
+                    binding.ivAwayLogo.visibility = View.GONE
+                    binding.tvAwayInitial.visibility = if (awayTeam.isNotBlank()) View.VISIBLE else View.GONE
+                }
+
+                binding.tvSourcesCount.text = "● Nguồn: ${channel.groupTitle}"
+                binding.tvWatchAction.text = if (channel.streamUrl.startsWith("match://")) "Xem luồng ▶" else "Phát ngay ▶"
                 return
             }
 
             // 1. Sport badge icon & text
-            val (sportIcon, sportName) = when (mg.league.uppercase()) {
-                "F1" -> "🏎️" to "Đua xe F1"
-                "TENNIS" -> "🎾" to "Quần vợt"
-                "NBA" -> "🏀" to "Bóng rổ"
-                "RUGBY" -> "🏉" to "Bóng bầu dục"
-                "UFC", "BOXING", "MMA" -> "🥊" to "Võ thuật"
+            val (sportIcon, sportName) = when {
+                mg.league.equals("F1", true) -> "🏎️" to "Đua xe F1"
+                mg.league.equals("TENNIS", true) -> "🎾" to "Quần vợt"
+                mg.league.equals("NBA", true) -> "🏀" to "Bóng rổ"
+                mg.league.equals("RUGBY", true) -> "🏉" to "Bóng bầu dục"
+                mg.league.equals("NFL", true) || mg.league.equals("NCAAF", true) -> "🏈" to "Bóng bầu dục Mỹ"
+                mg.league.uppercase() in listOf("UFC", "BOXING", "MMA") -> "🥊" to "Võ thuật"
+                mg.sources.any { it.name.contains("🏈") } || mg.leagueName.contains("NCAA", ignoreCase = true) || mg.leagueName.contains("Bầu dục", ignoreCase = true) || mg.homeTeam.contains("🏈") || mg.awayTeam.contains("🏈") -> "🏈" to "Bóng bầu dục Mỹ"
+                mg.sources.any { it.name.contains("🏉") } || mg.leagueName.contains("Rugby", ignoreCase = true) -> "🏉" to "Bóng bầu dục"
                 else -> "⚽" to "Bóng đá"
             }
             binding.tvSportBadge.text = "$sportIcon $sportName"
 
             // 2. League name
-            binding.tvLeagueName.text = mg.leagueName.ifBlank { "Trực tiếp thể thao" }
+            val cleanLg = mg.leagueName
+                .replace("🌐 Trực tiếp", "")
+                .replace("Trực tiếp", "")
+                .trim()
+            val finalLgName = when {
+                cleanLg.isNotBlank() && !cleanLg.equals("OTHER", true) -> cleanLg
+                mg.league.equals("NCAAF", true) -> "NCAA Football"
+                mg.league.equals("NFL", true) -> "Bóng bầu dục Mỹ"
+                else -> SportsLiveManager.LEAGUE_LABELS[mg.league] ?: "Bóng đá Quốc tế"
+            }
+            binding.tvLeagueName.text = finalLgName
 
             // 3. Time & Date
             val timeStr = if (mg.date.isNotBlank()) "⏰ ${mg.time} (${mg.date})" else "⏰ ${mg.time}"
@@ -246,6 +366,8 @@ class ChannelAdapter(
             // 5. Teams
             binding.tvHomeName.text = mg.homeTeam
             binding.tvAwayName.text = mg.awayTeam
+            binding.tvVsBadge.visibility = if (mg.awayTeam.isNotBlank()) View.VISIBLE else View.GONE
+            binding.tvAwayName.visibility = if (mg.awayTeam.isNotBlank()) View.VISIBLE else View.GONE
 
             // 6. Home Logo & Fallback Initials
             val homeLogoUrl = TeamLogoHelper.getTeamLogoUrl(mg.homeTeam, mg.homeLogo)
@@ -270,8 +392,8 @@ class ChannelAdapter(
             }
 
             // 7. Away Logo & Fallback Initials
-            val awayLogoUrl = TeamLogoHelper.getTeamLogoUrl(mg.awayTeam, mg.awayLogo)
-            val awayInitial = TeamLogoHelper.getInitial(mg.awayTeam)
+            val awayLogoUrl = if (mg.awayTeam.isNotBlank()) TeamLogoHelper.getTeamLogoUrl(mg.awayTeam, mg.awayLogo) else null
+            val awayInitial = if (mg.awayTeam.isNotBlank()) TeamLogoHelper.getInitial(mg.awayTeam) else ""
             binding.tvAwayInitial.text = awayInitial
 
             if (!awayLogoUrl.isNullOrBlank()) {
@@ -288,12 +410,17 @@ class ChannelAdapter(
             } else {
                 binding.ivAwayLogo.setImageDrawable(null)
                 binding.ivAwayLogo.visibility = View.GONE
-                binding.tvAwayInitial.visibility = View.VISIBLE
+                binding.tvAwayInitial.visibility = if (mg.awayTeam.isNotBlank()) View.VISIBLE else View.GONE
             }
 
-            // 8. Sources Count
+            // 8. Sources Count & Action
             val sourceCount = mg.sources.size
-            binding.tvSourcesCount.text = "● $sourceCount luồng phát - Nhấn để chọn kênh"
+            binding.tvSourcesCount.text = if (channel.streamUrl.startsWith("match://")) {
+                "● $sourceCount luồng phát - Nhấn để chọn kênh"
+            } else {
+                "● $sourceCount luồng phát • ${channel.groupTitle}"
+            }
+            binding.tvWatchAction.text = if (channel.streamUrl.startsWith("match://")) "Xem luồng ▶" else "Phát ngay ▶"
         }
     }
 
@@ -380,13 +507,7 @@ class ChannelAdapter(
             binding.ivFavorite.visibility = if (channel.isFavorite) View.VISIBLE else View.GONE
             binding.root.isSelected = isPlaying
 
-            val res = channel.getOrComputeResolution()
-            if (res.isNotEmpty()) {
-                binding.tvResolutionBadge.visibility = View.VISIBLE
-                binding.tvResolutionBadge.text = res
-            } else {
-                binding.tvResolutionBadge.visibility = View.GONE
-            }
+            binding.tvResolutionBadge.visibility = View.GONE
 
             val resolvedLogo = channel.getOrResolveLogo()
             if (resolvedLogo.isNotBlank()) {
