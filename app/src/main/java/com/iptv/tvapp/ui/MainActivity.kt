@@ -463,7 +463,10 @@ class MainActivity : AppCompatActivity() {
         binding.navModeSports.setOnClickListener {
             resetOverlayTimer()
             if (currentAppMode != AppMode.SPORTS && sportsCategoriesList.isEmpty()) {
-                showBottomNotification("⚽ Đang tải danh sách trận đấu trực tiếp hôm nay...")
+                val cached = playlistManager.sportsLiveManager.getCachedSportsCategories()
+                if (cached.isNotEmpty()) {
+                    sportsCategoriesList.addAll(cached)
+                }
             }
             switchAppMode(AppMode.SPORTS, focusCategories = true)
         }
@@ -1095,6 +1098,21 @@ class MainActivity : AppCompatActivity() {
 
                 binding.layoutBuffering.visibility = View.GONE
 
+                // Nạp trước dữ liệu thể thao ngầm trong nền để sẵn sàng ngay khi người dùng mở tab Thể thao
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val cached = playlistManager.sportsLiveManager.getCachedSportsCategories()
+                        if (cached.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                if (sportsCategoriesList.isEmpty()) {
+                                    sportsCategoriesList.addAll(cached)
+                                }
+                            }
+                        }
+                        playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = false)
+                    } catch (e: Exception) {}
+                }
+
                 val playableChannels = allChannels.filter { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS && !it.streamUrl.startsWith("action://") }
                 val targetChannel = when (prefs.startupMode) {
                     PreferencesHelper.MODE_FIRST_CHANNEL -> {
@@ -1179,14 +1197,16 @@ class MainActivity : AppCompatActivity() {
             allCategories.addAll(tvCategories)
         } else {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
+            if (sportsCategoriesList.isEmpty()) {
+                val cached = playlistManager.sportsLiveManager.getCachedSportsCategories()
+                if (cached.isNotEmpty()) {
+                    sportsCategoriesList.addAll(cached)
+                }
+            }
             allCategories.addAll(sportsCategoriesList)
 
-            // Tải trực tiếp từ máy chủ, không dùng cache cũ
-            val isFirstLoad = sportsCategoriesList.isEmpty()
-            if (isFirstLoad) {
-                showBottomNotification("Đang cập nhật từ máy chủ...")
-            }
-            fetchSportsInBackground(forceRefresh = true, showNotification = isFirstLoad)
+            val isFirstLoad = !hasLoadedSportsOnce
+            fetchSportsInBackground(forceRefresh = isFirstLoad, showNotification = isFirstLoad && sportsCategoriesList.isEmpty())
             if (!hasLoadedSportsOnce) {
                 hasLoadedSportsOnce = true
                 startPeriodicSportsRefresh()
@@ -2036,7 +2056,6 @@ class MainActivity : AppCompatActivity() {
 
                     val drmConfig = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
                         .setMultiSession(true)
-                        .setKeySetId(clearkeyJson.toByteArray(Charsets.UTF_8))
                         .build()
                     mediaItemBuilder.setDrmConfiguration(drmConfig)
                 } catch (e: Exception) {
@@ -3304,7 +3323,8 @@ class MainActivity : AppCompatActivity() {
                 currentSelectedCategory = updatedCat
                 categoryAdapter.setSelectedCategory(updatedCat)
                 if (binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                    displayCategoryChannels(updatedCat)
+                    val preserveFocus = currentFocusedChannel
+                    displayCategoryChannels(updatedCat, focusChannel = preserveFocus)
                 }
             }
         }

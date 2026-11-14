@@ -1015,10 +1015,30 @@ class SportsLiveManager(private val context: Context) {
     fun parseSportsCategoriesFromDataJson(root: JSONObject): List<Category> {
         val categories = mutableListOf<Category>()
 
-        matchGroupsMap.clear()
-        sourceIdToMatchMap.clear()
-        urlToMatchesMap.clear()
-        urlToClearKeyMap.clear()
+        val newMatchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
+        val newSourceIdToMatchMap = ConcurrentHashMap<String, MatchGroup>()
+        val newUrlToMatchesMap = ConcurrentHashMap<String, CopyOnWriteArrayList<MatchGroup>>()
+        val newUrlToClearKeyMap = ConcurrentHashMap<String, Pair<String, String>>()
+
+        fun localAddUrlMapping(url: String, mg: MatchGroup) {
+            if (url.isBlank()) return
+            var list = newUrlToMatchesMap[url]
+            if (list == null) {
+                val newList = CopyOnWriteArrayList<MatchGroup>()
+                val existing = newUrlToMatchesMap.putIfAbsent(url, newList)
+                list = existing ?: newList
+            }
+            if (list.none { it.key == mg.key }) {
+                list.add(mg)
+            }
+        }
+
+        fun localRegisterClearKey(url: String, keyId: String, key: String) {
+            if (url.isNotBlank() && keyId.isNotBlank() && key.isNotBlank()) {
+                val cleanUrl = url.substringBefore('|').trim()
+                newUrlToClearKeyMap[cleanUrl] = Pair(keyId.trim(), key.trim())
+            }
+        }
 
         // 1. Cập nhật lịch thi đấu ESPN và bảng xếp hạng
         parseSportsDataJson(root)
@@ -1070,7 +1090,7 @@ class SportsLiveManager(private val context: Context) {
                         val drmKid = clearKeyObj?.optString("keyId")?.ifBlank { null }
                         val drmK = clearKeyObj?.optString("key")?.ifBlank { null }
                         if (drmKid != null && drmK != null) {
-                            registerClearKey(sUrl, drmKid, drmK)
+                            localRegisterClearKey(sUrl, drmKid, drmK)
                         }
                         sourceChannels.add(
                             Channel(
@@ -1102,8 +1122,8 @@ class SportsLiveManager(private val context: Context) {
                         if (existingMg.sources.none { it.streamUrl == src.streamUrl }) {
                             existingMg.sources.add(src)
                         }
-                        sourceIdToMatchMap[src.id] = existingMg
-                        addUrlMapping(src.streamUrl, existingMg)
+                        newSourceIdToMatchMap[src.id] = existingMg
+                        localAddUrlMapping(src.streamUrl, existingMg)
                     }
                     continue
                 }
@@ -1162,10 +1182,10 @@ class SportsLiveManager(private val context: Context) {
                     awayLogo = awayLogo
                 )
                 addedMatches.add(mg)
-                matchGroupsMap[key] = mg
+                newMatchGroupsMap[key] = mg
                 for (src in sourceChannels) {
-                    sourceIdToMatchMap[src.id] = mg
-                    addUrlMapping(src.streamUrl, mg)
+                    newSourceIdToMatchMap[src.id] = mg
+                    localAddUrlMapping(src.streamUrl, mg)
                 }
 
                 // Chỉ hiển thị những trận chưa kết thúc (Full-time)
@@ -1276,7 +1296,7 @@ class SportsLiveManager(private val context: Context) {
                         val drmKid = clearKeyObj?.optString("keyId")?.ifBlank { null }
                         val drmK = clearKeyObj?.optString("key")?.ifBlank { null }
                         if (drmKid != null && drmK != null) {
-                            registerClearKey(cUrl, drmKid, drmK)
+                            localRegisterClearKey(cUrl, drmKid, drmK)
                         }
                         val ch = Channel(
                             id = "src_${gName.hashCode()}_$c",
@@ -1290,8 +1310,9 @@ class SportsLiveManager(private val context: Context) {
                             drmKey = drmK
                         )
                         channels.add(ch)
-                        findMatchByUrl(cUrl, cName)?.let { matchedMg ->
-                            sourceIdToMatchMap[ch.id] = matchedMg
+                        val matchedMg = newUrlToMatchesMap[cUrl]?.firstOrNull() ?: findMatchByUrl(cUrl, cName)
+                        if (matchedMg != null) {
+                            newSourceIdToMatchMap[ch.id] = matchedMg
                         }
                     }
                 }
@@ -1300,6 +1321,16 @@ class SportsLiveManager(private val context: Context) {
                 }
             }
         }
+
+        // Hoàn tất phân tích dữ liệu: Hoán đổi bản đồ đồng thời (Atomic swap) để UI không bị gián đoạn hay mất dữ liệu
+        matchGroupsMap.clear()
+        matchGroupsMap.putAll(newMatchGroupsMap)
+        sourceIdToMatchMap.clear()
+        sourceIdToMatchMap.putAll(newSourceIdToMatchMap)
+        urlToMatchesMap.clear()
+        urlToMatchesMap.putAll(newUrlToMatchesMap)
+        urlToClearKeyMap.clear()
+        urlToClearKeyMap.putAll(newUrlToClearKeyMap)
 
         return categories
     }
@@ -1506,8 +1537,8 @@ class SportsLiveManager(private val context: Context) {
 
     /**
      * Tải danh sách trực tiếp thể thao từ máy chủ Armbian Hub & GitHub (thethao-data.json / thethao.m3u).
-     * Luôn ưu tiên tải trực tiếp từ máy chủ mạng để đảm bảo dữ liệu mới nhất 100%, không phụ thuộc cache cũ.
-     * Chỉ dùng cache đĩa khi mất kết nối mạng (offline).
+     * Áp dụng Stale-While-Revalidate: Trả về ngay lập tức dữ liệu cache nếu có (< 2ms),
+     * sau đó cập nhật dữ liệu mới từ máy chủ mạng mà không gây đơ/lag UI.
      */
     suspend fun getSportsCategories(forceRefresh: Boolean = false): List<Category> =
         withContext(Dispatchers.IO) {
@@ -1516,8 +1547,26 @@ class SportsLiveManager(private val context: Context) {
             val cacheFile = File(context.cacheDir, "thethao_sports_cache.m3u")
             val baseSportsUrl = prefs.sportsPlaylistUrl.ifBlank { DEFAULT_SPORTS_URL }
 
-            // 1. TẢI TRỰC TIẾP TỪ MẠNG (Armbian Hub 10.0.0.222:8080 & GitHub CDN)
-            // Không qua cache cũ, đảm bảo người dùng luôn nhận dữ liệu trận đấu và luồng mới nhất ngay lần đầu
+            // 1. Trả về ngay lập tức nếu không ép tải lại và dữ liệu trong RAM còn mới (< 10 phút)
+            if (!forceRefresh && cachedCategories != null && cachedCategories!!.isNotEmpty() && (now - lastFetchTimeMs < 10 * 60 * 1000L)) {
+                return@withContext cachedCategories!!
+            }
+
+            // 2. Nạp từ cache đĩa tức thì nếu RAM chưa có và không ép tải lại (< 3ms)
+            if (!forceRefresh && dataCacheFile.exists() && dataCacheFile.length() > 200L && (now - dataCacheFile.lastModified() < 30 * 60 * 1000L)) {
+                try {
+                    val jsonStr = dataCacheFile.readText(Charsets.UTF_8)
+                    val root = JSONObject(jsonStr)
+                    val list = parseSportsCategoriesFromDataJson(root)
+                    if (list.isNotEmpty()) {
+                        cachedCategories = list
+                        lastFetchTimeMs = now
+                        return@withContext list
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 3. TẢI TỪ MẠNG (Armbian Hub 10.0.0.222:8080 & GitHub CDN)
             val updatedList = refreshSportsDataFromNetwork(dataCacheFile, cacheFile, baseSportsUrl)
             if (updatedList.isNotEmpty()) {
                 cachedCategories = updatedList
@@ -1525,7 +1574,7 @@ class SportsLiveManager(private val context: Context) {
                 return@withContext updatedList
             }
 
-            // 2. CHỈ KHI MẠNG LỖI HOẶC MẤT KẾT NỐI: Mới dùng cache đĩa JSON làm phương án cứu trợ offline
+            // 4. Nếu mạng lỗi/mất kết nối: Dùng cache đĩa JSON làm phương án cứu trợ offline
             if (dataCacheFile.exists() && dataCacheFile.length() > 200L) {
                 try {
                     val jsonStr = dataCacheFile.readText(Charsets.UTF_8)
@@ -1539,7 +1588,7 @@ class SportsLiveManager(private val context: Context) {
                 } catch (e: Exception) {}
             }
 
-            // 3. Fallback cuối cùng nếu cả dữ liệu mạng và cache JSON đều thất bại: parse file M3U cũ
+            // 5. Fallback cuối cùng nếu cả dữ liệu mạng và cache JSON đều thất bại: parse file M3U cũ
             if (cacheFile.exists() && cacheFile.length() > 0L) {
                 val fallbackList = parseSportsCategoriesFromFile(cacheFile, baseSportsUrl)
                 if (fallbackList.isNotEmpty()) {
@@ -1559,8 +1608,8 @@ class SportsLiveManager(private val context: Context) {
     ): List<Category> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val fastClient = httpClient.newBuilder()
-            .connectTimeout(3, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
+            .connectTimeout(2, TimeUnit.SECONDS)
+            .readTimeout(4, TimeUnit.SECONDS)
             .build()
 
         // 1. Tải thethao-data.json (chứa sẵn live_events, source_groups, fixtures, standings do Armbian tính toán)

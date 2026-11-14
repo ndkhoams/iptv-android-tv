@@ -26,6 +26,16 @@ class ChannelAdapter(
         private const val VIEW_TYPE_ODD = 1
         private const val VIEW_TYPE_MATCH_CARD = 2
         private const val VIEW_TYPE_REFRESH = 3
+
+        private val REGEX_EMOJI = Regex("""[\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f9ff]""")
+        private val REGEX_BRACKETS = Regex("""\[[^\]]*\]""")
+        private val REGEX_PARENS = Regex("""\([^\)]*\)""")
+        private val REGEX_BRAND_TAGS = Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm|Xôi Chè|Film4k|F4K Sport|F4K|Antsports|TV360|SocoLive)(?:\s+TV)?\b""")
+        private val REGEX_WHITESPACE = Regex("""\s+""")
+        private val REGEX_VS_SPLIT = Regex("""\s+(?:vs|Vs|VS|-)\s+""")
+        private val REGEX_TIME = Regex("""\b(\d{1,2}:\d{2})\b""")
+        private val REGEX_DATE = Regex("""\b(\d{1,2}[/-]\d{1,2})\b""")
+        private val REGEX_RAW_GROUP = Regex("""(?i)(?:LIVE EVENTS|Film4k|F4K Sport|F4K|Xôi Chè|Gà Vàng|Tiếu Lâm|Chuối Chiên|SocoLive|Trực tiếp thể thao|Trực tiếp)\b""")
     }
 
     var isSportsMode: Boolean = false
@@ -138,6 +148,7 @@ class ChannelAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (position < 0 || position >= channels.size) return
         val channel = channels[position]
         when (holder) {
             is MatchCardViewHolder -> {
@@ -225,21 +236,21 @@ class ChannelAdapter(
 
             if (mg == null) {
                 val rawName = channel.name
-                val timeMatch = Regex("""\b(\d{1,2}:\d{2})\b""").find(rawName)
+                val timeMatch = REGEX_TIME.find(rawName)
                 val timeStr = timeMatch?.groupValues?.get(1) ?: "LIVE"
-                val dateMatch = Regex("""\b(\d{1,2}[/-]\d{1,2})\b""").find(rawName)
+                val dateMatch = REGEX_DATE.find(rawName)
                 val dateStr = dateMatch?.groupValues?.get(1) ?: ""
 
                 // Làm sạch tên 2 đội bóng
                 val clean = rawName
-                    .replace(Regex("""[\u2600-\u26ff\u2700-\u27bf\U0001f300-\U0001f9ff]"""), " ")
-                    .replace(Regex("""\[[^\]]*\]"""), " ")
-                    .replace(Regex("""\([^\)]*\)"""), " ")
-                    .replace(Regex("""(?i)(?:-|\s)?\s*(?:Chuối Chiên|Gà Vàng|Xôi Lạc|Cà Khịa|TQM|Cola|Bia Ôm|Phá Làng|Vua Sân Cỏ|S8|Khô Gà|Giờ Vàng|Sao Kê|Xôi Gấc|Tiếu Lâm|Xôi Chè|Film4k|TV360|Antsports)(?:\s+TV)?\b"""), " ")
-                    .replace(Regex("""\s+"""), " ")
+                    .replace(REGEX_EMOJI, " ")
+                    .replace(REGEX_BRACKETS, " ")
+                    .replace(REGEX_PARENS, " ")
+                    .replace(REGEX_BRAND_TAGS, " ")
+                    .replace(REGEX_WHITESPACE, " ")
                     .trim()
 
-                val parts = clean.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
+                val parts = clean.split(REGEX_VS_SPLIT)
                 val homeTeam = if (parts.isNotEmpty()) parts[0].trim() else clean
                 val awayTeam = if (parts.size >= 2) parts[1].trim() else ""
 
@@ -258,7 +269,7 @@ class ChannelAdapter(
                 val cleanLgName = if (detectedLg != "OTHER") {
                     SportsLiveManager.LEAGUE_LABELS[detectedLg] ?: ""
                 } else {
-                    val rawGrp = channel.groupTitle.replace(Regex("""(?i)(?:LIVE EVENTS|Film4k|F4K Sport|F4K|Xôi Chè|Gà Vàng|Tiếu Lâm|Chuối Chiên|SocoLive|Trực tiếp thể thao|Trực tiếp)\b"""), "").trim()
+                    val rawGrp = channel.groupTitle.replace(REGEX_RAW_GROUP, "").trim()
                     rawGrp.ifBlank { "Bóng đá Quốc tế" }
                 }
                 binding.tvLeagueName.text = cleanLgName.ifBlank { "Bóng đá Quốc tế" }
@@ -290,6 +301,7 @@ class ChannelAdapter(
                     Glide.with(binding.ivHomeLogo.context)
                         .load(homeLogoUrl)
                         .override(80, 80)
+                        .dontAnimate()
                         .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .placeholder(R.drawable.ic_tv_placeholder)
@@ -310,6 +322,7 @@ class ChannelAdapter(
                     Glide.with(binding.ivAwayLogo.context)
                         .load(awayLogoUrl)
                         .override(80, 80)
+                        .dontAnimate()
                         .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
                         .placeholder(R.drawable.ic_tv_placeholder)
@@ -384,6 +397,7 @@ class ChannelAdapter(
                 Glide.with(binding.ivHomeLogo.context)
                     .load(homeLogoUrl)
                     .override(80, 80)
+                    .dontAnimate()
                     .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.ic_tv_placeholder)
@@ -406,6 +420,7 @@ class ChannelAdapter(
                 Glide.with(binding.ivAwayLogo.context)
                     .load(awayLogoUrl)
                     .override(80, 80)
+                    .dontAnimate()
                     .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .placeholder(R.drawable.ic_tv_placeholder)

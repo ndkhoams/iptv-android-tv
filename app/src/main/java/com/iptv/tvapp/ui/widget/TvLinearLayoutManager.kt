@@ -17,6 +17,17 @@ class TvLinearLayoutManager(
     var onHorizontalFocusSearch: ((focused: View, direction: Int) -> View?)? = null
 ) : LinearLayoutManager(context, VERTICAL, false) {
 
+    override fun onLayoutChildren(recycler: RecyclerView.Recycler?, state: RecyclerView.State?) {
+        try {
+            super.onLayoutChildren(recycler, state)
+        } catch (e: IndexOutOfBoundsException) {
+            // Ngăn chặn crash 'Inconsistency detected' khi dữ liệu danh sách thay đổi đồng thời với focus/scroll
+            e.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     override fun onInterceptFocusSearch(focused: View, direction: Int): View? {
         val count = itemCount
         val position = getPosition(focused)
