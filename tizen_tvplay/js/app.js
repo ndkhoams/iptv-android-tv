@@ -499,7 +499,8 @@
         if (str.indexOf("LIGUE") >= 0 || str.indexOf("PHÁP") >= 0) return LEAGUE_LOGOS_BASE64.LIGUE1;
         if (str.indexOf("CHAMPIONS") >= 0 || str.indexOf("C1") >= 0 || str.indexOf("UCL") >= 0) return LEAGUE_LOGOS_BASE64.UCL;
         if (str.indexOf("F1") >= 0 || str.indexOf("RACING") >= 0 || str.indexOf("FORMULA") >= 0) return LEAGUE_LOGOS_BASE64.F1;
-        if (str.indexOf("TENNIS") >= 0 || str.indexOf("QUẦN VỢT") >= 0 || str.indexOf("ATP") >= 0) return LEAGUE_LOGOS_BASE64.TENNIS;
+        var isWimbledonFootball = str.indexOf("AFC WIMBLEDON") >= 0 || str.indexOf("WIMBLEDON FC") >= 0 || (str.indexOf("WIMBLEDON") >= 0 && (str.indexOf("BLACKPOOL") >= 0 || str.indexOf("EFL") >= 0 || str.indexOf("FA CUP") >= 0));
+        if (!isWimbledonFootball && (str.indexOf("TENNIS") >= 0 || str.indexOf("QUẦN VỢT") >= 0 || str.indexOf("ATP") >= 0)) return LEAGUE_LOGOS_BASE64.TENNIS;
         if (str.indexOf("NBA") >= 0 || str.indexOf("BÓNG RỔ") >= 0 || str.indexOf("BASKETBALL") >= 0) return LEAGUE_LOGOS_BASE64.NBA;
         if (str.indexOf("V-LEAGUE") >= 0 || str.indexOf("VLEAGUE") >= 0 || str.indexOf("VIỆT NAM") >= 0) return LEAGUE_LOGOS_BASE64.VLEAGUE;
 
@@ -973,9 +974,11 @@
             activeEvents.forEach(function (ev, evIdx) {
                 var ongoing = isMatchOngoing(ev);
                 var lg = (ev.league || "").toUpperCase();
-                var sportIcon = (lg === "F1") ? "🏎️" : ((lg === "TENNIS") ? "🎾" : ((lg === "NBA") ? "🏀" : (ongoing ? "🔴" : "⚽")));
-
                 var cleanTeams = (ev.homeTeam + (ev.awayTeam ? " vs " + ev.awayTeam : "")).trim();
+                var teamsUpper = cleanTeams.toUpperCase();
+                var isWimbledonFootball = teamsUpper.indexOf("AFC WIMBLEDON") >= 0 || teamsUpper.indexOf("WIMBLEDON FC") >= 0 || (teamsUpper.indexOf("WIMBLEDON") >= 0 && teamsUpper.indexOf("BLACKPOOL") >= 0);
+                if (isWimbledonFootball && lg === "TENNIS") lg = "OTHER";
+                var sportIcon = (lg === "F1") ? "🏎️" : ((lg === "TENNIS") ? "🎾" : ((lg === "NBA") ? "🏀" : (ongoing ? "🔴" : "⚽")));
                 var timePart = ev.date ? ("[" + ev.time + " " + ev.date + "]") : ("[" + ev.time + "]");
                 var displayName = sportIcon + " " + timePart + " " + cleanTeams;
 

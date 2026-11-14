@@ -950,8 +950,10 @@ class SportsLiveManager(private val context: Context) {
         if (t.contains("f1") || t.contains("formula 1") || t.contains("formula one") || t.contains("grand prix") || t.contains("công thức 1")) {
             return "F1"
         }
-        if (t.contains("grand slam") || t.contains("atp 1000") || t.contains("atp1000") || t.contains("wimbledon") ||
-            t.contains("us open") || t.contains("australian open") || t.contains("roland garros") || t.contains("tennis") || t.contains("quần vợt")) {
+        val isWimbledonFootball = t.contains("afc wimbledon") || t.contains("wimbledon fc") ||
+            (t.contains("wimbledon") && (t.contains("blackpool") || t.contains("efl") || t.contains("fa cup") || t.contains("league two") || t.contains("league 2")))
+        if (!isWimbledonFootball && (t.contains("grand slam") || t.contains("atp 1000") || t.contains("atp1000") || (t.contains("wimbledon") && !t.contains("afc")) ||
+            t.contains("us open") || t.contains("australian open") || t.contains("roland garros") || t.contains("tennis") || t.contains("quần vợt"))) {
             return "TENNIS"
         }
         if (t.contains("nba") || t.contains("bóng rổ nba")) {
