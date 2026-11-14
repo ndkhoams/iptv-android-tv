@@ -234,7 +234,7 @@ class MainActivity : AppCompatActivity() {
         initPlayer()
         initWebServer()
         startClock()
-        loadPlaylist(forceRefresh = false, isStartup = true)
+        loadPlaylist(forceRefresh = true, isStartup = true)
         loadEpgData()
         // Không chạy startPeriodicSportsRefresh() lúc khởi động để giảm tải RAM/CPU tối đa cho thiết bị 1GB RAM
         checkAppUpdate(isManual = false)
@@ -340,18 +340,21 @@ class MainActivity : AppCompatActivity() {
             },
             onChannelFocused = { channel ->
                 updateSpotlight(channel, immediate = false)
-            }
+            },
+            matchGroupProvider = { key -> playlistManager.sportsLiveManager.getMatch(key) }
         )
         val channelViewPool = RecyclerView.RecycledViewPool().apply {
             setMaxRecycledViews(0, 25)
             setMaxRecycledViews(1, 25)
+            setMaxRecycledViews(2, 25)
+            setMaxRecycledViews(3, 5)
         }
         binding.rvChannels.apply {
             setRecycledViewPool(channelViewPool)
             layoutManager = TvLinearLayoutManager(this@MainActivity, { binding.rvChannels }) { focused, direction ->
                 when (direction) {
                     View.FOCUS_LEFT -> findHorizontallyAlignedCategoryView(focused)
-                    View.FOCUS_RIGHT -> focused // Khóa focus: Không cho focus nhảy sang cột Spotlight EPG/BXH bên phải
+                    View.FOCUS_RIGHT -> if (binding.layoutSpotlightCol.visibility == View.VISIBLE) null else focused
                     else -> null
                 }
             }
@@ -847,15 +850,20 @@ class MainActivity : AppCompatActivity() {
                 // Từ rvChannels:
                 // Ở chế độ TV: ấn sang phải để tương tác với EPG
                 // Ở chế độ Thể thao: ấn sang phải để tương tác với Bảng xếp hạng
+                // Nếu Spotlight đang ẩn (chế độ Live Events full-width): giữ nguyên focus tại kênh
                 if (binding.rvChannels.findContainingViewHolder(focused) != null || binding.rvChannels.hasFocus()) {
-                    if (currentAppMode == AppMode.TV) {
-                        if (focusSpotlightEpg()) {
-                            return
+                    if (binding.layoutSpotlightCol.visibility == View.VISIBLE) {
+                        if (currentAppMode == AppMode.TV) {
+                            if (focusSpotlightEpg()) {
+                                return
+                            }
+                        } else if (currentAppMode == AppMode.SPORTS) {
+                            if (focusSpotlightStandings()) {
+                                return
+                            }
                         }
-                    } else if (currentAppMode == AppMode.SPORTS) {
-                        if (focusSpotlightStandings()) {
-                            return
-                        }
+                    } else {
+                        return
                     }
                 }
 
@@ -1285,6 +1293,14 @@ class MainActivity : AppCompatActivity() {
 
         binding.tvCategoryHeader.text = category.name
         binding.tvChannelCount.text = getString(R.string.channels_count, category.channels.size)
+
+        // Đồng bộ giao diện với web: Danh mục Live Events ẩn cột Spotlight EPG/BXH bên phải
+        // để cột danh sách trận đấu mở rộng toàn màn hình thành 1 dòng dài (match cards)
+        val isLiveEvents = category.name.contains("LIVE EVENTS", ignoreCase = true) ||
+                           category.name.contains("Live Events", ignoreCase = true) ||
+                           category.channels.any { it.streamUrl.startsWith("match://") }
+        binding.layoutSpotlightCol.visibility = if (isLiveEvents) View.GONE else View.VISIBLE
+
         channelAdapter.submitList(currentCategoryChannels)
 
         val targetToHighlight = focusChannel ?: currentPlayingChannel?.takeIf { ch ->
@@ -1292,7 +1308,9 @@ class MainActivity : AppCompatActivity() {
         } ?: currentCategoryChannels.firstOrNull()
 
         if (targetToHighlight != null) {
-            updateSpotlight(targetToHighlight)
+            if (!isLiveEvents) {
+                updateSpotlight(targetToHighlight)
+            }
             val index = currentCategoryChannels.indexOfFirst { it.streamUrl == targetToHighlight.streamUrl }
             if (index != -1) {
                 binding.rvChannels.scrollToPosition(index)
@@ -1317,6 +1335,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSpotlight(channel: Channel, immediate: Boolean = true) {
+        if (binding.layoutSpotlightCol.visibility == View.GONE) {
+            return
+        }
         if (channel.id == SportsLiveManager.ACTION_REFRESH_SPORTS || channel.streamUrl == "action://refresh_sports") {
             currentFocusedChannel = channel
             binding.tvSpotlightName.text = "CẬP NHẬT TRẬN ĐẤU THỂ THAO"
@@ -2509,11 +2530,15 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     } else if (binding.rvChannels.hasFocus() || (currentFocus?.let { binding.rvChannels.findContainingViewHolder(it) } != null)) {
-                        if (currentAppMode == AppMode.TV) {
-                            focusSpotlightEpg()
-                            return true
-                        } else if (currentAppMode == AppMode.SPORTS) {
-                            focusSpotlightStandings()
+                        if (binding.layoutSpotlightCol.visibility == View.VISIBLE) {
+                            if (currentAppMode == AppMode.TV) {
+                                focusSpotlightEpg()
+                                return true
+                            } else if (currentAppMode == AppMode.SPORTS) {
+                                focusSpotlightStandings()
+                                return true
+                            }
+                        } else {
                             return true
                         }
                     } else if (binding.layoutSpotlightCol.hasFocus() || isDescendantOf(currentFocus, binding.layoutSpotlightCol)) {
@@ -2941,7 +2966,7 @@ class MainActivity : AppCompatActivity() {
             context = this,
             onPlaylistSelected = {
                 hideOverlay()
-                loadPlaylist(forceRefresh = false)
+                loadPlaylist(forceRefresh = true)
                 loadEpgData()
             },
             onOpenFullSettings = {

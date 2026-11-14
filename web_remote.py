@@ -109,17 +109,19 @@ def broadcast_event(event_type, data):
             if d in sse_clients:
                 sse_clients.remove(d)
 
-def get_local_or_remote_data(filename, remote_url):
+def get_local_or_remote_data(filename, remote_url, max_age_seconds=600):
     local_path = os.path.join(DATA_DIR, filename)
     if os.path.exists(local_path) and os.path.getsize(local_path) > 50:
-        try:
-            with open(local_path, "r", encoding="utf-8") as f:
-                return f.read()
-        except Exception:
-            pass
+        file_age = time.time() - os.path.getmtime(local_path)
+        if file_age < max_age_seconds:
+            try:
+                with open(local_path, "r", encoding="utf-8") as f:
+                    return f.read()
+            except Exception:
+                pass
     # Fetch from remote and cache
     try:
-        req = urllib.request.Request(remote_url, headers={"User-Agent": "TVPlay-Armbian/1.0"})
+        req = urllib.request.Request(remote_url, headers={"User-Agent": "TVPlay-Armbian/1.0", "Cache-Control": "no-cache"})
         with urllib.request.urlopen(req, timeout=8) as resp:
             content = resp.read().decode("utf-8", "ignore")
             if len(content) > 50:
@@ -128,6 +130,12 @@ def get_local_or_remote_data(filename, remote_url):
                 return content
     except Exception as e:
         print(f"[-] Fetch error for {filename}: {e}")
+        if os.path.exists(local_path):
+            try:
+                with open(local_path, "r", encoding="utf-8") as f:
+                    return f.read()
+            except Exception:
+                pass
     return ""
 
 def parse_m3u_channels(m3u_text):
@@ -1099,9 +1107,9 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
             if not os.path.exists(filepath):
                 # Try auto-fetching if it is ktv.m3u or thethao-data.json
                 if filename == "ktv.m3u":
-                    get_local_or_remote_data("ktv.m3u", "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u")
+                    get_local_or_remote_data("ktv.m3u", "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u", max_age_seconds=600)
                 elif filename == "thethao-data.json":
-                    get_local_or_remote_data("thethao-data.json", "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json")
+                    get_local_or_remote_data("thethao-data.json", "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json", max_age_seconds=300)
 
             if os.path.exists(filepath):
                 self.send_response(200)

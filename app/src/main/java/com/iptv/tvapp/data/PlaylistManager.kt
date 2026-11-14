@@ -124,8 +124,18 @@ class PlaylistManager(private val context: Context) {
                 if (isLocalSource(effectiveUrl)) {
                     loadFromLocal(effectiveUrl, cacheFile)
                 } else {
-                    if (forceRefresh || !cacheFile.exists() || cacheFile.length() == 0L) {
+                    // LUÔN ƯU TIÊN TẢI TỪ MẠNG (Armbian Hub / GitHub) TRƯỚC!
+                    // Không ưu tiên đọc cache cũ nếu mạng còn sống để đảm bảo danh sách kênh luôn cập nhật mới nhất
+                    var downloadSuccess = false
+                    try {
                         downloadAndCache(effectiveUrl, cacheFile)
+                        downloadSuccess = true
+                    } catch (e: Exception) {
+                        android.util.Log.w("PlaylistManager", "Network download failed for $effectiveUrl, fallback to cache: ${e.message}")
+                    }
+
+                    if (!downloadSuccess && (!cacheFile.exists() || cacheFile.length() == 0L)) {
+                        throw Exception("Không thể tải danh sách kênh từ mạng và chưa có bản lưu dự phòng.")
                     }
                 }
 
@@ -187,8 +197,23 @@ class PlaylistManager(private val context: Context) {
         var lastException: Exception? = null
         var downloadedBytes: ByteArray? = null
 
-        // Tự động phân giải CDN dự phòng nếu là link GitHub (Fastly -> jsDelivr -> Statically -> URL gốc)
-        val candidateUrls = GitHubCdnHelper.buildFallbackUrls(url)
+        // Tự động phân giải danh sách URL ưu tiên:
+        // Đối với danh mục mặc định / ktv.m3u:
+        // 1. Ưu tiên số 1: Máy chủ nội bộ Armbian Hub LAN (10.0.0.222:8080) siêu tốc trong mạng nội bộ
+        // 2. Ưu tiên số 2: GitHub Raw trực tiếp (nguồn gốc dữ liệu sạch và mới nhất)
+        // 3. Fallback: Fastly / jsDelivr CDN
+        val isKtv = url.contains("ktv.m3u", ignoreCase = true) || url == PreferencesHelper.BUILTIN_PLAYLIST_URL
+        val candidateUrls = mutableListOf<String>()
+        if (isKtv) {
+            val now = System.currentTimeMillis()
+            candidateUrls.add("http://10.0.0.222:8080/data/ktv.m3u?_ts=$now")
+            candidateUrls.add("https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u?_ts=$now")
+            candidateUrls.add("https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u")
+            candidateUrls.add("https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/ktv.m3u")
+            candidateUrls.add("https://cdn.statically.io/gh/ndkhoams/iptv/main/ktv.m3u")
+        } else {
+            candidateUrls.addAll(GitHubCdnHelper.buildFallbackUrls(url))
+        }
 
         urlLoop@ for (candidateUrl in candidateUrls) {
             for (ua in USER_AGENTS) {
@@ -196,6 +221,8 @@ class PlaylistManager(private val context: Context) {
                     val requestBuilder = Request.Builder()
                         .url(candidateUrl)
                         .header("User-Agent", ua)
+                        .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                        .header("Pragma", "no-cache")
                         .header("Accept", "text/plain, audio/x-mpegurl, application/x-mpegurl, text/html, */*")
                         .header("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7")
 
@@ -206,7 +233,16 @@ class PlaylistManager(private val context: Context) {
                         requestBuilder.header("Sec-Fetch-Dest", "document")
                     }
 
-                    val response = httpClient.newCall(requestBuilder.build()).execute()
+                    val clientToUse = if (candidateUrl.contains("10.0.0.222")) {
+                        httpClient.newBuilder()
+                            .connectTimeout(2, TimeUnit.SECONDS)
+                            .readTimeout(5, TimeUnit.SECONDS)
+                            .build()
+                    } else {
+                        httpClient
+                    }
+
+                    val response = clientToUse.newCall(requestBuilder.build()).execute()
                     if (response.isSuccessful) {
                         val bodyBytes = response.body?.bytes()
                         if (bodyBytes != null && bodyBytes.isNotEmpty()) {
@@ -227,8 +263,9 @@ class PlaylistManager(private val context: Context) {
                                         val redirectReq = Request.Builder()
                                             .url(extractedM3uUrl)
                                             .header("User-Agent", ua)
+                                            .header("Cache-Control", "no-cache")
                                             .build()
-                                        val redResp = httpClient.newCall(redirectReq).execute()
+                                        val redResp = clientToUse.newCall(redirectReq).execute()
                                         if (redResp.isSuccessful) {
                                             val redBytes = redResp.body?.bytes()
                                             if (redBytes != null && redBytes.isNotEmpty()) {
@@ -265,8 +302,15 @@ class PlaylistManager(private val context: Context) {
         }
 
         if (downloadedBytes != null && downloadedBytes.isNotEmpty()) {
-            FileOutputStream(targetFile).use { output ->
+            val tempFile = File(targetFile.parentFile, "${targetFile.name}.tmp")
+            FileOutputStream(tempFile).use { output ->
                 output.write(downloadedBytes)
+            }
+            if (tempFile.exists() && tempFile.length() > 50L) {
+                if (targetFile.exists()) {
+                    targetFile.delete()
+                }
+                tempFile.renameTo(targetFile)
             }
         } else {
             throw lastException ?: Exception("Không thể tải danh sách kênh từ URL này.")

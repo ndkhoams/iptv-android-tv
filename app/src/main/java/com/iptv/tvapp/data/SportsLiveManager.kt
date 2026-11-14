@@ -49,7 +49,9 @@ class SportsLiveManager(private val context: Context) {
         val leagueName: String,
         val sources: MutableList<Channel>,
         val isCompleted: Boolean = false,
-        val isOngoing: Boolean = false
+        val isOngoing: Boolean = false,
+        val homeLogo: String = "",
+        val awayLogo: String = ""
     )
 
     data class EspnFixture(
@@ -394,7 +396,7 @@ class SportsLiveManager(private val context: Context) {
         private const val CHROME_UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
         val PRIORITY_LEAGUES = listOf("UCL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1")
-        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA")
+        val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA", "RUGBY")
 
         val LEAGUE_LABELS = mapOf(
             "UCL" to "🏆 UEFA Champions League",
@@ -407,6 +409,7 @@ class SportsLiveManager(private val context: Context) {
             "F1" to "🏎️ Formula 1",
             "TENNIS" to "🎾 Tennis ATP / Grand Slam",
             "NBA" to "🏀 Bóng rổ NBA",
+            "RUGBY" to "🏉 Bóng bầu dục Quốc tế",
             "OTHER" to "🌐 Trực tiếp"
         )
 
@@ -679,6 +682,8 @@ class SportsLiveManager(private val context: Context) {
                 val key = item.optString("key")
                 val homeTeam = item.optString("homeTeam")
                 val awayTeam = item.optString("awayTeam")
+                val homeLogo = item.optString("homeLogo")
+                val awayLogo = item.optString("awayLogo")
                 val time = item.optString("time")
                 val date = item.optString("date")
                 val timestamp = item.optLong("timestamp")
@@ -774,7 +779,9 @@ class SportsLiveManager(private val context: Context) {
                     leagueName = leagueName,
                     sources = sourceChannels,
                     isCompleted = resolvedCompleted,
-                    isOngoing = resolvedOngoing
+                    isOngoing = resolvedOngoing,
+                    homeLogo = homeLogo,
+                    awayLogo = awayLogo
                 )
                 addedMatches.add(mg)
                 matchGroupsMap[key] = mg
@@ -792,6 +799,7 @@ class SportsLiveManager(private val context: Context) {
                             "F1" -> "🏎️"
                             "TENNIS" -> "🎾"
                             "NBA" -> "🏀"
+                            "RUGBY" -> "🏉"
                             else -> if (resolvedOngoing) "🔴" else "⚽"
                         }
                         val timePart = if (date.isNotBlank()) "[$time $date]" else "[$time]"
@@ -958,6 +966,12 @@ class SportsLiveManager(private val context: Context) {
         }
         if (t.contains("nba") || t.contains("bóng rổ nba")) {
             return "NBA"
+        }
+        if (t.contains("rugby") || t.contains("bóng bầu dục") || t.contains("nations championship") ||
+            t.contains("autumn nations") || t.contains("six nations") || t.contains("all blacks") ||
+            (t.contains("italy") && t.contains("argentina") && (t.contains("nations") || t.contains("rugby"))) ||
+            (t.contains("wales") && t.contains("new zealand") && (t.contains("nations") || t.contains("rugby")))) {
+            return "RUGBY"
         }
 
         // Nếu là trận đội trẻ hoặc đội nữ: Tuyệt đối không xếp vào giải đấu hàng đầu của đội chính (UCL, EPL, La Liga...)
@@ -1485,6 +1499,7 @@ class SportsLiveManager(private val context: Context) {
                         "F1" -> "🏎️"
                         "TENNIS" -> "🎾"
                         "NBA" -> "🏀"
+                        "RUGBY" -> "🏉"
                         else -> if (ongoing) "🔴" else "⚽"
                     }
                     val timePart = if (mg.date.isNotBlank()) "[${mg.time} ${mg.date}]" else "[${mg.time}]"

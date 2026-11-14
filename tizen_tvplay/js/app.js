@@ -984,7 +984,8 @@
                 var teamsUpper = cleanTeams.toUpperCase();
                 var isWimbledonFootball = teamsUpper.indexOf("AFC WIMBLEDON") >= 0 || teamsUpper.indexOf("WIMBLEDON FC") >= 0 || (teamsUpper.indexOf("WIMBLEDON") >= 0 && teamsUpper.indexOf("BLACKPOOL") >= 0);
                 if (isWimbledonFootball && lg === "TENNIS") lg = "OTHER";
-                var sportIcon = (lg === "F1") ? "🏎️" : ((lg === "TENNIS") ? "🎾" : ((lg === "NBA") ? "🏀" : (ongoing ? "🔴" : "⚽")));
+                var isRugby = lg === "RUGBY" || teamsUpper.indexOf("RUGBY") >= 0 || teamsUpper.indexOf("BÓNG BẦU DỤC") >= 0 || teamsUpper.indexOf("NATIONS CHAMPIONSHIP") >= 0 || teamsUpper.indexOf("AUTUMN NATIONS") >= 0 || (teamsUpper.indexOf("ITALY") >= 0 && teamsUpper.indexOf("ARGENTINA") >= 0) || (teamsUpper.indexOf("WALES") >= 0 && teamsUpper.indexOf("NEW ZEALAND") >= 0);
+                var sportIcon = (lg === "F1") ? "🏎️" : ((lg === "TENNIS") ? "🎾" : ((lg === "NBA") ? "🏀" : (isRugby ? "🏉" : (ongoing ? "🔴" : "⚽"))));
                 var timePart = ev.date ? ("[" + ev.time + " " + ev.date + "]") : ("[" + ev.time + "]");
                 var displayName = sportIcon + " " + timePart + " " + cleanTeams;
 
