@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.iptv.tvapp.ui.widget.TvLinearLayoutManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.DefaultLoadControl
 import com.google.android.exoplayer2.DefaultRenderersFactory
 import com.google.android.exoplayer2.ExoPlayer
@@ -34,9 +35,13 @@ import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.Tracks
+import com.google.android.exoplayer2.drm.DefaultDrmSessionManager
+import com.google.android.exoplayer2.drm.FrameworkMediaDrm
+import com.google.android.exoplayer2.drm.LocalMediaDrmCallback
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.Renderer
 import com.google.android.exoplayer2.mediacodec.MediaCodecSelector
+import com.google.android.exoplayer2.util.MimeTypes
 import com.google.android.exoplayer2.video.MediaCodecVideoRenderer
 import com.google.android.exoplayer2.video.VideoRendererEventListener
 import com.google.android.exoplayer2.video.VideoSize
@@ -461,10 +466,6 @@ class MainActivity : AppCompatActivity() {
                 showBottomNotification("⚽ Đang tải danh sách trận đấu trực tiếp hôm nay...")
             }
             switchAppMode(AppMode.SPORTS, focusCategories = true)
-        }
-
-        binding.navPlaylists.setOnClickListener {
-            showQuickPlaylistDialog()
         }
 
         binding.navSidebarSettings.setOnClickListener {
@@ -1180,10 +1181,10 @@ class MainActivity : AppCompatActivity() {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
             allCategories.addAll(sportsCategoriesList)
 
-            // Tải trực tiếp từ máy chủ Armbian & GitHub, không dùng cache cũ
+            // Tải trực tiếp từ máy chủ, không dùng cache cũ
             val isFirstLoad = sportsCategoriesList.isEmpty()
             if (isFirstLoad) {
-                showBottomNotification("⚽ Đang tải trực tiếp từ máy chủ Armbian & GitHub...")
+                showBottomNotification("Đang cập nhật từ máy chủ...")
             }
             fetchSportsInBackground(forceRefresh = true, showNotification = isFirstLoad)
             if (!hasLoadedSportsOnce) {
@@ -1631,14 +1632,14 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (currentPlayingChannel?.id == targetChannel.id) {
                     val streamUriString = normalizeStreamUrl(resolved)
-                    playWithExoPlayer(streamUriString)
+                    playWithExoPlayer(streamUriString, targetChannel)
                 }
             }
             return
         }
 
         val streamUriString = normalizeStreamUrl(targetChannel.streamUrl)
-        playWithExoPlayer(streamUriString)
+        playWithExoPlayer(streamUriString, targetChannel)
     }
 
     private fun parseStreamUrlAndHeaders(rawUrl: String): Pair<String, Map<String, String>> {
@@ -1978,12 +1979,70 @@ class MainActivity : AppCompatActivity() {
         binding.tvSpotlightStreamInfo.text = "$resDim • $bitrateStr • $resBadge | Âm thanh: $audioDetails | $engineName"
     }
 
-    private fun playWithExoPlayer(streamUriString: String) {
+    private fun hexToBase64Url(hexOrB64: String): String {
+        val clean = hexOrB64.trim().replace("-", "").replace(" ", "")
+        if (clean.length != 32 && (clean.length == 22 || clean.length == 24)) {
+            return clean.replace("+", "-").replace("/", "_").trimEnd('=')
+        }
+        return try {
+            val len = clean.length
+            val bytes = ByteArray(len / 2)
+            for (i in 0 until len step 2) {
+                bytes[i / 2] = ((Character.digit(clean[i], 16) shl 4) + Character.digit(clean[i + 1], 16)).toByte()
+            }
+            android.util.Base64.encodeToString(
+                bytes,
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+            ).trim()
+        } catch (e: Exception) {
+            clean
+        }
+    }
+
+    private fun playWithExoPlayer(streamUriString: String, channel: Channel? = null) {
         try {
             binding.playerView.visibility = View.VISIBLE
 
             val (cleanUrl, headers) = parseStreamUrlAndHeaders(streamUriString)
-            val mediaItem = MediaItem.fromUri(Uri.parse(cleanUrl))
+            val effectiveChannel = channel ?: currentPlayingChannel
+
+            var drmKid = effectiveChannel?.drmKeyId
+            var drmKey = effectiveChannel?.drmKey
+            if (drmKid.isNullOrBlank() || drmKey.isNullOrBlank()) {
+                val clearKeyFromManager = playlistManager.sportsLiveManager.getClearKeyForUrl(cleanUrl)
+                if (clearKeyFromManager != null) {
+                    drmKid = clearKeyFromManager.first
+                    drmKey = clearKeyFromManager.second
+                }
+            }
+
+            val mediaItemBuilder = MediaItem.Builder().setUri(Uri.parse(cleanUrl))
+            if (cleanUrl.contains(".mpd") || cleanUrl.contains("DASH", ignoreCase = true) || !drmKid.isNullOrBlank()) {
+                mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_MPD)
+            }
+
+            var drmSessionManager: DefaultDrmSessionManager? = null
+            if (!drmKid.isNullOrBlank() && !drmKey.isNullOrBlank()) {
+                try {
+                    val b64Kid = hexToBase64Url(drmKid)
+                    val b64Key = hexToBase64Url(drmKey)
+                    val clearkeyJson = """{"keys":[{"kty":"oct","k":"$b64Key","kid":"$b64Kid"}],"type":"temporary"}"""
+                    val drmCallback = LocalMediaDrmCallback(clearkeyJson.toByteArray(Charsets.UTF_8))
+                    drmSessionManager = DefaultDrmSessionManager.Builder()
+                        .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                        .setMultiSession(true)
+                        .setPlayClearSamplesWithoutKeys(true)
+                        .build(drmCallback)
+
+                    val drmConfig = MediaItem.DrmConfiguration.Builder(C.CLEARKEY_UUID)
+                        .setMultiSession(true)
+                        .setKeySetId(clearkeyJson.toByteArray(Charsets.UTF_8))
+                        .build()
+                    mediaItemBuilder.setDrmConfiguration(drmConfig)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
 
             val ua = headers["User-Agent"] ?: headers["user-agent"] ?: prefs.httpUserAgent
             val httpDataSourceFactory = DefaultHttpDataSource.Factory()
@@ -2000,6 +2059,10 @@ class MainActivity : AppCompatActivity() {
 
             val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
             val mediaSourceFactory = DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
+            if (drmSessionManager != null) {
+                mediaSourceFactory.setDrmSessionManagerProvider { drmSessionManager }
+            }
+            val mediaItem = mediaItemBuilder.build()
             val mediaSource = mediaSourceFactory.createMediaSource(mediaItem)
 
             player?.setMediaSource(mediaSource)
@@ -2664,7 +2727,7 @@ class MainActivity : AppCompatActivity() {
 
         val isSidebarFocused = focused != null && (focused.id == R.id.navFavorites ||
                 focused.id == R.id.navModeTv || focused.id == R.id.navModeSports ||
-                focused.id == R.id.navPlaylists || focused.id == R.id.navSidebarSettings ||
+                focused.id == R.id.navSidebarSettings ||
                 focused.id == R.id.navRefreshPlaylists || focused.id == R.id.navCheckUpdate)
 
         if (isSidebarFocused) {
@@ -2971,9 +3034,9 @@ class MainActivity : AppCompatActivity() {
      * Nút 1: Làm mới toàn bộ playlist (cả các sự kiện trực tiếp thể thao và các playlist M3U người dùng nhập vào)
      */
     private fun refreshAllPlaylists() {
-        showBottomNotification("Đang làm mới toàn bộ danh sách kênh và trực tiếp thể thao...")
+        showBottomNotification("Đang làm mới danh sách kênh...")
         binding.layoutBuffering.visibility = View.VISIBLE
-        binding.tvBufferingText.text = "Đang cập nhật danh sách..."
+        binding.tvBufferingText.text = "Đang làm mới danh sách kênh..."
 
         lifecycleScope.launch {
             try {
@@ -3027,7 +3090,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun checkAppUpdate(isManual: Boolean) {
         if (isManual) {
-            Toast.makeText(this, "Đang kiểm tra phiên bản mới từ GitHub...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Đang kiểm tra phiên bản mới...", Toast.LENGTH_SHORT).show()
         }
 
         lifecycleScope.launch {
@@ -3164,8 +3227,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshSportsMatchesManually() {
-        showBottomNotification("🔄 Đang làm mới danh sách trận đấu thể thao...")
-        binding.tvQuickBufferingText.text = "Đang quét trận đấu..."
+        showBottomNotification("Đang làm mới danh sách kênh...")
+        binding.tvQuickBufferingText.text = "Đang làm mới danh sách kênh..."
         binding.layoutQuickBuffering.visibility = View.VISIBLE
 
         lifecycleScope.launch(Dispatchers.Main) {

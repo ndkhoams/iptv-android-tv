@@ -224,7 +224,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="● 1 luồng phát - Nhấn để chọn kênh"
+            android:text="● 1 luồng phát · Nhấn OK để chọn kênh"
             android:textColor="@color/text_secondary"
             android:textSize="11sp" />
 
@@ -235,7 +235,8 @@
             android:text="Xem luồng ▶"
             android:textColor="@color/fpt_orange"
             android:textSize="11sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>
 

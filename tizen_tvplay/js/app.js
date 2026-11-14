@@ -2057,7 +2057,8 @@
     }
 
     function checkOtaUpdate(manual) {
-        if (otaStatusTextEl) otaStatusTextEl.textContent = "Đang kiểm tra máy chủ cập nhật GitHub / CDN...";
+        if (otaStatusTextEl) otaStatusTextEl.textContent = "Đang kiểm tra phiên bản mới...";
+        if (manual) showToast("Đang kiểm tra phiên bản mới...");
         var serverResponded = false;
 
         function tryOta(idx) {
@@ -2811,7 +2812,7 @@
             focusedColumn = 'channels';
             updateFocusView();
         } else if (idx === 3) {
-            showToast("Đang làm mới danh sách...");
+            showToast("Đang làm mới danh sách kênh...");
             loadAllData();
         } else if (idx === 4) {
             openSettingsModal();

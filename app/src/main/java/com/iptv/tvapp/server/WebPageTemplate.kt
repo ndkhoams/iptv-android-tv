@@ -624,7 +624,7 @@ object WebPageTemplate {
         }
 
         function refreshSportsFromWeb() {
-            showToast("🔄 Đang cập nhật trận đấu thể thao...");
+            showToast("Đang làm mới danh sách kênh...");
             fetch('/api/sports/refresh', { method: 'POST' })
             .then(function() {
                 setTimeout(function() {

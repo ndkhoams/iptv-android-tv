@@ -28,6 +28,9 @@ object M3UParser {
         var currentGroup = "Tất cả"
         var currentReferer: String? = null
         var currentUserAgent: String? = null
+        var currentDrmScheme: String? = null
+        var currentDrmKeyId: String? = null
+        var currentDrmKey: String? = null
         var channelIndex = 1
         var isFirstLine = true
         var isHtmlContent = false
@@ -83,6 +86,20 @@ object M3UParser {
                     currentReferer = opt.substringAfter('=').trim()
                 } else if (lowerOpt.startsWith("http-user-agent=")) {
                     currentUserAgent = opt.substringAfter('=').trim()
+                }
+            } else if (trimmedLine.startsWith("#KODIPROP:", ignoreCase = true)) {
+                // Hỗ trợ Kodi inputstream.adaptive DRM properties (ClearKey / MPD)
+                val prop = trimmedLine.substringAfter(':').trim()
+                val lowerProp = prop.lowercase()
+                if (lowerProp.startsWith("inputstream.adaptive.license_type=")) {
+                    currentDrmScheme = prop.substringAfter('=').trim()
+                } else if (lowerProp.startsWith("inputstream.adaptive.license_key=")) {
+                    val keyVal = prop.substringAfter('=').trim()
+                    val parts = keyVal.split(":")
+                    if (parts.size >= 2) {
+                        currentDrmKeyId = parts[0].trim()
+                        currentDrmKey = parts[1].trim()
+                    }
                 }
             } else if (trimmedLine.isNotBlank() && !trimmedLine.startsWith("#")) {
                 // Dòng này chứa link stream (http / https / rtsp / udp / rtp / ...)
@@ -146,7 +163,10 @@ object M3UParser {
                             logoUrl = currentLogo,
                             streamUrl = streamUrl,
                             groupTitle = currentGroup.ifBlank { "Khác" },
-                            number = channelIndex
+                            number = channelIndex,
+                            drmScheme = currentDrmScheme,
+                            drmKeyId = currentDrmKeyId,
+                            drmKey = currentDrmKey
                         )
                     )
 
@@ -158,6 +178,9 @@ object M3UParser {
                     currentGroup = "Khác"
                     currentReferer = null
                     currentUserAgent = null
+                    currentDrmScheme = null
+                    currentDrmKeyId = null
+                    currentDrmKey = null
                 }
             }
 

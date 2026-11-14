@@ -321,8 +321,8 @@ class ChannelAdapter(
                     binding.tvAwayInitial.visibility = if (awayTeam.isNotBlank()) View.VISIBLE else View.GONE
                 }
 
-                binding.tvSourcesCount.text = "● Nguồn: ${channel.groupTitle}"
-                binding.tvWatchAction.text = if (channel.streamUrl.startsWith("match://")) "Xem luồng ▶" else "Phát ngay ▶"
+                binding.tvSourcesCount.text = "● Nguồn: ${channel.groupTitle} · Nhấn OK để chọn kênh"
+                binding.tvWatchAction.visibility = View.GONE
                 return
             }
 
@@ -419,12 +419,8 @@ class ChannelAdapter(
 
             // 8. Sources Count & Action
             val sourceCount = mg.sources.size
-            binding.tvSourcesCount.text = if (channel.streamUrl.startsWith("match://")) {
-                "● $sourceCount luồng phát - Nhấn để chọn kênh"
-            } else {
-                "● $sourceCount luồng phát • ${channel.groupTitle}"
-            }
-            binding.tvWatchAction.text = if (channel.streamUrl.startsWith("match://")) "Xem luồng ▶" else "Phát ngay ▶"
+            binding.tvSourcesCount.text = "● $sourceCount luồng phát · Nhấn OK để chọn kênh"
+            binding.tvWatchAction.visibility = View.GONE
         }
     }
 
@@ -451,9 +447,9 @@ class ChannelAdapter(
         }
 
         fun bind(channel: Channel) {
-            binding.tvChannelNumber.text = "🔄"
+            binding.tvChannelNumber.visibility = View.GONE
             binding.ivChannelLogo.setImageResource(R.drawable.ic_refresh)
-            binding.tvChannelName.text = channel.name
+            binding.tvChannelName.text = channel.name.replace("🔄", "").trim()
             binding.tvResolutionBadge.visibility = View.GONE
             binding.tvNowPlaying.visibility = View.GONE
             binding.tvDefaultBadge.visibility = View.GONE
@@ -502,6 +498,7 @@ class ChannelAdapter(
         }
 
         fun bind(channel: Channel, position: Int) {
+            binding.tvChannelNumber.visibility = View.VISIBLE
             binding.tvChannelNumber.text = String.format("%02d", channel.number)
             binding.tvChannelName.text = channel.name
 

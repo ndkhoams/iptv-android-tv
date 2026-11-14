@@ -423,27 +423,11 @@
                     android:focusable="true"
                     android:focusableInTouchMode="true"
                     android:nextFocusUp="@+id/navModeSports"
-                    android:nextFocusDown="@+id/navPlaylists"
+                    android:nextFocusDown="@+id/navSidebarSettings"
                     android:nextFocusRight="@+id/rvCategories"
                     android:contentDescription="Làm mới danh sách kênh" />
 
-                <!-- 5. Chọn Danh Sách Phát Nhanh -->
-                <ImageButton
-                    android:id="@+id/navPlaylists"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:layout_marginTop="16dp"
-                    android:background="@drawable/selector_fpt_sidebar"
-                    android:src="@drawable/ic_nav_playlist"
-                    android:scaleType="centerInside"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navRefreshPlaylists"
-                    android:nextFocusRight="@+id/rvCategories"
-                    android:nextFocusDown="@+id/navSidebarSettings"
-                    android:contentDescription="Chọn danh sách phát nhanh" />
-
-                <!-- 6. Cài đặt hệ thống -->
+                <!-- 5. Cài đặt hệ thống -->
                 <ImageButton
                     android:id="@+id/navSidebarSettings"
                     android:layout_width="38dp"
@@ -454,7 +438,7 @@
                     android:scaleType="centerInside"
                     android:focusable="true"
                     android:focusableInTouchMode="true"
-                    android:nextFocusUp="@+id/navPlaylists"
+                    android:nextFocusUp="@+id/navRefreshPlaylists"
                     android:nextFocusDown="@+id/navCheckUpdate"
                     android:nextFocusRight="@+id/rvCategories"
                     android:contentDescription="Cài đặt" />

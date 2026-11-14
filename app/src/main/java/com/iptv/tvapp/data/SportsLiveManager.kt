@@ -375,6 +375,19 @@ class SportsLiveManager(private val context: Context) {
         private val matchGroupsMap = ConcurrentHashMap<String, MatchGroup>()
         private val sourceIdToMatchMap = ConcurrentHashMap<String, MatchGroup>()
         private val urlToMatchesMap = ConcurrentHashMap<String, CopyOnWriteArrayList<MatchGroup>>()
+        private val urlToClearKeyMap = ConcurrentHashMap<String, Pair<String, String>>()
+
+        fun registerClearKey(url: String, keyId: String, key: String) {
+            if (url.isNotBlank() && keyId.isNotBlank() && key.isNotBlank()) {
+                val cleanUrl = url.substringBefore('|').trim()
+                urlToClearKeyMap[cleanUrl] = Pair(keyId.trim(), key.trim())
+            }
+        }
+
+        fun getClearKeyForUrl(url: String): Pair<String, String>? {
+            val cleanUrl = url.substringBefore('|').trim()
+            return urlToClearKeyMap[cleanUrl]
+        }
         private val canonicalTeamCache = ConcurrentHashMap<String, String>()
         private val teamsAndLeagueCache = ConcurrentHashMap<String, Triple<String, String, String>>()
         private val espnFixturesCache = ConcurrentHashMap<String, List<EspnFixture>>()
@@ -386,7 +399,7 @@ class SportsLiveManager(private val context: Context) {
 
         val PRIORITY_LEAGUES = listOf(
             "UCL", "UEL", "UECL", "EPL", "VLEAGUE", "LALIGA", "BUNDESLIGA", "SERIE_A", "LIGUE1",
-            "WC_QUAL", "WORLD_CUP", "NATIONS_LEAGUE", "EURO", "COPA_AMERICA", "ASIAN_CUP", "AFC_CL",
+            "WC_QUAL", "WORLD_CUP", "NATIONS_LEAGUE", "CONCACAF_NL", "EURO", "COPA_AMERICA", "ASIAN_CUP", "AFC_CL",
             "FA_CUP", "EFL_CUP"
         )
         val FEATURED_SPORTS = listOf("F1", "TENNIS", "NBA")
@@ -414,7 +427,9 @@ class SportsLiveManager(private val context: Context) {
             "brazil", "argentina", "uruguay", "colombia", "chile", "ecuador", "peru", "paraguay", "venezuela",
             "bolivia", "mỹ", "usa", "mexico", "canada", "costa rica", "jamaica", "panama", "senegal", "morocco",
             "nigeria", "ai cập", "egypt", "algeria", "ghana", "bờ biển ngà", "ivory coast", "cameroon",
-            "nam phi", "south africa", "tunisia", "uganda", "botswana", "úc", "australia", "new zealand"
+            "nam phi", "south africa", "tunisia", "uganda", "botswana", "úc", "australia", "new zealand",
+            "cyprus", "síp", "sip", "montenegro", "bosnia", "armenia", "latvia", "kazakhstan",
+            "haiti", "belize", "saint vincent"
         )
 
         val EURO_NATIONS = listOf(
@@ -422,7 +437,9 @@ class SportsLiveManager(private val context: Context) {
             "germany", "đức", "italy", "ý", "spain", "tây ban nha", "portugal", "bồ đào nha", "netherlands",
             "hà lan", "belgium", "bỉ", "croatia", "switzerland", "thụy sĩ", "denmark", "đan mạch", "sweden",
             "thụy điển", "poland", "ba lan", "czech", "séc", "austria", "áo", "serbia", "scotland", "turkey",
-            "thổ nhĩ kỳ", "ukraine", "romania", "slovakia", "slovenia", "albania", "ireland", "greece", "hy lạp"
+            "thổ nhĩ kỳ", "ukraine", "romania", "slovakia", "slovenia", "albania", "ireland", "greece", "hy lạp",
+            "cyprus", "síp", "sip", "montenegro", "bosnia", "armenia", "latvia", "kazakhstan",
+            "kosovo", "israel", "luxembourg", "faroe", "moldova", "azerbaijan", "macedonia", "malta", "estonia", "lithuania", "belarus"
         )
 
         val LEAGUE_LABELS = mapOf(
@@ -449,6 +466,7 @@ class SportsLiveManager(private val context: Context) {
             "WC_QUAL" to "World Cup Qualifiers",
             "WORLD_CUP" to "World Cup",
             "NATIONS_LEAGUE" to "UEFA Nations League",
+            "CONCACAF_NL" to "CONCACAF Nations League",
             "EURO" to "UEFA Euro",
             "COPA_AMERICA" to "Copa America",
             "ASIAN_CUP" to "AFC Asian Cup",
@@ -462,6 +480,8 @@ class SportsLiveManager(private val context: Context) {
             "COPPA_ITALIA" to "Coppa Italia",
             "DFB_POKAL" to "DFB-Pokal",
             "COUPE_DE_FRANCE" to "Coupe de France",
+            "BRAZIL_SERIE_A" to "VĐQG Brazil (Série A)",
+            "BRAZIL_SERIE_B" to "Hạng 2 Brazil (Série B)",
             "FRIENDLY" to "Friendly",
             "F1" to "Formula 1",
             "TENNIS" to "Tennis",
@@ -473,8 +493,104 @@ class SportsLiveManager(private val context: Context) {
             "OTHER" to "Bóng đá Quốc tế"
         )
 
-        // Bảng ánh xạ định danh chuẩn hóa cho các CLB để gom nhóm các cách viết khác nhau thành 1 trận duy nhất
+        // Bảng ánh xạ định danh chuẩn hóa cho các CLB & đội tuyển quốc tế để gom nhóm các cách viết khác nhau thành 1 trận duy nhất
         val TEAM_ALIASES = listOf(
+            // Quốc gia / Đội tuyển quốc tế
+            "vietnam" to listOf("vietnam", "viet nam", "việt nam", "vn"),
+            "taiwan" to listOf("chinese taipei", "đài loan", "đài bắc trung hoa", "dai loan", "dai bac trung hoa", "taiwan", "đài bắc", "dai bac"),
+            "india" to listOf("india", "ấn độ", "an do", "ando"),
+            "maldives" to listOf("maldives", "man-đi-vơ", "mandivo"),
+            "thailand" to listOf("thailand", "thái lan", "thai lan"),
+            "indonesia" to listOf("indonesia", "indo", "in-đô-nê-xi-a"),
+            "malaysia" to listOf("malaysia", "malay", "ma-lai-xi-a"),
+            "singapore" to listOf("singapore", "sing", "xin-ga-po"),
+            "philippines" to listOf("philippines", "philip", "phi-líp-pin"),
+            "myanmar" to listOf("myanmar", "miến điện", "mien dien", "mi-an-ma"),
+            "cambodia" to listOf("cambodia", "campuchia", "cam-pu-chia"),
+            "laos" to listOf("laos", "lào", "lao"),
+            "japan" to listOf("japan", "nhật bản", "nhat ban", "nhật", "nhat"),
+            "korea" to listOf("south korea", "korea", "hàn quốc", "han quoc", "hàn", "han"),
+            "northkorea" to listOf("north korea", "triều tiên", "trieu tien", "bắc triều tiên", "bac trieu tien"),
+            "china" to listOf("china", "trung quốc", "trung quoc", "trung"),
+            "australia" to listOf("australia", "úc", "uc"),
+            "saudiarabia" to listOf("saudi arabia", "saudi", "ả rập xê út", "a rap xe ut", "ả rập saudi", "a rap saudi"),
+            "qatar" to listOf("qatar", "ca-ta"),
+            "uae" to listOf("uae", "u.a.e", "các tiểu vương quốc ả rập thống nhất", "cac tieu vuong quoc a rap thong nhat"),
+            "iran" to listOf("iran", "i-ran"),
+            "iraq" to listOf("iraq", "i-rắc", "i rac"),
+            "uzbekistan" to listOf("uzbekistan", "u-dơ-bê-ki-xtan"),
+            "russia" to listOf("russia", "nga"),
+            "england" to listOf("england", "tam sư", "anh"),
+            "france" to listOf("france", "pháp", "phap"),
+            "germany" to listOf("germany", "đức", "duc"),
+            "spain" to listOf("spain", "tây ban nha", "tay ban nha"),
+            "italy" to listOf("italy", "italia", "ý"),
+            "portugal" to listOf("portugal", "bồ đào nha", "bo dao nha"),
+            "netherlands" to listOf("netherlands", "holland", "hà lan", "ha lan"),
+            "belgium" to listOf("belgium", "bỉ", "bi", "belgium indoor soccer"),
+            "slovenia" to listOf("slovenia", "xlo-ven-ni-a", "slovenia indoor soccer"),
+            "croatia" to listOf("croatia"),
+            "switzerland" to listOf("switzerland", "thụy sĩ", "thuy si"),
+            "sweden" to listOf("sweden", "thụy điển", "thuy dien"),
+            "denmark" to listOf("denmark", "đan mạch", "dan mach"),
+            "norway" to listOf("norway", "na uy"),
+            "poland" to listOf("poland", "ba lan"),
+            "turkey" to listOf("turkey", "thổ nhĩ kỳ", "tho nhi ky"),
+            "brazil" to listOf("brazil", "bờ-ra-din"),
+            "argentina" to listOf("argentina", "ác-ghen-ti-na"),
+            "uruguay" to listOf("uruguay"),
+            "colombia" to listOf("colombia"),
+            "usa" to listOf("usa", "united states", "mỹ", "hoa kỳ", "hoa ky"),
+            "canada" to listOf("canada"),
+            "mexico" to listOf("mexico", "mê-hi-cô"),
+            "morocco" to listOf("morocco", "maroc", "ma rốc"),
+            "senegal" to listOf("senegal"),
+            "egypt" to listOf("egypt", "ai cập", "ai cap"),
+            "cameroon" to listOf("cameroon"),
+            "ghana" to listOf("ghana"),
+            "southafrica" to listOf("south africa", "nam phi"),
+            "newzealand" to listOf("new zealand", "tân tây lan"),
+            "bangladesh" to listOf("bangladesh"),
+            "srilanka" to listOf("sri lanka"),
+            "kuwait" to listOf("kuwait"),
+            "syria" to listOf("syria"),
+            "albania" to listOf("albania"),
+            "finland" to listOf("finland", "phần lan", "phan lan"),
+            "austria" to listOf("austria", "áo", "ao"),
+            "ireland" to listOf("republic of ireland", "ireland", "cộng hòa ireland", "cong hoa ireland", "ai-len"),
+            "northernireland" to listOf("northern ireland", "bắc ireland", "bac ireland"),
+            "bosnia" to listOf("bosnia and herzegovina", "bosnia & herzegovina", "bosnia", "bô-xni-a", "bo-xni-a"),
+            "cyprus" to listOf("cyprus", "síp", "sip", "đảo síp", "dao sip"),
+            "montenegro" to listOf("montenegro", "môn-tê-nê-grô", "mon-te-ne-gro"),
+            "czech" to listOf("czech republic", "czechia", "séc", "sec", "tiệp khắc"),
+            "greece" to listOf("greece", "hy lạp", "hy lap"),
+            "wales" to listOf("wales", "xứ wales", "xu wales"),
+            "scotland" to listOf("scotland", "xcốt-len", "xcot-len"),
+            "romania" to listOf("romania", "ru-ma-ni", "rumani"),
+            "armenia" to listOf("armenia", "ác-mê-ni-a", "ac-me-ni-a"),
+            "latvia" to listOf("latvia", "lát-vi-a", "lat-vi-a"),
+            "kazakhstan" to listOf("kazakhstan", "ca-dắc-xtan", "ca-dac-xtan"),
+            "slovakia" to listOf("slovakia", "xlo-va-ki-a"),
+            "hungary" to listOf("hungary", "hung-ga-ri"),
+            "serbia" to listOf("serbia", "xéc-bi"),
+            "georgia" to listOf("georgia", "gióoc-gi-a"),
+            "kosovo" to listOf("kosovo", "cô-xô-vô"),
+            "israel" to listOf("israel", "ích-xra-en"),
+            "luxembourg" to listOf("luxembourg", "lục xâm bảo"),
+            "faroe" to listOf("faroe islands", "quần đảo faroe", "faroe", "quan dao faroe"),
+            "moldova" to listOf("moldova", "môn-đô-va"),
+            "azerbaijan" to listOf("azerbaijan", "ai-déc-bai-gian"),
+            "macedonia" to listOf("north macedonia", "bắc macedonia", "macedonia", "bac macedonia"),
+            "malta" to listOf("malta", "man-ta"),
+            "estonia" to listOf("estonia", "ét-xtô-ni-a"),
+            "lithuania" to listOf("lithuania", "lít-va"),
+            "belarus" to listOf("belarus", "bê-la-rút"),
+            "haiti" to listOf("haiti", "hai-ti"),
+            "belize" to listOf("belize", "bê-li-xê"),
+            "saintvincent" to listOf("saint vincent and the grenadines", "saint vincent & the grenadines", "saint vincent", "st. vincent", "st vincent"),
+            "jamaica" to listOf("jamaica", "gia-mai-ca"),
+
+            // CLB
             "bilbao" to listOf("athletic bilbao", "athletic club", "ath bilbao", "bilbao"),
             "realsociedad" to listOf("real sociedad", "sociedad"),
             "tphcm" to listOf("công an tp.hồ chí minh", "cong an ho chi minh", "tp. hồ chí minh", "tp.hồ chí minh", "hồ chí minh", "ho chi minh", "tp.hcm", "tphcm", "clb tp.hcm"),
@@ -627,18 +743,34 @@ class SportsLiveManager(private val context: Context) {
             return patterns.any { it.containsMatchIn(combined) }
         }
 
+        private fun stripVnAccents(text: String): String {
+            if (text.isBlank()) return ""
+            val normalized = text.replace('đ', 'd').replace('Đ', 'D')
+            return java.text.Normalizer.normalize(normalized, java.text.Normalizer.Form.NFD)
+                .replace(Regex("""\p{InCombiningDiacriticalMarks}+"""), "")
+        }
+
         fun canonicalizeTeam(name: String): String {
             if (name.isBlank()) return ""
             canonicalTeamCache[name]?.let { return it }
 
-            val t = name.lowercase().trim()
-            val isYouth = isYouthMatch(t)
+            val rawT = name.lowercase().trim()
+            val isYouth = isYouthMatch(rawT)
+
+            // Loại bỏ tiền tố / hậu tố thông dụng
+            val tClean = rawT.replace(Regex("""(?i)\b(đội tuyển quốc gia|đội tuyển|đtqg|đt|tuyển qg|tuyển|national team|clb|fc|cf|fk|sc|ac|as|rc|ca|stade|calcio|indoor soccer|indoor football)\b\.?"""), " ")
+                .replace(Regex("""\s+"""), " ").trim()
+            val tUnacc = stripVnAccents(tClean)
+
             for ((canon, aliases) in TEAM_ALIASES) {
                 for (al in aliases) {
-                    val matches = if (al.contains(" ")) {
-                        t.contains(al)
+                    val alClean = al.lowercase().trim()
+                    val alUnacc = stripVnAccents(alClean)
+                    val matches = if (alClean.contains(" ")) {
+                        tClean.contains(alClean) || tUnacc.contains(alUnacc)
                     } else {
-                        Regex("""\b${Regex.escape(al)}\b""").containsMatchIn(t)
+                        Regex("""\b${Regex.escape(alClean)}\b""").containsMatchIn(tClean) ||
+                        Regex("""\b${Regex.escape(alUnacc)}\b""").containsMatchIn(tUnacc)
                     }
                     if (matches) {
                         val result = if (isYouth) "${canon}_youth" else canon
@@ -647,9 +779,10 @@ class SportsLiveManager(private val context: Context) {
                     }
                 }
             }
-            val fallback = t.replace(Regex("""[^a-z0-9]"""), "")
-            canonicalTeamCache[name] = fallback
-            return fallback
+            val fallback = tUnacc.replace(Regex("""[^a-z0-9]"""), "")
+            val finalRes = if (isYouth) "${fallback}_youth" else fallback
+            canonicalTeamCache[name] = finalRes
+            return finalRes
         }
 
         private fun findEspnFixture(home: String, away: String): EspnFixture? {
@@ -742,7 +875,17 @@ class SportsLiveManager(private val context: Context) {
             if (t.contains("europa league") || t.contains("cúp c2") || t.contains("uel")) return "UEL"
             if (t.contains("conference league") || t.contains("cúp c3") || t.contains("uecl")) return "UECL"
             if (t.contains("premier league") || t.contains("ngoại hạng anh") || t.split(" ").contains("epl")) return "EPL"
-            if (t.contains("nations league") || t.contains("uefa nations")) return "NATIONS_LEAGUE"
+
+            // CONCACAF Nations League (Bắc & Trung Mỹ) - Phải kiểm tra trước UEFA Nations League
+            if (t.contains("concacaf nations") || t.contains("concacaf nl") || (t.contains("concacaf") && t.contains("nations"))) {
+                return "CONCACAF_NL"
+            }
+
+            // UEFA Nations League (Châu Âu)
+            if (t.contains("uefa nations") || (t.contains("nations league") && !t.contains("concacaf"))) {
+                return "NATIONS_LEAGUE"
+            }
+
             if (t.contains("world cup") || t.contains("wcq") || t.contains("vòng loại world cup") || t.contains("fifa world cup")) return "WC_QUAL"
             if (t.contains("giao hữu") || t.contains("friendly") || t.contains("club friendly")) return "FRIENDLY"
             if (t.contains("fa cup") || t.contains("cúp fa")) return "FA_CUP"
@@ -753,8 +896,17 @@ class SportsLiveManager(private val context: Context) {
             if (t.contains("national league")) return "NATIONAL_LEAGUE"
             if (t.contains("la liga 2") || t.contains("laliga 2") || t.contains("segunda") || t.contains("hypermotion")) return "LALIGA_2"
             if (t.contains("la liga") || t.contains("laliga")) return "LALIGA"
-            if (t.contains("serie b")) return "SERIE_B"
-            if (t.contains("serie a") || t.contains("serie-a")) return "SERIE_A"
+
+            // Giải VĐQG Brazil (Brasileirão Série A / Série B) - KHÔNG ĐƯỢC NHẬN NHẦM THÀNH SERIE A CỦA Ý
+            if (t.contains("brazil") || t.contains("brazilian") || t.contains("brasileir")) {
+                if (t.contains("serie b") || t.contains("serie-b") || t.contains("série b")) return "BRAZIL_SERIE_B"
+                if (t.contains("serie a") || t.contains("serie-a") || t.contains("série a")) return "BRAZIL_SERIE_A"
+                return "BRAZIL"
+            }
+
+            // Giải VĐQG Ý (Serie A / Serie B)
+            if (t.contains("serie b") && !t.contains("brazil") && !t.contains("ecuador")) return "SERIE_B"
+            if ((t.contains("serie a") || t.contains("serie-a")) && !t.contains("brazil") && !t.contains("ecuador") && !t.contains("colombia")) return "SERIE_A"
             if (t.contains("bundesliga 2") || t.contains("2. bundesliga")) return "BUNDESLIGA_2"
             if (t.contains("bundesliga")) return "BUNDESLIGA"
             if (t.contains("ligue 2")) return "LIGUE2"
@@ -805,6 +957,7 @@ class SportsLiveManager(private val context: Context) {
         matchGroupsMap.clear()
         sourceIdToMatchMap.clear()
         urlToMatchesMap.clear()
+        urlToClearKeyMap.clear()
         canonicalTeamCache.clear()
         teamsAndLeagueCache.clear()
         espnFixturesCache.clear()
@@ -862,6 +1015,7 @@ class SportsLiveManager(private val context: Context) {
         matchGroupsMap.clear()
         sourceIdToMatchMap.clear()
         urlToMatchesMap.clear()
+        urlToClearKeyMap.clear()
 
         // 1. Cập nhật lịch thi đấu ESPN và bảng xếp hạng
         parseSportsDataJson(root)
@@ -873,7 +1027,7 @@ class SportsLiveManager(private val context: Context) {
             val addedMatches = mutableListOf<MatchGroup>()
             val refreshItem = Channel(
                 id = ACTION_REFRESH_SPORTS,
-                name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
+                name = "Cập nhật trận đấu (Bấm OK để tải lại)",
                 logoUrl = null,
                 streamUrl = "action://refresh_sports",
                 groupTitle = CATEGORY_LIVE_EVENTS,
@@ -909,6 +1063,12 @@ class SportsLiveManager(private val context: Context) {
                         val sUrl = sObj.optString("url")
                         val sLogo = sObj.optString("logo").ifBlank { null }
                         val sGroup = sObj.optString("group")
+                        val clearKeyObj = sObj.optJSONObject("clearKey")
+                        val drmKid = clearKeyObj?.optString("keyId")?.ifBlank { null }
+                        val drmK = clearKeyObj?.optString("key")?.ifBlank { null }
+                        if (drmKid != null && drmK != null) {
+                            registerClearKey(sUrl, drmKid, drmK)
+                        }
                         sourceChannels.add(
                             Channel(
                                 id = "src_${key}_${s}_${sUrl.hashCode()}",
@@ -916,7 +1076,10 @@ class SportsLiveManager(private val context: Context) {
                                 logoUrl = sLogo,
                                 streamUrl = sUrl,
                                 groupTitle = sGroup,
-                                number = s + 1
+                                number = s + 1,
+                                drmScheme = if (drmKid != null && drmK != null) "clearkey" else null,
+                                drmKeyId = drmKid,
+                                drmKey = drmK
                             )
                         )
                     }
@@ -1106,13 +1269,22 @@ class SportsLiveManager(private val context: Context) {
                         val cLogo = cObj.optString("logo").ifBlank { null }
                         val cGroup = cObj.optString("group", gName)
                         val cNum = cObj.optInt("number", c + 1)
+                        val clearKeyObj = cObj.optJSONObject("clearKey")
+                        val drmKid = clearKeyObj?.optString("keyId")?.ifBlank { null }
+                        val drmK = clearKeyObj?.optString("key")?.ifBlank { null }
+                        if (drmKid != null && drmK != null) {
+                            registerClearKey(cUrl, drmKid, drmK)
+                        }
                         val ch = Channel(
                             id = "src_${gName.hashCode()}_$c",
                             name = cName,
                             logoUrl = cLogo,
                             streamUrl = cUrl,
                             groupTitle = cGroup,
-                            number = cNum
+                            number = cNum,
+                            drmScheme = if (drmKid != null && drmK != null) "clearkey" else null,
+                            drmKeyId = drmKid,
+                            drmKey = drmK
                         )
                         channels.add(ch)
                         findMatchByUrl(cUrl, cName)?.let { matchedMg ->
@@ -1654,7 +1826,7 @@ class SportsLiveManager(private val context: Context) {
                 val matchesWithRefresh = mutableListOf<Channel>()
                 val refreshItem = Channel(
                     id = ACTION_REFRESH_SPORTS,
-                    name = "🔄 Cập nhật trận đấu (Bấm OK để tải lại)",
+                    name = "Cập nhật trận đấu (Bấm OK để tải lại)",
                     logoUrl = null,
                     streamUrl = "action://refresh_sports",
                     groupTitle = CATEGORY_LIVE_EVENTS,

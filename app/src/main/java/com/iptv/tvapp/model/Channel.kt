@@ -13,7 +13,10 @@ data class Channel(
     var isFavorite: Boolean = false,
     var isDefaultStartup: Boolean = false,
     var resolutionBadge: String? = null,
-    var cachedResolvedLogo: String? = null
+    var cachedResolvedLogo: String? = null,
+    var drmScheme: String? = null,
+    var drmKeyId: String? = null,
+    var drmKey: String? = null
 ) : Serializable {
 
     fun getOrComputeResolution(): String {
