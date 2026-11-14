@@ -177,6 +177,10 @@ class ChannelAdapter(
 
     override fun getItemCount(): Int = channels.size
 
+    fun getChannelAt(position: Int): Channel? {
+        return if (position in 0 until channels.size) channels[position] else null
+    }
+
     // ================= 1. VIEW HOLDER CHO THẺ TRẬN ĐẤU LIVE EVENTS (GIAO DIỆN WEB ĐỒNG BỘ) =================
     inner class MatchCardViewHolder(
         private val binding: ItemMatchCardBinding

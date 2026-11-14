@@ -647,6 +647,152 @@ class SportsLiveManager(private val context: Context) {
             canonicalTeamCache[name] = fallback
             return fallback
         }
+
+        private fun findEspnFixture(home: String, away: String): EspnFixture? {
+            if (isYouthMatch(home, away) || isWomenMatch(home, away)) return null
+            val h = home.lowercase()
+            val a = away.lowercase()
+            val cHome = canonicalizeTeam(home)
+            val cAway = canonicalizeTeam(away)
+            for ((_, fixtures) in espnFixturesCache) {
+                for (f in fixtures) {
+                    val t1 = f.team1.lowercase()
+                    val t2 = f.team2.lowercase()
+                    val ct1 = canonicalizeTeam(f.team1)
+                    val ct2 = canonicalizeTeam(f.team2)
+
+                    val match1 = ((h.contains(t1) || t1.contains(h)) || (cHome.isNotBlank() && (cHome.contains(ct1) || ct1.contains(cHome)))) &&
+                                 ((a.contains(t2) || t2.contains(a)) || (cAway.isNotBlank() && (cAway.contains(ct2) || ct2.contains(cAway))))
+                    val match2 = ((h.contains(t2) || t2.contains(h)) || (cHome.isNotBlank() && (cHome.contains(ct2) || ct2.contains(cHome)))) &&
+                                 ((a.contains(t1) || t1.contains(a)) || (cAway.isNotBlank() && (cAway.contains(ct1) || ct1.contains(cAway))))
+                    if (match1 || match2) return f
+                }
+            }
+            return null
+        }
+
+        private fun matchEspnFixture(home: String, away: String): String? {
+            return findEspnFixture(home, away)?.league
+        }
+
+        private fun matchClub(teamName: String, club: String): Boolean {
+            val t = teamName.lowercase().trim()
+            val c = club.lowercase().trim()
+            if (t == c) return true
+            if (c.contains(" ")) {
+                return t.contains(c)
+            }
+            return Regex("""\b${Regex.escape(c)}\b""").containsMatchIn(t)
+        }
+
+        /**
+         * Nhận diện giải đấu:
+         * 1. Đối chiếu lịch thi đấu thực tế hôm nay từ ESPN
+         * 2. Kiểm tra các môn thể thao nổi bật (F1, Tennis ATP/Grand Slam, NBA, Rugby, American Football)
+         * 3. Kiểm tra từ khóa giải đấu trực tiếp trong tiêu đề
+         * 4. So sánh CẢ 2 CLB để chắc chắn chứ không chỉ 1 CLB
+         */
+        @JvmStatic
+        fun detectLeague(text: String, homeTeam: String, awayTeam: String): String {
+            val t = text.lowercase()
+
+            // 1. Kiểm tra các môn thể thao nổi bật được yêu cầu (F1, Tennis Grand Slam/ATP, NBA, Rugby, American Football)
+            if (t.contains("f1") || t.contains("formula 1") || t.contains("formula one") || t.contains("grand prix") || t.contains("công thức 1")) {
+                return "F1"
+            }
+            val isWimbledonFootball = t.contains("afc wimbledon") || t.contains("wimbledon fc") ||
+                (t.contains("wimbledon") && (t.contains("blackpool") || t.contains("efl") || t.contains("fa cup") || t.contains("league two") || t.contains("league 2")))
+            if (!isWimbledonFootball && (t.contains("grand slam") || t.contains("atp 1000") || t.contains("atp1000") || (t.contains("wimbledon") && !t.contains("afc")) ||
+                t.contains("us open") || t.contains("australian open") || t.contains("roland garros") || t.contains("tennis") || t.contains("quần vợt"))) {
+                return "TENNIS"
+            }
+            if (t.contains("nba") || t.contains("bóng rổ nba")) {
+                return "NBA"
+            }
+            if (t.contains("rugby") || t.contains("bóng bầu dục") || t.contains("nations championship") ||
+                t.contains("autumn nations") || t.contains("six nations") || t.contains("all blacks") ||
+                (t.contains("italy") && t.contains("argentina") && (t.contains("nations") || t.contains("rugby"))) ||
+                (t.contains("wales") && t.contains("new zealand") && (t.contains("nations") || t.contains("rugby")))) {
+                return "RUGBY"
+            }
+            if (t.contains("nfl") || t.contains("super bowl") || t.contains("bóng bầu dục mỹ") || t.contains("cfl") ||
+                t.contains("ncaaf") || t.contains("us ncaaf") || t.contains("🏈") ||
+                (t.contains("ncaa") && !t.contains("soccer") && !t.contains("bóng đá") && !t.contains("basketball"))) {
+                return if (t.contains("ncaa")) "NCAAF" else "NFL"
+            }
+
+            // Nếu là trận đội trẻ hoặc đội nữ: Tuyệt đối không xếp vào giải đấu hàng đầu của đội chính (UCL, EPL, La Liga...)
+            if (isYouthMatch(text, homeTeam, awayTeam) || isWomenMatch(text, homeTeam, awayTeam)) {
+                return "OTHER"
+            }
+
+            // 2. Đối chiếu lịch thi đấu thực tế hôm nay
+            val espnLeague = matchEspnFixture(homeTeam, awayTeam)
+            if (espnLeague != null) return espnLeague
+
+            // 3. Kiểm tra trực tiếp tên giải đấu trong tiêu đề
+            if ((t.contains("uefa champions") || t.contains("cúp c1") || t.contains("cup c1") || t.contains("champions league")) &&
+                !t.contains("afc") && !t.contains("women")) {
+                return "UCL"
+            }
+            if (t.contains("europa league") || t.contains("cúp c2") || t.contains("uel")) return "UEL"
+            if (t.contains("conference league") || t.contains("cúp c3") || t.contains("uecl")) return "UECL"
+            if (t.contains("premier league") || t.contains("ngoại hạng anh") || t.split(" ").contains("epl")) return "EPL"
+            if (t.contains("nations league") || t.contains("uefa nations")) return "NATIONS_LEAGUE"
+            if (t.contains("world cup") || t.contains("wcq") || t.contains("vòng loại world cup") || t.contains("fifa world cup")) return "WC_QUAL"
+            if (t.contains("giao hữu") || t.contains("friendly") || t.contains("club friendly")) return "FRIENDLY"
+            if (t.contains("fa cup") || t.contains("cúp fa")) return "FA_CUP"
+            if (t.contains("carabao") || t.contains("efl cup") || t.contains("cúp liên đoàn")) return "EFL_CUP"
+            if (t.contains("efl championship") || t.contains("championship") || t.contains("hạng nhất anh")) return "EFL"
+            if (t.contains("league two") || t.contains("league 2") || t.contains("hạng 4 anh") || t.contains("hạng ba anh")) return "LEAGUE_TWO"
+            if (t.contains("league one") || t.contains("league 1") || t.contains("hạng 3 anh") || t.contains("hạng nhì anh")) return "LEAGUE_ONE"
+            if (t.contains("national league")) return "NATIONAL_LEAGUE"
+            if (t.contains("la liga 2") || t.contains("laliga 2") || t.contains("segunda") || t.contains("hypermotion")) return "LALIGA_2"
+            if (t.contains("la liga") || t.contains("laliga")) return "LALIGA"
+            if (t.contains("serie b")) return "SERIE_B"
+            if (t.contains("serie a") || t.contains("serie-a")) return "SERIE_A"
+            if (t.contains("bundesliga 2") || t.contains("2. bundesliga")) return "BUNDESLIGA_2"
+            if (t.contains("bundesliga")) return "BUNDESLIGA"
+            if (t.contains("ligue 2")) return "LIGUE2"
+            if (t.contains("ligue 1") || t.contains("ligue1")) return "LIGUE1"
+            if (t.contains("v.league 2") || t.contains("v-league 2") || t.contains("hạng nhất việt nam")) return "V_LEAGUE_2"
+            if (t.contains("v.league 1") || t.contains("v-league 1") || t.contains("vleague 1") || t.contains("v.league") || t.contains("vleague")) return "VLEAGUE"
+            if (t.contains("copa del rey") || t.contains("cúp nhà vua")) return "COPA_DEL_REY"
+            if (t.contains("coppa italia")) return "COPPA_ITALIA"
+            if (t.contains("dfb-pokal") || t.contains("dfb pokal")) return "DFB_POKAL"
+            if (t.contains("coupe de france")) return "COUPE_DE_FRANCE"
+            if (t.contains("afc champions") || t.contains("cúp c1 châu á") || t.contains("afc cl")) return "AFC_CL"
+            if (t.contains("asian cup") || t.contains("cúp châu á")) return "ASIAN_CUP"
+            if (t.contains("saudi") || t.contains("roshn")) return "SAUDI_LEAGUE"
+            if (t.contains("mls")) return "MLS"
+            if (t.contains("eredivisie")) return "EREDIVISIE"
+            if (t.contains("eerste divisie")) return "EERSTE_DIVISIE"
+
+            // 4. So sánh CẢ 2 CLB để chắc chắn (không nhầm khi chỉ có 1 đội hoặc đội bóng chuyền)
+            val h = homeTeam.lowercase()
+            val a = awayTeam.lowercase()
+            if (h.isNotBlank() && a.isNotBlank()) {
+                if (EPL_CLUBS.any { matchClub(h, it) } && EPL_CLUBS.any { matchClub(a, it) }) return "EPL"
+                if (LALIGA_CLUBS.any { matchClub(h, it) } && LALIGA_CLUBS.any { matchClub(a, it) }) return "LALIGA"
+                if (SERIE_A_CLUBS.any { matchClub(h, it) } && SERIE_A_CLUBS.any { matchClub(a, it) }) return "SERIE_A"
+                if (BUNDESLIGA_CLUBS.any { matchClub(h, it) } && BUNDESLIGA_CLUBS.any { matchClub(a, it) }) return "BUNDESLIGA"
+                if (LIGUE1_CLUBS.any { matchClub(h, it) } && LIGUE1_CLUBS.any { matchClub(a, it) }) return "LIGUE1"
+                if (VLEAGUE_CLUBS.any { matchClub(h, it) } && VLEAGUE_CLUBS.any { matchClub(a, it) }) return "VLEAGUE"
+                if (ENGLISH_LOWER_CLUBS.any { matchClub(h, it) } && ENGLISH_LOWER_CLUBS.any { matchClub(a, it) }) return "LEAGUE_TWO"
+
+                // Nhận diện trận đấu giữa hai đội tuyển quốc gia
+                val isHNat = NATIONAL_TEAMS.any { matchClub(h, it) }
+                val isANat = NATIONAL_TEAMS.any { matchClub(a, it) }
+                if (isHNat && isANat) {
+                    if (EURO_NATIONS.any { matchClub(h, it) } && EURO_NATIONS.any { matchClub(a, it) }) {
+                        return "NATIONS_LEAGUE"
+                    }
+                    return "WC_QUAL"
+                }
+            }
+
+            return "OTHER"
+        }
     }
 
     fun clearCache() {
@@ -978,151 +1124,6 @@ class SportsLiveManager(private val context: Context) {
             } catch (e: Exception) {}
         }
         return false
-    }
-
-    private fun findEspnFixture(home: String, away: String): EspnFixture? {
-        if (isYouthMatch(home, away) || isWomenMatch(home, away)) return null
-        val h = home.lowercase()
-        val a = away.lowercase()
-        val cHome = canonicalizeTeam(home)
-        val cAway = canonicalizeTeam(away)
-        for ((_, fixtures) in espnFixturesCache) {
-            for (f in fixtures) {
-                val t1 = f.team1.lowercase()
-                val t2 = f.team2.lowercase()
-                val ct1 = canonicalizeTeam(f.team1)
-                val ct2 = canonicalizeTeam(f.team2)
-
-                val match1 = ((h.contains(t1) || t1.contains(h)) || (cHome.isNotBlank() && (cHome.contains(ct1) || ct1.contains(cHome)))) &&
-                             ((a.contains(t2) || t2.contains(a)) || (cAway.isNotBlank() && (cAway.contains(ct2) || ct2.contains(cAway))))
-                val match2 = ((h.contains(t2) || t2.contains(h)) || (cHome.isNotBlank() && (cHome.contains(ct2) || ct2.contains(cHome)))) &&
-                             ((a.contains(t1) || t1.contains(a)) || (cAway.isNotBlank() && (cAway.contains(ct1) || ct1.contains(cAway))))
-                if (match1 || match2) return f
-            }
-        }
-        return null
-    }
-
-    private fun matchEspnFixture(home: String, away: String): String? {
-        return findEspnFixture(home, away)?.league
-    }
-
-    private fun matchClub(teamName: String, club: String): Boolean {
-        val t = teamName.lowercase().trim()
-        val c = club.lowercase().trim()
-        if (t == c) return true
-        if (c.contains(" ")) {
-            return t.contains(c)
-        }
-        return Regex("""\b${Regex.escape(c)}\b""").containsMatchIn(t)
-    }
-
-    /**
-     * Nhận diện giải đấu:
-     * 1. Đối chiếu lịch thi đấu thực tế hôm nay từ ESPN
-     * 2. Kiểm tra các môn thể thao nổi bật (F1, Tennis ATP/Grand Slam, NBA)
-     * 3. Kiểm tra từ khóa giải đấu trực tiếp trong tiêu đề
-     * 4. So sánh CẢ 2 CLB để chắc chắn chứ không chỉ 1 CLB
-     */
-    fun detectLeague(text: String, homeTeam: String, awayTeam: String): String {
-        val t = text.lowercase()
-
-        // 1. Kiểm tra các môn thể thao nổi bật được yêu cầu (F1, Tennis Grand Slam/ATP, NBA, Rugby, American Football)
-        if (t.contains("f1") || t.contains("formula 1") || t.contains("formula one") || t.contains("grand prix") || t.contains("công thức 1")) {
-            return "F1"
-        }
-        val isWimbledonFootball = t.contains("afc wimbledon") || t.contains("wimbledon fc") ||
-            (t.contains("wimbledon") && (t.contains("blackpool") || t.contains("efl") || t.contains("fa cup") || t.contains("league two") || t.contains("league 2")))
-        if (!isWimbledonFootball && (t.contains("grand slam") || t.contains("atp 1000") || t.contains("atp1000") || (t.contains("wimbledon") && !t.contains("afc")) ||
-            t.contains("us open") || t.contains("australian open") || t.contains("roland garros") || t.contains("tennis") || t.contains("quần vợt"))) {
-            return "TENNIS"
-        }
-        if (t.contains("nba") || t.contains("bóng rổ nba")) {
-            return "NBA"
-        }
-        if (t.contains("rugby") || t.contains("bóng bầu dục") || t.contains("nations championship") ||
-            t.contains("autumn nations") || t.contains("six nations") || t.contains("all blacks") ||
-            (t.contains("italy") && t.contains("argentina") && (t.contains("nations") || t.contains("rugby"))) ||
-            (t.contains("wales") && t.contains("new zealand") && (t.contains("nations") || t.contains("rugby")))) {
-            return "RUGBY"
-        }
-        if (t.contains("nfl") || t.contains("super bowl") || t.contains("bóng bầu dục mỹ") || t.contains("cfl") ||
-            t.contains("ncaaf") || t.contains("us ncaaf") || t.contains("🏈") ||
-            (t.contains("ncaa") && !t.contains("soccer") && !t.contains("bóng đá") && !t.contains("basketball"))) {
-            return if (t.contains("ncaa")) "NCAAF" else "NFL"
-        }
-
-        // Nếu là trận đội trẻ hoặc đội nữ: Tuyệt đối không xếp vào giải đấu hàng đầu của đội chính (UCL, EPL, La Liga...)
-        if (isYouthMatch(text, homeTeam, awayTeam) || isWomenMatch(text, homeTeam, awayTeam)) {
-            return "OTHER"
-        }
-
-        // 2. Đối chiếu lịch thi đấu thực tế hôm nay
-        val espnLeague = matchEspnFixture(homeTeam, awayTeam)
-        if (espnLeague != null) return espnLeague
-
-        // 3. Kiểm tra trực tiếp tên giải đấu trong tiêu đề
-        if ((t.contains("uefa champions") || t.contains("cúp c1") || t.contains("cup c1") || t.contains("champions league")) &&
-            !t.contains("afc") && !t.contains("women")) {
-            return "UCL"
-        }
-        if (t.contains("europa league") || t.contains("cúp c2") || t.contains("uel")) return "UEL"
-        if (t.contains("conference league") || t.contains("cúp c3") || t.contains("uecl")) return "UECL"
-        if (t.contains("premier league") || t.contains("ngoại hạng anh") || t.split(" ").contains("epl")) return "EPL"
-        if (t.contains("nations league") || t.contains("uefa nations")) return "NATIONS_LEAGUE"
-        if (t.contains("world cup") || t.contains("wcq") || t.contains("vòng loại world cup") || t.contains("fifa world cup")) return "WC_QUAL"
-        if (t.contains("giao hữu") || t.contains("friendly") || t.contains("club friendly")) return "FRIENDLY"
-        if (t.contains("fa cup") || t.contains("cúp fa")) return "FA_CUP"
-        if (t.contains("carabao") || t.contains("efl cup") || t.contains("cúp liên đoàn")) return "EFL_CUP"
-        if (t.contains("efl championship") || t.contains("championship") || t.contains("hạng nhất anh")) return "EFL"
-        if (t.contains("league two") || t.contains("league 2") || t.contains("hạng 4 anh") || t.contains("hạng ba anh")) return "LEAGUE_TWO"
-        if (t.contains("league one") || t.contains("league 1") || t.contains("hạng 3 anh") || t.contains("hạng nhì anh")) return "LEAGUE_ONE"
-        if (t.contains("national league")) return "NATIONAL_LEAGUE"
-        if (t.contains("la liga 2") || t.contains("laliga 2") || t.contains("segunda") || t.contains("hypermotion")) return "LALIGA_2"
-        if (t.contains("la liga") || t.contains("laliga")) return "LALIGA"
-        if (t.contains("serie b")) return "SERIE_B"
-        if (t.contains("serie a") || t.contains("serie-a")) return "SERIE_A"
-        if (t.contains("bundesliga 2") || t.contains("2. bundesliga")) return "BUNDESLIGA_2"
-        if (t.contains("bundesliga")) return "BUNDESLIGA"
-        if (t.contains("ligue 2")) return "LIGUE2"
-        if (t.contains("ligue 1") || t.contains("ligue1")) return "LIGUE1"
-        if (t.contains("v.league 2") || t.contains("v-league 2") || t.contains("hạng nhất việt nam")) return "V_LEAGUE_2"
-        if (t.contains("v.league 1") || t.contains("v-league 1") || t.contains("vleague 1") || t.contains("v.league") || t.contains("vleague")) return "VLEAGUE"
-        if (t.contains("copa del rey") || t.contains("cúp nhà vua")) return "COPA_DEL_REY"
-        if (t.contains("coppa italia")) return "COPPA_ITALIA"
-        if (t.contains("dfb-pokal") || t.contains("dfb pokal")) return "DFB_POKAL"
-        if (t.contains("coupe de france")) return "COUPE_DE_FRANCE"
-        if (t.contains("afc champions") || t.contains("cúp c1 châu á") || t.contains("afc cl")) return "AFC_CL"
-        if (t.contains("asian cup") || t.contains("cúp châu á")) return "ASIAN_CUP"
-        if (t.contains("saudi") || t.contains("roshn")) return "SAUDI_LEAGUE"
-        if (t.contains("mls")) return "MLS"
-        if (t.contains("eredivisie")) return "EREDIVISIE"
-        if (t.contains("eerste divisie")) return "EERSTE_DIVISIE"
-
-        // 4. So sánh CẢ 2 CLB để chắc chắn (không nhầm khi chỉ có 1 đội hoặc đội bóng chuyền)
-        val h = homeTeam.lowercase()
-        val a = awayTeam.lowercase()
-        if (h.isNotBlank() && a.isNotBlank()) {
-            if (EPL_CLUBS.any { matchClub(h, it) } && EPL_CLUBS.any { matchClub(a, it) }) return "EPL"
-            if (LALIGA_CLUBS.any { matchClub(h, it) } && LALIGA_CLUBS.any { matchClub(a, it) }) return "LALIGA"
-            if (SERIE_A_CLUBS.any { matchClub(h, it) } && SERIE_A_CLUBS.any { matchClub(a, it) }) return "SERIE_A"
-            if (BUNDESLIGA_CLUBS.any { matchClub(h, it) } && BUNDESLIGA_CLUBS.any { matchClub(a, it) }) return "BUNDESLIGA"
-            if (LIGUE1_CLUBS.any { matchClub(h, it) } && LIGUE1_CLUBS.any { matchClub(a, it) }) return "LIGUE1"
-            if (VLEAGUE_CLUBS.any { matchClub(h, it) } && VLEAGUE_CLUBS.any { matchClub(a, it) }) return "VLEAGUE"
-            if (ENGLISH_LOWER_CLUBS.any { matchClub(h, it) } && ENGLISH_LOWER_CLUBS.any { matchClub(a, it) }) return "LEAGUE_TWO"
-
-            // Nhận diện trận đấu giữa hai đội tuyển quốc gia
-            val isHNat = NATIONAL_TEAMS.any { matchClub(h, it) }
-            val isANat = NATIONAL_TEAMS.any { matchClub(a, it) }
-            if (isHNat && isANat) {
-                if (EURO_NATIONS.any { matchClub(h, it) } && EURO_NATIONS.any { matchClub(a, it) }) {
-                    return "NATIONS_LEAGUE"
-                }
-                return "WC_QUAL"
-            }
-        }
-
-        return "OTHER"
     }
 
     /**

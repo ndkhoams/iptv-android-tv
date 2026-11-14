@@ -835,16 +835,17 @@ class MainActivity : AppCompatActivity() {
                             val chHolder = binding.rvChannels.findContainingViewHolder(focused)
                             if (chHolder != null) {
                                 val pos = chHolder.adapterPosition
-                                if (pos in 0 until channelAdapter.itemCount) {
-                                    val focusedCh = channelAdapter.getChannelAt(pos)
-                                    if (focusedCh != null) {
-                                        val matchKey = if (focusedCh.streamUrl.startsWith("match://")) focusedCh.streamUrl.removePrefix("match://") else null
-                                        val mg = (if (matchKey != null) playlistManager.sportsLiveManager.getMatch(matchKey) else null)
-                                            ?: playlistManager.sportsLiveManager.findMatchForChannel(focusedCh)
-                                        if (mg != null && mg.sources.isNotEmpty()) {
-                                            showMatchSourcesDialog(mg)
-                                            return
-                                        }
+                                val focusedCh = currentCategoryChannels.getOrNull(pos) ?: channelAdapter.getChannelAt(pos)
+                                if (focusedCh != null) {
+                                    val sUrl = focusedCh.streamUrl
+                                    val mg = if (sUrl.startsWith("match://")) {
+                                        playlistManager.sportsLiveManager.getMatch(sUrl.removePrefix("match://"))
+                                    } else {
+                                        playlistManager.sportsLiveManager.findMatchForChannel(focusedCh)
+                                    }
+                                    if (mg != null && mg.sources.isNotEmpty()) {
+                                        showMatchSourcesDialog(mg)
+                                        return
                                     }
                                 }
                             }
