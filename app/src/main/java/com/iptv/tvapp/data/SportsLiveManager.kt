@@ -1146,9 +1146,9 @@ class SportsLiveManager(private val context: Context) {
     }
 
     /**
-     * Tải danh sách trực tiếp thể thao từ file thethao.m3u (được máy chủ Armbian tự động đẩy lên GitHub)
-     * Tối ưu hiệu năng: Ưu tiên trả về danh sách kênh NGAY LẬP TỨC (từ RAM hoặc Cache file),
-     * các tác vụ mạng mất thời gian (tải file mới, ESPN scoreboard) xử lý ngầm trong nền.
+     * Tải danh sách trực tiếp thể thao từ máy chủ Armbian Hub & GitHub (thethao-data.json / thethao.m3u).
+     * Luôn ưu tiên tải trực tiếp từ máy chủ mạng để đảm bảo dữ liệu mới nhất 100%, không phụ thuộc cache cũ.
+     * Chỉ dùng cache đĩa khi mất kết nối mạng (offline).
      */
     suspend fun getSportsCategories(forceRefresh: Boolean = false): List<Category> =
         withContext(Dispatchers.IO) {
@@ -1157,31 +1157,8 @@ class SportsLiveManager(private val context: Context) {
             val cacheFile = File(context.cacheDir, "thethao_sports_cache.m3u")
             val baseSportsUrl = prefs.sportsPlaylistUrl.ifBlank { DEFAULT_SPORTS_URL }
 
-            // 1. Đã có trong RAM và không yêu cầu ép buộc làm mới -> trả về tức thì (0ms)
-            if (!forceRefresh && cachedCategories != null && cachedCategories!!.isNotEmpty() && (now - lastFetchTimeMs) < CACHE_TTL_MS) {
-                return@withContext cachedCategories!!
-            }
-
-            // 2. ƯU TIÊN TUYỆT ĐỐI: Đọc cache JSON từ đĩa -> trả về NGAY LẬP TỨC (< 5ms)
-            if (!forceRefresh && cachedCategories == null && dataCacheFile.exists() && dataCacheFile.length() > 200L) {
-                try {
-                    val jsonStr = dataCacheFile.readText(Charsets.UTF_8)
-                    val root = JSONObject(jsonStr)
-                    val list = parseSportsCategoriesFromDataJson(root)
-                    if (list.isNotEmpty()) {
-                        cachedCategories = list
-                        lastFetchTimeMs = now
-                        // Kích hoạt cập nhật ngầm từ mạng CDN không chặn giao diện
-                        CoroutineScope(Dispatchers.IO).launch {
-                            refreshSportsDataFromNetwork(dataCacheFile, cacheFile, baseSportsUrl)
-                        }
-                        return@withContext list
-                    }
-                } catch (e: Exception) {}
-            }
-
-            // 3. Nếu chưa có cache hoặc người dùng bấm Cập nhật (forceRefresh = true):
-            // Tải dữ liệu JSON mới từ CDN mạng
+            // 1. TẢI TRỰC TIẾP TỪ MẠNG (Armbian Hub 10.0.0.222:8080 & GitHub CDN)
+            // Không qua cache cũ, đảm bảo người dùng luôn nhận dữ liệu trận đấu và luồng mới nhất ngay lần đầu
             val updatedList = refreshSportsDataFromNetwork(dataCacheFile, cacheFile, baseSportsUrl)
             if (updatedList.isNotEmpty()) {
                 cachedCategories = updatedList
@@ -1189,7 +1166,21 @@ class SportsLiveManager(private val context: Context) {
                 return@withContext updatedList
             }
 
-            // 4. Fallback cuối cùng nếu cả dữ liệu mạng và cache JSON đều thất bại: parse file M3U cũ
+            // 2. CHỈ KHI MẠNG LỖI HOẶC MẤT KẾT NỐI: Mới dùng cache đĩa JSON làm phương án cứu trợ offline
+            if (dataCacheFile.exists() && dataCacheFile.length() > 200L) {
+                try {
+                    val jsonStr = dataCacheFile.readText(Charsets.UTF_8)
+                    val root = JSONObject(jsonStr)
+                    val list = parseSportsCategoriesFromDataJson(root)
+                    if (list.isNotEmpty()) {
+                        cachedCategories = list
+                        lastFetchTimeMs = now
+                        return@withContext list
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 3. Fallback cuối cùng nếu cả dữ liệu mạng và cache JSON đều thất bại: parse file M3U cũ
             if (cacheFile.exists() && cacheFile.length() > 0L) {
                 val fallbackList = parseSportsCategoriesFromFile(cacheFile, baseSportsUrl)
                 if (fallbackList.isNotEmpty()) {

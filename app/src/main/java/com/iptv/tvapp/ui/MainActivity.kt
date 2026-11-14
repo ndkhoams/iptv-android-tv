@@ -1121,19 +1121,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchSportsInBackground(forceRefresh: Boolean = false, showNotification: Boolean = true) {
+    private fun fetchSportsInBackground(forceRefresh: Boolean = true, showNotification: Boolean = true) {
         sportsFetchJob?.cancel()
         sportsFetchJob = lifecycleScope.launch {
-            // Nếu danh sách trong RAM đang rỗng, nạp ngay từ cache đĩa (< 3ms)
-            if (sportsCategoriesList.isEmpty()) {
-                val cached = withContext(Dispatchers.IO) {
-                    playlistManager.sportsLiveManager.getCachedSportsCategories()
-                }
-                if (cached.isNotEmpty()) {
-                    applyUpdatedSportsCategories(cached)
-                }
-            }
-
             try {
                 val sportsCategories = withContext(Dispatchers.IO) {
                     playlistManager.sportsLiveManager.getSportsCategories(forceRefresh = forceRefresh)
@@ -1169,21 +1159,16 @@ class MainActivity : AppCompatActivity() {
             allCategories.addAll(tvCategories)
         } else {
             binding.tvActivePlaylistBadge.text = "⚽ Trực tiếp Thể Thao"
-            if (sportsCategoriesList.isEmpty()) {
-                val cached = playlistManager.sportsLiveManager.getCachedSportsCategories()
-                if (cached.isNotEmpty()) {
-                    sportsCategoriesList.addAll(cached)
-                }
-            }
             allCategories.addAll(sportsCategoriesList)
-            // Lazy Loading: Chỉ kích hoạt tải mạng trực tiếp thể thao khi người dùng lần đầu chọn chế độ Thể Thao
+
+            // Tải trực tiếp từ máy chủ Armbian & GitHub, không dùng cache cũ
+            val isFirstLoad = sportsCategoriesList.isEmpty()
+            if (isFirstLoad) {
+                showBottomNotification("⚽ Đang tải trực tiếp từ máy chủ Armbian & GitHub...")
+            }
+            fetchSportsInBackground(forceRefresh = true, showNotification = isFirstLoad)
             if (!hasLoadedSportsOnce) {
                 hasLoadedSportsOnce = true
-                val isFirstLoadEmpty = sportsCategoriesList.isEmpty()
-                if (isFirstLoadEmpty) {
-                    showBottomNotification("⚽ Đang tải danh sách trận đấu trực tiếp hôm nay...")
-                }
-                fetchSportsInBackground(forceRefresh = false, showNotification = isFirstLoadEmpty)
                 startPeriodicSportsRefresh()
             }
         }

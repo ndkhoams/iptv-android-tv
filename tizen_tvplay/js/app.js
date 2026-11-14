@@ -658,9 +658,15 @@
                 if (callback) callback();
                 return;
             }
+            var baseUrl = SPORTS_DATA_URLS[idx];
+            var sep = baseUrl.indexOf('?') >= 0 ? '&' : '?';
+            var fetchUrl = baseUrl + sep + '_ts=' + Date.now();
+
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', SPORTS_DATA_URLS[idx], true);
-            xhr.timeout = (SPORTS_DATA_URLS[idx].indexOf('10.0.0.222') >= 0) ? 2000 : 7000;
+            xhr.open('GET', fetchUrl, true);
+            xhr.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            xhr.setRequestHeader('Pragma', 'no-cache');
+            xhr.timeout = (baseUrl.indexOf('10.0.0.222') >= 0) ? 1500 : 5000;
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
@@ -1075,6 +1081,14 @@
         } else if (mode === APP_MODE_SPORTS) {
             categories = sportsCategories;
             if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "DANH MỤC THỂ THAO";
+            // Tải trực tiếp sự kiện thể thao mới nhất từ Armbian/GitHub (bỏ qua cache cũ)
+            loadSportsData(function () {
+                if (currentAppMode === APP_MODE_SPORTS) {
+                    categories = sportsCategories;
+                    renderCategories();
+                    renderChannels();
+                }
+            });
         } else if (mode === APP_MODE_FAVORITES) {
             buildFavoritesCategories();
             if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "KÊNH YÊU THÍCH";
