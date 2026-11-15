@@ -356,158 +356,1249 @@ def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
     t = threading.Thread(target=_task, daemon=True)
     t.start()
 
-WEB_REMOTE_HTML = """<!DOCTYPE html>
-<html lang="vi">
+WEB_REMOTE_HTML = r"""<!DOCTYPE html>
+<html lang="vi" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>TV Play - Web Remote</title>
+    <link rel="icon" type="image/png" href="https://ndkhoams.github.io/icons/favicon.png">
     <style>
         :root {
-            --bg-color: #0E0C1B;
-            --card-bg: #161526;
-            --card-border: #2E294E;
-            --accent: #FF6500;
-            --accent-hover: #FF8533;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --green: #10b981;
-            --red: #ef4444;
+            --bg: #000000;
+            --bg-raised: #0c0c0f;
+            --bg-card: rgba(22, 22, 26, 0.78);
+            --bg-card-hover: rgba(32, 32, 38, 0.88);
+            --cell: #1c1c1e;
+            --cell-hover: rgba(255, 255, 255, 0.08);
+            --cell-active: rgba(255, 255, 255, 0.14);
+            --label: #f5f5f7;
+            --label-2: rgba(235, 235, 245, 0.65);
+            --label-3: rgba(235, 235, 245, 0.4);
+            --separator: rgba(255, 255, 255, 0.08);
+            --separator-hover: rgba(255, 255, 255, 0.16);
+            --accent: #ff6500;
+            --accent-hover: #ff8533;
+            --accent-glow: rgba(255, 101, 0, 0.35);
+            --blue: #0a84ff;
+            --orange: #ff9f0a;
+            --green: #30d158;
+            --red: #ff453a;
+            --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding-bottom: 75px; user-select: none; }
-        
-        header { background: #121024; padding: 12px 16px; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
-        .brand-title { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 800; }
-        .brand-orange { color: var(--accent); }
-        .tv-status-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
-        .status-connected { background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3); }
-        .status-disconnected { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3); }
-        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
-        .now-playing-banner { background: linear-gradient(135deg, rgba(255, 101, 0, 0.18), #0E0C1B); border-bottom: 1px solid rgba(255, 101, 0, 0.35); padding: 10px 16px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-        .now-playing-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
-        .ch-badge { background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
-        .ch-name { font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .osd-btn { background: #1e293b; border: 1px solid var(--accent); color: var(--accent); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-        .osd-btn:active { background: var(--accent); color: #fff; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-body);
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        .tab-content { display: none; padding: 14px 16px; max-width: 540px; margin: 0 auto; }
-        .tab-content.active { display: block; }
+        body {
+            background-color: var(--bg);
+            color: var(--label);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 85px);
+            user-select: none;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
 
-        /* REMOTE CONTROLLER TAB */
-        .remote-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; padding: 18px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 14px; }
-        .dpad-container { width: 230px; height: 230px; margin: 12px auto; position: relative; background: #0b1120; border-radius: 50%; border: 2px solid var(--card-border); box-shadow: inset 0 4px 14px rgba(0,0,0,0.7); }
-        .dpad-btn { position: absolute; background: #1e293b; border: 1px solid var(--card-border); color: #fff; font-size: 18px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 12px; transition: transform 0.08s, background 0.08s; }
-        .dpad-btn:active { background: var(--accent); transform: scale(0.94); }
-        .dpad-up { top: 10px; left: 77px; width: 76px; height: 54px; border-radius: 28px 28px 8px 8px; }
-        .dpad-down { bottom: 10px; left: 77px; width: 76px; height: 54px; border-radius: 8px 8px 28px 28px; }
-        .dpad-left { top: 77px; left: 10px; width: 54px; height: 76px; border-radius: 28px 8px 8px 28px; }
-        .dpad-right { top: 77px; right: 10px; width: 54px; height: 76px; border-radius: 8px 28px 28px 8px; }
-        .dpad-ok { top: 77px; left: 77px; width: 76px; height: 76px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 19px; border: 2px solid var(--accent-hover); box-shadow: 0 4px 12px rgba(255, 101, 0, 0.4); }
-        .dpad-ok:active { background: #e05800; transform: scale(0.92); }
+        /* Ambient Dynamic Glow */
+        .ambient-glow {
+            position: fixed;
+            width: 650px;
+            max-width: 95vw;
+            height: 380px;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: radial-gradient(ellipse at center, rgba(255, 101, 0, 0.16) 0%, rgba(10, 132, 255, 0.08) 45%, transparent 70%);
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
 
-        .row-actions { display: flex; gap: 10px; margin-top: 12px; }
-        .action-btn { flex: 1; padding: 12px 6px; background: #1e293b; border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.1s; }
-        .action-btn:active { background: var(--accent); border-color: var(--accent); transform: scale(0.95); }
-        .btn-mode-toggle { background: #241e3d; border-color: #6366f1; color: #a5b4fc; }
+        /* Glassmorphism Tokens */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        }
 
-        .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-        .key-num { padding: 12px; background: #121024; border: 1px solid var(--card-border); border-radius: 8px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center; }
-        .key-num:active { background: var(--accent); }
+        .glass-pill {
+            background: rgba(28, 28, 32, 0.82);
+            backdrop-filter: blur(28px) saturate(190%);
+            -webkit-backdrop-filter: blur(28px) saturate(190%);
+            border: 0.5px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
 
-        /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: #121024; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-        .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; flex: 1; padding: 6px 0; font-weight: 600; }
-        .nav-btn.active { color: var(--accent); font-weight: 800; }
-        .nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
+        /* Sticky Top Header */
+        header.app-header-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 10px), 14px);
+            padding-bottom: 12px;
+            padding-left: 16px;
+            padding-right: 16px;
+            background: rgba(10, 10, 12, 0.92);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        /* CHANNELS TAB */
-        .cat-pills-wrap { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; margin-bottom: 8px; scrollbar-width: none; }
-        .cat-pills-wrap::-webkit-scrollbar { display: none; }
-        .cat-pill { background: #1e293b; border: 1px solid var(--card-border); color: var(--text-sub); padding: 7px 14px; border-radius: 18px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-        .cat-pill.active { background: var(--accent); color: #fff; border-color: var(--accent-hover); box-shadow: 0 2px 8px rgba(255,101,0,0.4); }
-        .search-box { width: 100%; padding: 11px 14px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
-        .search-box:focus { border-color: var(--accent); }
-        .channels-list { max-height: calc(100vh - 240px); overflow-y: auto; }
-        .channel-row { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.12s; }
-        .channel-row:active { background: rgba(255, 101, 0, 0.2); border-color: var(--accent); }
-        .channel-left { display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden; }
-        .ch-num { color: var(--accent); font-weight: 800; font-size: 14px; min-width: 26px; }
-        .ch-title { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ch-group { font-size: 11px; color: var(--text-sub); }
+        .header-inner {
+            width: 100%;
+            max-width: 540px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        /* SPORTS TAB */
-        .sports-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .refresh-btn { background: #1e293b; border: 1px solid var(--accent); color: var(--accent); font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
-        .refresh-btn:active { background: var(--accent); color: #fff; }
-        .match-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
-        .match-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
-        .match-title { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.35; flex: 1; }
-        .match-time-badge { background: #334155; color: #cbd5e1; font-size: 11px; padding: 3px 8px; border-radius: 8px; font-weight: 700; white-space: nowrap; }
-        .badge-live { background: var(--red); color: #fff; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .sources-box { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--card-border); display: none; }
-        .sources-box.show { display: block; }
-        .source-item { width: 100%; padding: 10px 12px; background: #0b1120; border: 1px solid var(--card-border); border-radius: 8px; color: #e2e8f0; font-size: 13px; font-weight: 600; margin-bottom: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .source-item:active { background: var(--accent); color: #fff; border-color: var(--accent-hover); }
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-        /* PLAYLIST TAB */
-        .form-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
-        .form-card h3 { font-size: 14px; color: var(--accent); margin-bottom: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; font-weight: 600; }
-        .form-input { width: 100%; padding: 11px 13px; background: #0b1120; border: 1px solid var(--card-border); border-radius: 8px; color: #fff; font-size: 13px; outline: none; }
-        .form-input:focus { border-color: var(--accent); }
-        .submit-btn { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; color: #fff; font-weight: bold; font-size: 13px; cursor: pointer; transition: background 0.15s; }
-        .submit-btn:active { background: var(--accent-hover); transform: scale(0.98); }
+        .brand-logo-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #ff6500 0%, #ff8800 50%, #ffaa00 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(255, 101, 0, 0.35);
+            flex-shrink: 0;
+        }
 
-        .playlist-item { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: border-color 0.15s; }
-        .playlist-item.selected { border-color: var(--accent); background: rgba(255, 101, 0, 0.12); box-shadow: 0 0 12px rgba(255,101,0,0.25); }
-        .playlist-info { flex: 1; overflow: hidden; }
-        .playlist-name { font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-        .playlist-badge-sel { background: var(--green); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
-        .playlist-url { font-size: 11px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .playlist-actions { display: flex; gap: 6px; flex-shrink: 0; }
-        .btn-sm { padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; border: none; transition: transform 0.1s; }
-        .btn-sm:active { transform: scale(0.94); }
-        .btn-select { background: var(--green); color: #fff; }
-        .btn-delete { background: var(--red); color: #fff; }
+        .brand-logo-box svg {
+            width: 20px;
+            height: 20px;
+            color: #ffffff;
+            fill: currentColor;
+        }
 
-        /* SETTINGS TAB */
-        .settings-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-        .settings-card h3 { font-size: 14px; color: var(--accent); margin-bottom: 10px; font-weight: 700; }
-        .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .info-row span:first-child { color: var(--text-sub); }
-        .info-row span:last-child { color: #fff; font-weight: 600; }
+        .brand-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: var(--font-display);
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+        }
 
-        /* TOAST */
-        #toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid var(--accent); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 200; box-shadow: 0 4px 14px rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
-        #toast.show { opacity: 1; }
+        .brand-sub {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .tv-status-badge {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .status-connected {
+            background: rgba(48, 209, 88, 0.16);
+            color: var(--green);
+            border: 0.5px solid rgba(48, 209, 88, 0.35);
+            box-shadow: 0 0 12px rgba(48, 209, 88, 0.2);
+        }
+
+        .status-disconnected {
+            background: rgba(255, 69, 58, 0.14);
+            color: var(--red);
+            border: 0.5px solid rgba(255, 69, 58, 0.3);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-connected .status-dot {
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Now Playing Banner (Strand Mini-Hero) */
+        .now-playing-wrap {
+            padding: 10px 16px 4px;
+            max-width: 540px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .now-playing-card {
+            background: linear-gradient(135deg, rgba(255, 101, 0, 0.15) 0%, rgba(20, 20, 26, 0.85) 100%);
+            border: 0.5px solid rgba(255, 101, 0, 0.3);
+            border-top: 1px solid rgba(255, 150, 50, 0.4);
+            border-radius: 18px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 101, 0, 0.12);
+        }
+
+        .now-playing-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .live-badge {
+            background: linear-gradient(135deg, #ff453a 0%, #ff6500 100%);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 7px;
+            border-radius: 6px;
+            white-space: nowrap;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(255, 69, 58, 0.4);
+            flex-shrink: 0;
+        }
+
+        .ch-name {
+            font-weight: 700;
+            font-size: 13px;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .osd-pill-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 0.5px solid rgba(255, 255, 255, 0.2);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .osd-pill-btn:hover {
+            background: rgba(255, 101, 0, 0.2);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .osd-pill-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* Tab Content Wrappers */
+        .tab-content {
+            display: none;
+            padding: 12px 16px 20px;
+            max-width: 540px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================================================= */
+        /* TAB 1: REMOTE CONTROLLER TAB                                              */
+        /* ========================================================================= */
+        .remote-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.12);
+            border-top: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 28px;
+            padding: 18px 16px 20px;
+            box-shadow: 0 16px 44px -4px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 101, 0, 0.12);
+            margin-bottom: 14px;
+        }
+
+        .dpad-container {
+            width: 236px;
+            height: 236px;
+            margin: 14px auto 18px;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #202028 0%, #111116 70%, #08080a 100%);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 
+                inset 0 3px 8px rgba(255, 255, 255, 0.12),
+                inset 0 -4px 12px rgba(0, 0, 0, 0.85),
+                0 14px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .dpad-btn {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--label);
+            font-size: 16px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dpad-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .dpad-btn:active {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 0 16px var(--accent-glow);
+            transform: scale(0.94);
+        }
+
+        .dpad-up {
+            top: 8px;
+            left: 80px;
+            width: 76px;
+            height: 56px;
+            border-radius: 36px 36px 12px 12px;
+        }
+
+        .dpad-down {
+            bottom: 8px;
+            left: 80px;
+            width: 76px;
+            height: 56px;
+            border-radius: 12px 12px 36px 36px;
+        }
+
+        .dpad-left {
+            top: 80px;
+            left: 8px;
+            width: 56px;
+            height: 76px;
+            border-radius: 36px 12px 12px 36px;
+        }
+
+        .dpad-right {
+            top: 80px;
+            right: 8px;
+            width: 56px;
+            height: 76px;
+            border-radius: 12px 36px 36px 12px;
+        }
+
+        .dpad-ok {
+            top: 80px;
+            left: 80px;
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6500 0%, #ff8800 50%, #ffaa00 100%);
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 
+                inset 0 1px 2px rgba(255, 255, 255, 0.6),
+                0 8px 24px rgba(255, 101, 0, 0.45);
+        }
+
+        .dpad-ok:active {
+            transform: scale(0.92);
+            box-shadow: 0 2px 10px rgba(255, 101, 0, 0.6);
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px 8px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            color: var(--label);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 101, 0, 0.25);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn-mode-tv {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.15) 0%, rgba(10, 132, 255, 0.05) 100%);
+            border-color: rgba(10, 132, 255, 0.3);
+            color: #93c5fd;
+        }
+
+        .btn-mode-sports {
+            background: linear-gradient(135deg, rgba(255, 101, 0, 0.18) 0%, rgba(255, 159, 10, 0.08) 100%);
+            border-color: rgba(255, 101, 0, 0.35);
+            color: #fdba74;
+        }
+
+        .keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .key-num {
+            padding: 12px 0;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 12px;
+            color: var(--label);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.12s;
+        }
+
+        .key-num:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .key-num:active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent-hover);
+            transform: scale(0.94);
+        }
+
+        /* ========================================================================= */
+        /* TAB 2: CHANNELS TAB                                                       */
+        /* ========================================================================= */
+        .cat-pills-wrap {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 2px 2px 10px;
+            margin-bottom: 8px;
+            scrollbar-width: none;
+        }
+
+        .cat-pills-wrap::-webkit-scrollbar {
+            display: none;
+        }
+
+        .cat-pill {
+            background: rgba(255, 255, 255, 0.06);
+            border: 0.5px solid rgba(255, 255, 255, 0.14);
+            color: var(--label-2);
+            padding: 7px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .cat-pill:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .cat-pill.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent-hover);
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(255, 101, 0, 0.4);
+        }
+
+        .search-wrap {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-icon-svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--label-3);
+            pointer-events: none;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 14px 12px 38px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-box:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 16px rgba(255, 101, 0, 0.2);
+        }
+
+        .channels-list {
+            max-height: calc(100vh - 250px);
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .channel-row {
+            background: var(--bg-card);
+            border: 0.5px solid rgba(255, 255, 255, 0.09);
+            border-radius: 18px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .channel-row:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(255, 255, 255, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .channel-row:active {
+            background: rgba(255, 101, 0, 0.18);
+            border-color: var(--accent);
+            transform: scale(0.99);
+        }
+
+        .channel-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .ch-logo-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1c1c24 0%, #121216 100%);
+            border: 0.5px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .ch-num {
+            color: var(--accent);
+            font-weight: 800;
+            font-size: 13px;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", monospace;
+        }
+
+        .ch-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.25;
+        }
+
+        .ch-group {
+            font-size: 10px;
+            color: var(--label-3);
+            margin-top: 2px;
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            font-family: monospace;
+        }
+
+        .btn-play-pill {
+            background: rgba(255, 101, 0, 0.12);
+            border: 0.5px solid rgba(255, 101, 0, 0.3);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 12px;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+        .channel-row:hover .btn-play-pill {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 101, 0, 0.4);
+        }
+
+        /* ========================================================================= */
+        /* TAB 3: SPORTS TAB                                                         */
+        /* ========================================================================= */
+        .sports-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .sports-section-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 0.5px solid var(--accent);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .refresh-btn:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        .match-card {
+            background: var(--bg-card);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 20px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .match-card:hover {
+            border-color: rgba(255, 255, 255, 0.22);
+            transform: translateY(-1px);
+        }
+
+        .match-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+
+        .match-league {
+            color: var(--blue);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .match-badges-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .time-pill {
+            background: rgba(255, 159, 10, 0.15);
+            border: 0.5px solid rgba(255, 159, 10, 0.35);
+            color: var(--orange);
+            font-size: 10px;
+            font-family: monospace;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+
+        .live-tag {
+            background: var(--red);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 0 10px rgba(255, 69, 58, 0.4);
+            animation: pulse-live 1.6s infinite;
+        }
+
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Teams Row */
+        .match-teams-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .team-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .team-box.away {
+            flex-direction: row-reverse;
+            text-align: right;
+        }
+
+        .team-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 0.5px solid rgba(255, 255, 255, 0.14);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--label);
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .team-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .vs-pill {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--label-3);
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .sources-box {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.12);
+            display: none;
+        }
+
+        .sources-box.show {
+            display: block;
+            animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .source-item {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--label);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.15s;
+        }
+
+        .source-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .source-item:active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent-hover);
+        }
+
+        /* ========================================================================= */
+        /* TAB 4: PLAYLISTS TAB                                                      */
+        /* ========================================================================= */
+        .form-card {
+            background: var(--bg-card);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 22px;
+            padding: 18px 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .form-card h3 {
+            font-size: 14px;
+            color: var(--accent);
+            margin-bottom: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--font-display);
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--label-2);
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 11px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 0.5px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 14px rgba(255, 101, 0, 0.25);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff6500 0%, #ff9f0a 100%);
+            border: none;
+            border-radius: 14px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 101, 0, 0.35);
+            transition: all 0.15s;
+        }
+
+        .submit-btn:hover {
+            filter: brightness(1.08);
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .playlist-item {
+            background: var(--bg-card);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            transition: all 0.15s;
+        }
+
+        .playlist-item.selected {
+            border-color: var(--accent);
+            background: rgba(255, 101, 0, 0.08);
+            box-shadow: 0 0 16px rgba(255, 101, 0, 0.2);
+        }
+
+        .playlist-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .playlist-name {
+            font-weight: 700;
+            font-size: 13px;
+            color: #fff;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .playlist-badge-sel {
+            background: var(--green);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .playlist-url {
+            font-size: 11px;
+            color: var(--label-3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: monospace;
+        }
+
+        .playlist-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .btn-sm {
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            border: none;
+            transition: all 0.12s;
+        }
+
+        .btn-sm:active {
+            transform: scale(0.93);
+        }
+
+        .btn-select {
+            background: rgba(48, 209, 88, 0.2);
+            border: 0.5px solid var(--green);
+            color: #4ade80;
+        }
+
+        .btn-select:hover {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .btn-delete {
+            background: rgba(255, 69, 58, 0.15);
+            border: 0.5px solid var(--red);
+            color: #f87171;
+        }
+
+        .btn-delete:hover {
+            background: var(--red);
+            color: #fff;
+        }
+
+        /* ========================================================================= */
+        /* TAB 5: SETTINGS & SAMSUNG TIZEN DEPLOYMENT                                */
+        /* ========================================================================= */
+        .settings-card {
+            background: var(--bg-card);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 22px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .settings-card h3 {
+            font-size: 13px;
+            color: var(--accent);
+            margin-bottom: 12px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            font-family: var(--font-display);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            padding: 7px 0;
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .info-row span:first-child {
+            color: var(--label-2);
+        }
+
+        .info-row span:last-child {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* ========================================================================= */
+        /* STRAND LIQUID GLASS BOTTOM DOCK (Chuẩn phong cách TV Play Strand Image 3) */
+        /* ========================================================================= */
+        .strand-dock-container {
+            position: fixed;
+            bottom: calc(env(safe-area-inset-bottom, 8px) + 8px);
+            left: 12px;
+            right: 12px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+            z-index: 90;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .strand-liquid-dock {
+            pointer-events: auto;
+            flex: 1 1 auto;
+            height: 62px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 100%), rgba(20, 20, 26, 0.88);
+            backdrop-filter: blur(40px) saturate(210%);
+            -webkit-backdrop-filter: blur(40px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-top: 1px solid rgba(255, 255, 255, 0.45);
+            box-shadow: 
+                inset 0 1px 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4),
+                0 16px 44px -8px rgba(0, 0, 0, 0.85),
+                0 0 24px 0 rgba(255, 101, 0, 0.2);
+            border-radius: 32px;
+            padding: 4px 6px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .dock-tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1 1 0%;
+            height: 100%;
+            padding: 4px 6px;
+            border-radius: 24px;
+            color: var(--label-2);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            outline: none;
+            gap: 3px;
+        }
+
+        .dock-tab svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            transition: transform 0.15s, color 0.15s;
+        }
+
+        .dock-tab span {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .dock-tab:hover {
+            color: #ffffff;
+        }
+
+        .dock-tab.active {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.16);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .dock-tab.active svg {
+            color: var(--accent);
+            filter: drop-shadow(0 0 8px var(--accent-glow));
+            transform: scale(1.08);
+        }
+
+        .dock-tab.active span {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        /* Floating Toast */
+        #toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(24, 24, 30, 0.94);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 0.5px solid var(--accent);
+            color: #ffffff;
+            padding: 8px 18px;
+            border-radius: 24px;
+            font-size: 12px;
+            font-weight: 700;
+            z-index: 200;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 101, 0, 0.25);
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(4px);
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="brand-title">
-            <span>📺</span>
-            <span>TV <span class="brand-orange">PLAY</span> REMOTE</span>
-        </div>
-        <div id="tvStatusBadge" class="tv-status-badge status-disconnected">
-            <span class="status-dot"></span>
-            <span id="tvStatusText">Chờ TV kết nối...</span>
+    <!-- Ambient Dynamic Glow (Strand Backdrop Lighting) -->
+    <div class="ambient-glow"></div>
+
+    <!-- 1. Sticky Strand Header -->
+    <header class="app-header-sticky">
+        <div class="header-inner">
+            <div class="brand-title">
+                <div class="brand-logo-box">
+                    <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+                </div>
+                <div>
+                    <div class="brand-name">TV Play</div>
+                    <div class="brand-sub">Web Remote</div>
+                </div>
+            </div>
+            <div id="tvStatusBadge" class="tv-status-badge status-disconnected">
+                <span class="status-dot"></span>
+                <span id="tvStatusText">Chờ TV kết nối...</span>
+            </div>
         </div>
     </header>
 
-    <div class="now-playing-banner">
-        <div class="now-playing-left">
-            <span class="ch-badge">ĐANG PHÁT</span>
-            <span id="bannerChName" class="ch-name">Chưa có luồng phát</span>
+    <!-- 2. Now Playing Mini-Hero Card -->
+    <div class="now-playing-wrap">
+        <div class="now-playing-card">
+            <div class="now-playing-left">
+                <span class="live-badge">
+                    <span class="status-dot"></span>
+                    <span>ĐANG PHÁT</span>
+                </span>
+                <span id="bannerChName" class="ch-name">Chưa có luồng phát</span>
+            </div>
+            <button class="osd-pill-btn" onclick="sendKey('overlay')">Bật OSD 📺</button>
         </div>
-        <button class="osd-btn" onclick="sendKey('overlay')">Bật OSD 📺</button>
     </div>
 
-    <!-- TAB 1: REMOTE -->
+    <!-- TAB 1: REMOTE CONTROLLER -->
     <div id="tab-remote" class="tab-content active">
         <div class="remote-card">
             <div class="dpad-container">
@@ -535,8 +1626,8 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             </div>
 
             <div class="row-actions">
-                <button class="action-btn btn-mode-toggle" onclick="sendKey('mode_tv')">📺 Xem TV</button>
-                <button class="action-btn btn-mode-toggle" onclick="sendKey('mode_sports')">⚽ Trực tiếp Thể Thao</button>
+                <button class="action-btn btn-mode-tv" onclick="sendKey('mode_tv')">📺 Xem TV</button>
+                <button class="action-btn btn-mode-sports" onclick="sendKey('mode_sports')">⚽ Trực tiếp Thể Thao</button>
             </div>
 
             <div class="keypad-grid">
@@ -559,17 +1650,30 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
     <!-- TAB 2: KÊNH TV -->
     <div id="tab-channels" class="tab-content">
         <div id="catPills" class="cat-pills-wrap"></div>
-        <input type="text" id="channelSearch" class="search-box" placeholder="🔍 Tìm kiếm kênh truyền hình..." oninput="filterChannels()">
-        <div id="channelsContainer" class="channels-list">Đang tải danh sách kênh...</div>
+        <div class="search-wrap">
+            <svg class="search-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="channelSearch" class="search-box" placeholder="Tìm kiếm kênh truyền hình (VTV, K+, HBO...)" oninput="filterChannels()">
+        </div>
+        <div id="channelsContainer" class="channels-list">Đang nạp danh sách kênh...</div>
     </div>
 
     <!-- TAB 3: THỂ THAO -->
     <div id="tab-sports" class="tab-content">
         <div class="sports-header">
-            <span style="font-size:14px; font-weight:700;">🔥 LỊCH ĐẤU TRỰC TIẾP HÔM NAY</span>
-            <button class="refresh-btn" onclick="loadSports()">🔄 Làm mới</button>
+            <div class="sports-section-title">
+                <span class="status-dot" style="background:var(--green); box-shadow:0 0 8px var(--green);"></span>
+                <span>Lịch Đấu Trực Tiếp Hôm Nay</span>
+            </div>
+            <button class="refresh-btn" onclick="loadSports()">
+                <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Tải lại</span>
+            </button>
         </div>
-        <div id="sportsContainer">Đang tải dữ liệu thể thao...</div>
+        <div id="sportsContainer">Đang nạp dữ liệu thể thao...</div>
     </div>
 
     <!-- TAB 4: DANH SÁCH PHÁT (PLAYLISTS) -->
@@ -578,22 +1682,22 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             <h3>🔗 Dán Link M3U Mới Từ Điện Thoại</h3>
             <div class="form-group">
                 <label>Tên danh sách</label>
-                <input type="text" id="newPlName" class="form-input" placeholder="Ví dụ: Kênh Thể Thao, Kênh Nước Ngoài...">
+                <input type="text" id="newPlName" class="form-input" placeholder="Ví dụ: Kênh Thể Thao, Kênh Quốc Tế...">
             </div>
             <div class="form-group">
                 <label>Đường link URL (M3U / M3U8)</label>
                 <input type="url" id="newPlUrl" class="form-input" placeholder="http://... hoặc https://...">
             </div>
-            <div style="margin-top:8px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+            <div style="margin-top:10px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="newPlSelectNow" checked style="width:18px; height:18px; accent-color:#FF6500; cursor:pointer;">
-                <label for="newPlSelectNow" style="font-size:13px; color:var(--text-main); cursor:pointer;">Kích hoạt phát danh sách này ngay trên TV</label>
+                <label for="newPlSelectNow" style="font-size:12px; color:var(--label); cursor:pointer;">Kích hoạt phát danh sách này ngay trên TV</label>
             </div>
             <button class="submit-btn" onclick="addNewPlaylist()">+ Thêm &amp; Lưu Vào TV</button>
         </div>
 
         <div class="form-card">
             <h3>📂 Tải File M3U Từ Điện Thoại Lên TV</h3>
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.4;">Truyền file M3U/M3U8 từ bộ nhớ điện thoại hoặc máy tính sang TV qua Wi-Fi.</p>
+            <p style="font-size:12px; color:var(--label-2); margin-bottom:12px; line-height:1.4;">Truyền file M3U/M3U8 từ bộ nhớ điện thoại hoặc máy tính sang TV qua Wi-Fi.</p>
             <div class="form-group">
                 <label>Tên danh sách (tùy chọn)</label>
                 <input type="text" id="uploadPlName" class="form-input" placeholder="Để trống sẽ lấy theo tên file">
@@ -602,23 +1706,23 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
                 <label>Chọn file (.m3u, .m3u8, .txt)</label>
                 <input type="file" id="fileLocalM3u" accept=".m3u,.m3u8,.txt" class="form-input" style="padding:8px;">
             </div>
-            <div style="margin-top:8px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+            <div style="margin-top:10px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="uploadPlSelectNow" checked style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;">
-                <label for="uploadPlSelectNow" style="font-size:13px; color:var(--text-main); cursor:pointer;">Kích hoạt phát danh sách này ngay trên TV</label>
+                <label for="uploadPlSelectNow" style="font-size:12px; color:var(--label); cursor:pointer;">Kích hoạt phát danh sách này ngay trên TV</label>
             </div>
-            <button class="submit-btn" style="background:#10b981;" onclick="uploadLocalPlaylist()">⬆ Tải File Lên TV</button>
+            <button class="submit-btn" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow:0 6px 20px rgba(16, 185, 129, 0.3);" onclick="uploadLocalPlaylist()">⬆ Tải File Lên TV</button>
         </div>
 
-        <h3 style="font-size:14px; margin: 18px 0 10px; color:var(--accent); font-weight:700;">📑 Danh Sách Playlist Đã Có:</h3>
+        <h3 style="font-size:13px; margin: 18px 0 10px; color:var(--accent); font-weight:800; letter-spacing:0.04em;">📑 DANH SÁCH PLAYLIST ĐÃ CÓ:</h3>
         <div id="playlistsContainer">Đang tải danh sách playlist...</div>
     </div>
 
-    <!-- TAB 5: CÀI ĐẶT -->
+    <!-- TAB 5: CÀI ĐẶT & TIZEN -->
     <div id="tab-settings" class="tab-content">
         <!-- SAMSUNG TIZEN DEPLOYMENT CARD -->
-        <div class="settings-card" style="border:1px solid #FF6500; background:linear-gradient(180deg, #18152c 0%, #161526 100%);">
+        <div class="settings-card" style="border: 0.5px solid rgba(255, 101, 0, 0.4); border-top: 1px solid rgba(255, 150, 50, 0.6); background: linear-gradient(180deg, rgba(35, 20, 16, 0.7) 0%, rgba(20, 20, 26, 0.85) 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin-bottom:0; display:flex; align-items:center; gap:6px; color:#FF6500; font-size:15px;">
+                <h3 style="margin-bottom:0; display:flex; align-items:center; gap:6px; color:var(--accent); font-size:14px;">
                     <span>📺</span> SAMSUNG TIZEN TV (.WGT)
                 </h3>
                 <span id="tizenStatusBadge" class="tv-status-badge status-disconnected">
@@ -627,12 +1731,12 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
                 </span>
             </div>
 
-            <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.4;">
+            <p style="font-size:12px; color:var(--label-2); margin-bottom:12px; line-height:1.4;">
                 Cài đặt trực tiếp file <code>TVplay.wgt</code> từ máy chủ Armbian lên Samsung TV qua mạng LAN (cài ngầm 100%, không làm gián đoạn người đang xem YouTube trên TV).
             </p>
 
             <div class="form-group" style="margin-bottom:10px;">
-                <label style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:4px; font-weight:600;">Địa chỉ IP Samsung TV</label>
+                <label style="font-size:12px; color:var(--label-2); display:block; margin-bottom:4px; font-weight:600;">Địa chỉ IP Samsung TV</label>
                 <input type="text" id="tizenTvIp" class="form-input" value="10.0.0.9" placeholder="10.0.0.9">
             </div>
 
@@ -642,27 +1746,27 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             </div>
 
             <div class="row-actions" style="margin-top:12px; gap:8px;">
-                <button class="action-btn" style="background:#1e293b; border-color:#64748b;" onclick="checkTizenTv()">
+                <button class="action-btn" style="background:rgba(255,255,255,0.08);" onclick="checkTizenTv()">
                     🔍 Kiểm Tra TV
                 </button>
-                <button class="action-btn" style="background:#FF6500; border-color:#FF8533; font-weight:800;" onclick="installTizenWgt()">
+                <button class="action-btn" style="background:linear-gradient(135deg, #ff6500 0%, #ff8800 100%); border-color:rgba(255,255,255,0.3); color:#fff; font-weight:800; box-shadow:0 4px 16px rgba(255,101,0,0.35);" onclick="installTizenWgt()">
                     📦 Cài Đặt .wgt Lên TV
                 </button>
             </div>
 
             <div class="row-actions" style="margin-top:8px;">
-                <button class="action-btn" style="background:#241e3d; border-color:#6366f1; color:#a5b4fc;" onclick="launchTizenApp()">
+                <button class="action-btn btn-mode-tv" onclick="launchTizenApp()">
                     🚀 Mở App TV Play Trên TV
                 </button>
             </div>
 
             <!-- Upload Custom .wgt -->
-            <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--card-border);">
-                <label style="font-size:12px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">
+            <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.12);">
+                <label style="font-size:12px; font-weight:700; color:var(--label); display:block; margin-bottom:6px;">
                     📂 Tải file .wgt mới từ điện thoại / máy tính:
                 </label>
                 <input type="file" id="tizenWgtUploadFile" accept=".wgt" class="form-input" style="padding:6px; font-size:12px;">
-                <button class="submit-btn" style="margin-top:8px; padding:10px; background:#10b981; font-size:13px;" onclick="uploadTizenWgt()">
+                <button class="submit-btn" style="margin-top:8px; padding:10px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); font-size:12px;" onclick="uploadTizenWgt()">
                     ⬆ Tải Lên &amp; Cài Đặt Ngay
                 </button>
             </div>
@@ -670,10 +1774,10 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             <!-- Deployment Log / Status Output -->
             <div id="tizenLogWrap" style="margin-top:12px; display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="font-size:11px; font-weight:700; color:var(--text-sub);">TIẾN TRÌNH &amp; NHẬT KÝ CLI:</span>
-                    <button style="background:none; border:none; color:var(--text-sub); font-size:11px; cursor:pointer;" onclick="toggleTizenLog()">Ẩn/Hiện</button>
+                    <span style="font-size:11px; font-weight:700; color:var(--label-2);">TIẾN TRÌNH &amp; NHẬT KÝ CLI:</span>
+                    <button style="background:none; border:none; color:var(--label-3); font-size:11px; cursor:pointer;" onclick="toggleTizenLog()">Ẩn/Hiện</button>
                 </div>
-                <pre id="tizenLogBox" style="background:#090814; border:1px solid var(--card-border); border-radius:8px; padding:10px; font-size:11px; color:#10b981; max-height:160px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; font-family:monospace;"></pre>
+                <pre id="tizenLogBox" style="background:#000000; border:0.5px solid rgba(255,255,255,0.14); border-radius:12px; padding:10px; font-size:11px; color:#30d158; max-height:160px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; font-family:monospace;"></pre>
             </div>
         </div>
 
@@ -693,30 +1797,33 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION -->
-    <div class="bottom-nav">
-        <button class="nav-btn active" onclick="switchTab('remote')">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/></svg>
-            <span>Điều Khiển</span>
-        </button>
-        <button class="nav-btn" onclick="switchTab('channels')">
-            <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
-            <span>Kênh TV</span>
-        </button>
-        <button class="nav-btn" onclick="switchTab('sports')">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-            <span>Thể Thao</span>
-        </button>
-        <button class="nav-btn" onclick="switchTab('playlists')">
-            <svg viewBox="0 0 24 24"><path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z"/></svg>
-            <span>Danh Sách</span>
-        </button>
-        <button class="nav-btn" onclick="switchTab('settings')">
-            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-            <span>Cài Đặt</span>
-        </button>
+    <!-- STRAND LIQUID GLASS BOTTOM DOCK (Signature Floating Capsule) -->
+    <div class="strand-dock-container">
+        <nav class="strand-liquid-dock">
+            <button class="dock-tab active" onclick="switchTab('remote')">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/></svg>
+                <span>Điều Khiển</span>
+            </button>
+            <button class="dock-tab" onclick="switchTab('channels')">
+                <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+                <span>Kênh TV</span>
+            </button>
+            <button class="dock-tab" onclick="switchTab('sports')">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                <span>Thể Thao</span>
+            </button>
+            <button class="dock-tab" onclick="switchTab('playlists')">
+                <svg viewBox="0 0 24 24"><path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z"/></svg>
+                <span>Danh Sách</span>
+            </button>
+            <button class="dock-tab" onclick="switchTab('settings')">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                <span>Cài Đặt</span>
+            </button>
+        </nav>
     </div>
 
+    <!-- Toast Notification -->
     <div id="toast"></div>
 
     <script>
@@ -726,24 +1833,25 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 
         function showToast(msg) {
             var t = document.getElementById('toast');
+            if (!t) return;
             t.textContent = msg;
             t.classList.add('show');
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2000);
+            toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2200);
         }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
-            document.querySelectorAll('.nav-btn').forEach(function(el) { el.classList.remove('active'); });
+            document.querySelectorAll('.dock-tab').forEach(function(el) { el.classList.remove('active'); });
             var targetTab = document.getElementById('tab-' + tabId);
             if (targetTab) targetTab.classList.add('active');
             
-            var btns = document.querySelectorAll('.nav-btn');
-            if (tabId === 'remote') btns[0].classList.add('active');
-            if (tabId === 'channels') { btns[1].classList.add('active'); if (!allChannels.length) loadChannels(); }
-            if (tabId === 'sports') { btns[2].classList.add('active'); loadSports(); }
-            if (tabId === 'playlists') { btns[3].classList.add('active'); loadPlaylists(); }
-            if (tabId === 'settings') { btns[4].classList.add('active'); loadTizenStatus(); }
+            var btns = document.querySelectorAll('.dock-tab');
+            if (tabId === 'remote' && btns[0]) btns[0].classList.add('active');
+            if (tabId === 'channels' && btns[1]) { btns[1].classList.add('active'); if (!allChannels.length) loadChannels(); }
+            if (tabId === 'sports' && btns[2]) { btns[2].classList.add('active'); loadSports(); }
+            if (tabId === 'playlists' && btns[3]) { btns[3].classList.add('active'); loadPlaylists(); }
+            if (tabId === 'settings' && btns[4]) { btns[4].classList.add('active'); loadTizenStatus(); }
         }
 
         /* PLAYLIST FUNCTIONS */
@@ -751,13 +1859,13 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 
         function loadPlaylists() {
             var container = document.getElementById('playlistsContainer');
-            container.innerHTML = '<div style="color:var(--text-sub); padding:10px;">Đang tải...</div>';
+            container.innerHTML = '<div style="color:var(--label-2); padding:10px;">Đang nạp danh sách...</div>';
             fetch('/api/playlists?t=' + Date.now())
             .then(function(res) { return res.json(); })
             .then(function(list) {
                 currentPlaylists = list || [];
                 if (!list || list.length === 0) {
-                    container.innerHTML = '<div style="color:var(--text-sub); padding:12px;">Chưa có playlist nào.</div>';
+                    container.innerHTML = '<div style="color:var(--label-2); padding:12px;">Chưa có playlist nào.</div>';
                     return;
                 }
                 var html = '';
@@ -932,7 +2040,7 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(ch)
             }).then(function(res) { return res.json(); }).then(function(d) {
-                showToast('Phát kênh: ' + ch.name);
+                showToast('Phát: ' + ch.name);
                 document.getElementById('bannerChName').textContent = '[' + ch.number + '] ' + ch.name;
             }).catch(function(e) {
                 showToast('Lỗi phát kênh');
@@ -959,13 +2067,13 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 
         function loadChannels() {
             var container = document.getElementById('channelsContainer');
-            container.innerHTML = 'Đang tải danh sách kênh...';
+            container.innerHTML = '<div style="color:var(--label-2); padding:16px; text-align:center;">Đang nạp danh sách kênh...</div>';
             fetch('/api/channels').then(function(res) { return res.json(); }).then(function(channels) {
                 allChannels = channels;
                 buildCategories();
                 renderChannels();
             }).catch(function(e) {
-                container.innerHTML = '<div style="color:var(--red); padding:10px;">Lỗi nạp kênh từ Armbian</div>';
+                container.innerHTML = '<div style="color:var(--red); padding:16px; text-align:center;">Lỗi nạp kênh từ Armbian Hub</div>';
             });
         }
 
@@ -1012,20 +2120,23 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             currentFilteredChannels = list;
             var container = document.getElementById('channelsContainer');
             if (!list.length) {
-                container.innerHTML = '<div style="color:var(--text-sub); padding:16px; text-align:center;">Không tìm thấy kênh phù hợp</div>';
+                container.innerHTML = '<div style="color:var(--label-3); padding:24px; text-align:center;">Không tìm thấy kênh phù hợp</div>';
                 return;
             }
             var html = '';
             list.forEach(function(ch, idx) {
+                var numStr = ch.number < 10 ? '0' + ch.number : ch.number;
                 html += '<div class="channel-row" onclick="onChannelClick(' + idx + ')">' +
                     '<div class="channel-left">' +
-                        '<span class="ch-num">' + (ch.number < 10 ? '0' + ch.number : ch.number) + '</span>' +
-                        '<div>' +
+                        '<div class="ch-logo-box">' +
+                            '<span class="ch-num">' + numStr + '</span>' +
+                        '</div>' +
+                        '<div style="overflow:hidden; flex:1;">' +
                             '<div class="ch-title">' + (ch.name || '') + '</div>' +
-                            '<div class="ch-group">' + (ch.groupTitle || 'Kênh TV') + '</div>' +
+                            '<span class="ch-group">' + (ch.groupTitle || 'Kênh TV') + '</span>' +
                         '</div>' +
                     '</div>' +
-                    '<span style="color:var(--accent); font-size:12px; font-weight:700;">PHÁT ▶</span>' +
+                    '<button class="btn-play-pill">Phát ▶</button>' +
                 '</div>';
             });
             container.innerHTML = html;
@@ -1036,6 +2147,7 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
                 playChannel(currentFilteredChannels[idx]);
             }
         }
+
         function toggleMatchSources(counter) {
             var box = document.getElementById('match-sources-' + counter);
             if (box) {
@@ -1045,11 +2157,11 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 
         function loadSports() {
             var container = document.getElementById('sportsContainer');
-            container.innerHTML = 'Đang tải dữ liệu thể thao...';
+            container.innerHTML = '<div style="color:var(--label-2); padding:16px; text-align:center;">Đang nạp dữ liệu thể thao...</div>';
             fetch('/api/sports/categories').then(function(res) { return res.json(); }).then(function(data) {
                 renderSports(data);
             }).catch(function(e) {
-                container.innerHTML = '<div style="color:var(--red); padding:10px;">Lỗi tải dữ liệu thể thao</div>';
+                container.innerHTML = '<div style="color:var(--red); padding:16px; text-align:center;">Lỗi nạp dữ liệu thể thao</div>';
             });
         }
 
@@ -1060,34 +2172,60 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             var categories = data.categories || [];
             currentSportsCategories = categories;
             if (!categories.length) {
-                container.innerHTML = '<div style="color:var(--text-sub); padding:16px; text-align:center;">Hiện chưa có lịch trận đấu thể thao trực tiếp</div>';
+                container.innerHTML = '<div style="color:var(--label-3); padding:24px; text-align:center;">Hiện chưa có lịch trận đấu thể thao trực tiếp</div>';
                 return;
             }
             var html = '';
             var boxCounter = 0;
             categories.forEach(function(cat, catIdx) {
                 var isLive = (cat.name || '').toUpperCase().indexOf('LIVE EVENTS') !== -1;
-                html += '<div style="margin: 14px 0 8px; font-size:13px; font-weight:800; color:' + (isLive ? 'var(--red)' : 'var(--accent)') + ';">' + cat.name + '</div>';
+                html += '<div style="margin: 16px 0 10px; font-size:12px; font-weight:800; letter-spacing:0.04em; color:' + (isLive ? 'var(--red)' : 'var(--accent)') + '; font-family:var(--font-display);">' + cat.name + '</div>';
                 
                 (cat.matches || []).forEach(function(m, matchIdx) {
                     boxCounter++;
                     var sources = m.sources || [];
+                    
+                    // Parse teams
+                    var fullTitle = m.title || '';
+                    var homeTeam = fullTitle;
+                    var awayTeam = '';
+                    var vsSplit = fullTitle.split(/\s+vs\s+/i);
+                    if (vsSplit.length > 1) {
+                        homeTeam = vsSplit[0].trim();
+                        awayTeam = vsSplit[1].trim();
+                    }
+                    var homeInitial = homeTeam.substring(0, 3).toUpperCase();
+                    var awayInitial = awayTeam ? awayTeam.substring(0, 3).toUpperCase() : '';
+
                     html += '<div class="match-card">' +
-                        '<div class="match-header" onclick="toggleMatchSources(' + boxCounter + ')">' +
-                            '<div class="match-title">' + m.title + '</div>' +
-                            '<div class="match-time-badge ' + (m.isOngoing ? 'badge-live' : '') + '">' +
-                                (m.isOngoing ? '● TRỰC TIẾP' : (m.time || 'Sắp đá')) +
+                        '<div onclick="toggleMatchSources(' + boxCounter + ')">' +
+                            '<div class="match-top-row">' +
+                                '<span class="match-league">⚽ BÓNG ĐÁ TRỰC TIẾP</span>' +
+                                '<div class="match-badges-right">' +
+                                    (m.time ? '<span class="time-pill">⏰ ' + m.time + '</span>' : '') +
+                                    '<span class="' + (m.isOngoing ? 'live-tag' : 'time-pill') + '">' +
+                                        (m.isOngoing ? '<span class="status-dot"></span> LIVE' : 'Sắp đấu') +
+                                    '</span>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="match-teams-row">' +
+                                '<div class="team-box">' +
+                                    '<div class="team-avatar">' + homeInitial + '</div>' +
+                                    '<span class="team-name">' + homeTeam + '</span>' +
+                                '</div>' +
+                                (awayTeam ? '<span class="vs-pill">VS</span>' : '') +
+                                (awayTeam ? '<div class="team-box away"><div class="team-avatar">' + awayInitial + '</div><span class="team-name">' + awayTeam + '</span></div>' : '') +
                             '</div>' +
                         '</div>' +
                         '<div id="match-sources-' + boxCounter + '" class="sources-box">';
                     
                     if (!sources.length) {
-                        html += '<div style="font-size:12px; color:var(--text-sub); padding:6px 0;">Chưa cập nhật luồng phát</div>';
+                        html += '<div style="font-size:12px; color:var(--label-3); padding:8px 0; text-align:center;">Chưa cập nhật luồng phát</div>';
                     } else {
                         sources.forEach(function(s, srcIdx) {
                             html += '<button class="source-item" onclick="onSportsSourceClick(' + catIdx + ',' + matchIdx + ',' + srcIdx + ')">' +
                                 '<span>📺 ' + s.name + '</span>' +
-                                '<span style="color:var(--accent);">Chọn ▶</span>' +
+                                '<span style="color:var(--accent); font-weight:700;">Chọn ▶</span>' +
                             '</button>';
                         });
                     }
@@ -1118,20 +2256,20 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 
                 if (data.tvConnected) {
                     badge.className = 'tv-status-badge status-connected';
-                    text.textContent = 'TV: Đã kết nối (' + (data.clientType || 'Tizen') + ')';
-                    infoType.textContent = data.clientType || 'Samsung Tizen';
+                    text.textContent = 'TV: ' + (data.clientType || 'Đã kết nối');
+                    if (infoType) infoType.textContent = data.clientType || 'Samsung Tizen';
                 } else {
                     badge.className = 'tv-status-badge status-disconnected';
                     text.textContent = 'Chờ TV kết nối...';
-                    infoType.textContent = 'Chưa kết nối';
+                    if (infoType) infoType.textContent = 'Chưa kết nối';
                 }
 
                 if (data.nowPlaying) {
                     banner.textContent = data.nowPlaying;
-                    infoCh.textContent = data.nowPlaying;
+                    if (infoCh) infoCh.textContent = data.nowPlaying;
                 }
                 if (data.currentMode) {
-                    infoMode.textContent = data.currentMode.toUpperCase();
+                    if (infoMode) infoMode.textContent = data.currentMode.toUpperCase();
                 }
             }).catch(function(e) {});
         }
@@ -1322,6 +2460,42 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             }
         }
 
+        function initSSE() {
+            if (!window.EventSource) return;
+            try {
+                var es = new EventSource('/events');
+                es.addEventListener('tv_state_update', function(e) {
+                    try {
+                        var data = JSON.parse(e.data);
+                        var badge = document.getElementById('tvStatusBadge');
+                        var text = document.getElementById('tvStatusText');
+                        var banner = document.getElementById('bannerChName');
+                        var infoType = document.getElementById('infoTvType');
+                        var infoCh = document.getElementById('infoTvChannel');
+                        var infoMode = document.getElementById('infoTvMode');
+
+                        if (badge && text) {
+                            badge.className = 'tv-status-badge status-connected';
+                            text.textContent = 'TV: ' + (data.clientType || 'Đã kết nối');
+                        }
+                        if (infoType) infoType.textContent = data.clientType || 'Samsung Tizen';
+
+                        if (data.nowPlaying) {
+                            if (banner) banner.textContent = data.nowPlaying;
+                            if (infoCh) infoCh.textContent = data.nowPlaying;
+                        }
+                        if (data.currentMode && infoMode) {
+                            infoMode.textContent = data.currentMode.toUpperCase();
+                        }
+                    } catch(err) {}
+                });
+                es.onerror = function() {
+                    // Reconnects automatically by browser
+                };
+            } catch(e) {}
+        }
+
+        initSSE();
         checkTvStatus();
         setInterval(checkTvStatus, 3000);
     </script>
