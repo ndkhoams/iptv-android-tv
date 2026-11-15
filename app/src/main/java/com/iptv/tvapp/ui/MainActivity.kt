@@ -347,7 +347,7 @@ class MainActivity : AppCompatActivity() {
             },
             matchGroupProvider = { key -> playlistManager.sportsLiveManager.getMatch(key) }
         ).apply {
-            channelMatchFinder = { ch -> playlistManager.sportsLiveManager.findMatchForChannel(ch) }
+            channelMatchFinder = { ch -> playlistManager.sportsLiveManager.findFastMatchForChannel(ch) }
         }
         val channelViewPool = RecyclerView.RecycledViewPool().apply {
             setMaxRecycledViews(0, 25)
@@ -3309,6 +3309,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyUpdatedSportsCategories(sportsCategories: List<Category>) {
+        channelAdapter.clearCardInfoCache()
         sportsCategoriesList.clear()
         sportsCategoriesList.addAll(sportsCategories)
 

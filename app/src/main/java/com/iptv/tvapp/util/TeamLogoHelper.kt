@@ -82,6 +82,9 @@ object TeamLogoHelper {
         "napoli" to "https://a.espncdn.com/i/teamlogos/soccer/500/114.png"
     )
 
+    private val logoUrlCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val initialCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     fun normalize(str: String?): String {
         if (str.isNullOrBlank()) return ""
         val nfd = Normalizer.normalize(str, Normalizer.Form.NFD)
@@ -94,24 +97,37 @@ object TeamLogoHelper {
 
     fun getInitial(name: String?): String {
         if (name.isNullOrBlank()) return "CLB"
+        initialCache[name]?.let { return it }
         val words = name.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-        return when {
+        val res = when {
             words.size >= 3 -> "${words[0].first()}${words[1].first()}${words[2].first()}".uppercase(Locale.ROOT)
             words.size == 2 -> "${words[0].first()}${words[1].take(2)}".uppercase(Locale.ROOT)
             else -> name.take(3).uppercase(Locale.ROOT)
         }
+        initialCache[name] = res
+        return res
     }
 
     fun getTeamLogoUrl(teamName: String, directLogo: String? = null): String? {
         if (!directLogo.isNullOrBlank() && directLogo.startsWith("http")) {
             return directLogo
         }
+        val cached = logoUrlCache[teamName]
+        if (cached != null) {
+            return if (cached.isEmpty()) null else cached
+        }
 
         val norm = normalize(teamName)
-        if (norm.isBlank()) return null
+        if (norm.isBlank()) {
+            logoUrlCache[teamName] = ""
+            return null
+        }
 
         // 1. Kiểm tra Premapped Club logos
-        CLUB_LOGOS[norm]?.let { return it }
+        CLUB_LOGOS[norm]?.let {
+            logoUrlCache[teamName] = it
+            return it
+        }
 
         // 2. Kiểm tra Country Flags
         val flagCode = COUNTRY_FLAGS[norm] ?: COUNTRY_FLAGS.entries.firstOrNull {
@@ -119,9 +135,12 @@ object TeamLogoHelper {
         }?.value
 
         if (!flagCode.isNullOrBlank()) {
-            return "https://flagcdn.com/w80/$flagCode.png"
+            val url = "https://flagcdn.com/w80/$flagCode.png"
+            logoUrlCache[teamName] = url
+            return url
         }
 
+        logoUrlCache[teamName] = ""
         return null
     }
 }

@@ -107,29 +107,26 @@ class SportsLiveManager(private val context: Context) {
         return null
     }
 
+    fun findFastMatchForChannel(channel: Channel?): MatchGroup? = Companion.findFastMatchForChannel(channel)
+
     fun findMatchForChannel(channel: Channel?): MatchGroup? {
         if (channel == null) return null
         if (channel.id == ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return null
 
-        // 0. Tra cứu trực tiếp theo sourceId O(1)
-        sourceIdToMatchMap[channel.id]?.let { cachedMg ->
-            return cachedMg
+        // 0. Tra cứu nhanh O(1) qua bản đồ bộ nhớ đệm
+        findFastMatchForChannel(channel)?.let { return it }
+
+        if (unmatchedChannelIds.contains(channel.id)) return null
+
+        // 1. Tra cứu thông minh theo URL luồng (xử lý triệt để đài/BLV dùng chung 1 URL cho nhiều trận khác giờ)
+        findMatchByUrl(channel.streamUrl, channel.name)?.let {
+            sourceIdToMatchMap[channel.id] = it
+            return it
         }
-
-        // 1. match:// URI
-        if (channel.streamUrl.startsWith("match://")) {
-            val key = channel.streamUrl.removePrefix("match://")
-            getMatch(key)?.let { return it }
-        }
-
-        // 2. Tra cứu theo key hoặc tên trong matchGroupsMap
-        getMatch(channel.name)?.let { return it }
-
-        // 3. Tra cứu thông minh theo URL luồng (xử lý triệt để đài/BLV dùng chung 1 URL cho nhiều trận khác giờ)
-        findMatchByUrl(channel.streamUrl, channel.name)?.let { return it }
 
         // Bỏ qua nếu là kênh TV thông thường không có vs hoặc ký hiệu thể thao
         if (!isEligibleSportsMatch(channel.name, channel.groupTitle) && !channel.name.contains("vs", ignoreCase = true)) {
+            unmatchedChannelIds.add(channel.id)
             return null
         }
 
@@ -223,6 +220,7 @@ class SportsLiveManager(private val context: Context) {
             }
         }
 
+        unmatchedChannelIds.add(channel.id)
         return null
     }
 
@@ -379,6 +377,39 @@ class SportsLiveManager(private val context: Context) {
         private val sourceIdToMatchMap = ConcurrentHashMap<String, MatchGroup>()
         private val urlToMatchesMap = ConcurrentHashMap<String, CopyOnWriteArrayList<MatchGroup>>()
         private val urlToClearKeyMap = ConcurrentHashMap<String, Pair<String, String>>()
+        private val unmatchedChannelIds = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+        private val detectLeagueCache = ConcurrentHashMap<String, String>()
+
+        fun findFastMatchForChannel(channel: Channel?): MatchGroup? {
+            if (channel == null) return null
+            if (channel.id == ACTION_REFRESH_SPORTS || channel.streamUrl.startsWith("action://")) return null
+
+            // 0. Tra cứu trực tiếp theo sourceId O(1)
+            sourceIdToMatchMap[channel.id]?.let { return it }
+
+            // 1. match:// URI O(1)
+            if (channel.streamUrl.startsWith("match://")) {
+                val key = channel.streamUrl.removePrefix("match://")
+                matchGroupsMap[key]?.let { return it }
+                val cleanKey = key.substringAfter("_")
+                for ((k, v) in matchGroupsMap) {
+                    if (k.substringAfter("_") == cleanKey) return v
+                }
+                return null
+            }
+
+            // 2. Tra cứu trực tiếp theo URL luồng O(1)
+            val cleanUrl = channel.streamUrl.substringBefore('|').trim()
+            urlToMatchesMap[cleanUrl]?.firstOrNull()?.let { return it }
+            if (cleanUrl != channel.streamUrl) {
+                urlToMatchesMap[channel.streamUrl]?.firstOrNull()?.let { return it }
+            }
+
+            // 3. Tra cứu trực tiếp theo key hoặc tên trong matchGroupsMap O(1)
+            matchGroupsMap[channel.name]?.let { return it }
+
+            return null
+        }
 
         fun registerClearKey(url: String, keyId: String, key: String) {
             if (url.isNotBlank() && keyId.isNotBlank() && key.isNotBlank()) {
@@ -834,6 +865,14 @@ class SportsLiveManager(private val context: Context) {
          */
         @JvmStatic
         fun detectLeague(text: String, homeTeam: String, awayTeam: String): String {
+            val key = "$text|$homeTeam|$awayTeam"
+            detectLeagueCache[key]?.let { return it }
+            val res = detectLeagueInternal(text, homeTeam, awayTeam)
+            detectLeagueCache[key] = res
+            return res
+        }
+
+        private fun detectLeagueInternal(text: String, homeTeam: String, awayTeam: String): String {
             val t = text.lowercase()
 
             // 1. Kiểm tra các môn thể thao nổi bật được yêu cầu (F1, Tennis Grand Slam/ATP, NBA, Rugby, American Football)
@@ -965,6 +1004,8 @@ class SportsLiveManager(private val context: Context) {
         teamsAndLeagueCache.clear()
         espnFixturesCache.clear()
         lastEspnFetchTimeMs = 0L
+        unmatchedChannelIds.clear()
+        detectLeagueCache.clear()
     }
 
     /**
@@ -1310,9 +1351,33 @@ class SportsLiveManager(private val context: Context) {
                             drmKey = drmK
                         )
                         channels.add(ch)
-                        val matchedMg = newUrlToMatchesMap[cUrl]?.firstOrNull() ?: findMatchByUrl(cUrl, cName)
+                        val cleanUrl = cUrl.substringBefore('|').trim()
+                        var matchedMg = newUrlToMatchesMap[cUrl]?.firstOrNull()
+                            ?: newUrlToMatchesMap[cleanUrl]?.firstOrNull()
+                            ?: newMatchGroupsMap[cName]
+
+                        if (matchedMg == null) {
+                            val (h, a, _) = extractTeamsAndLeague(cName)
+                            val cH = canonicalizeTeam(h)
+                            val cA = canonicalizeTeam(a)
+                            if (cH.length >= 3 && cA.length >= 3) {
+                                matchedMg = newMatchGroupsMap.values.firstOrNull { mg ->
+                                    val mgH = canonicalizeTeam(mg.homeTeam)
+                                    val mgA = canonicalizeTeam(mg.awayTeam)
+                                    isMatchBetweenTeams(cH, cA, mgH, mgA)
+                                }
+                            }
+                        }
+
                         if (matchedMg != null) {
                             newSourceIdToMatchMap[ch.id] = matchedMg
+                            localAddUrlMapping(cUrl, matchedMg)
+                            if (cleanUrl != cUrl) {
+                                localAddUrlMapping(cleanUrl, matchedMg)
+                            }
+                            if (matchedMg.sources.none { it.streamUrl == ch.streamUrl }) {
+                                matchedMg.sources.add(ch)
+                            }
                         }
                     }
                 }
@@ -1331,6 +1396,8 @@ class SportsLiveManager(private val context: Context) {
         urlToMatchesMap.putAll(newUrlToMatchesMap)
         urlToClearKeyMap.clear()
         urlToClearKeyMap.putAll(newUrlToClearKeyMap)
+        unmatchedChannelIds.clear()
+        detectLeagueCache.clear()
 
         return categories
     }
