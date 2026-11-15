@@ -263,6 +263,7 @@ def get_sports():
 # Samsung Tizen TV Configuration & Deployment
 TIZEN_CLI_PATH = "/opt/samsung/apps2samsung-cli"
 TIZEN_WGT_PATH = "/opt/samsung/TVplay.wgt"
+TIZEN_UPLOADS_DIR = "/opt/samsung/uploads"
 DEFAULT_TIZEN_IP = "10.0.0.9"
 
 tizen_state_lock = Lock()
@@ -278,19 +279,74 @@ tizen_deploy_state = {
     "wgtMtime": 0
 }
 
+def get_available_wgts():
+    wgts = []
+    # 1. Check default TVplay.wgt
+    if os.path.exists(TIZEN_WGT_PATH):
+        sz = os.path.getsize(TIZEN_WGT_PATH)
+        mtime = int(os.path.getmtime(TIZEN_WGT_PATH))
+        wgts.append({
+            "name": "TVplay.wgt",
+            "path": TIZEN_WGT_PATH,
+            "size": sz,
+            "sizeStr": f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB",
+            "mtime": mtime,
+            "isDefault": True,
+            "tag": "Bản chuẩn máy chủ"
+        })
+    # 2. Scan /opt/samsung/ for other .wgt files
+    samsung_dir = os.path.dirname(TIZEN_WGT_PATH)
+    if os.path.exists(samsung_dir):
+        for f in sorted(os.listdir(samsung_dir)):
+            if f.endswith(".wgt") and f != "TVplay.wgt":
+                fpath = os.path.join(samsung_dir, f)
+                if os.path.isfile(fpath):
+                    sz = os.path.getsize(fpath)
+                    mtime = int(os.path.getmtime(fpath))
+                    wgts.append({
+                        "name": f,
+                        "path": fpath,
+                        "size": sz,
+                        "sizeStr": f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB",
+                        "mtime": mtime,
+                        "isDefault": False,
+                        "tag": "Gói ứng dụng có sẵn"
+                    })
+    # 3. Scan uploads dir
+    if os.path.exists(TIZEN_UPLOADS_DIR):
+        for f in sorted(os.listdir(TIZEN_UPLOADS_DIR)):
+            if f.endswith(".wgt"):
+                fpath = os.path.join(TIZEN_UPLOADS_DIR, f)
+                if os.path.isfile(fpath):
+                    sz = os.path.getsize(fpath)
+                    mtime = int(os.path.getmtime(fpath))
+                    wgts.append({
+                        "name": f,
+                        "path": fpath,
+                        "size": sz,
+                        "sizeStr": f"{sz / 1024:.1f} KB" if sz < 1024*1024 else f"{sz / (1024*1024):.1f} MB",
+                        "mtime": mtime,
+                        "isDefault": False,
+                        "tag": "Người dùng tải lên"
+                    })
+    return wgts
+
 def get_tizen_status():
     with tizen_state_lock:
         st = dict(tizen_deploy_state)
-    wgt_exists = os.path.exists(TIZEN_WGT_PATH)
-    wgt_size = os.path.getsize(TIZEN_WGT_PATH) if wgt_exists else 0
-    wgt_mtime = int(os.path.getmtime(TIZEN_WGT_PATH)) if wgt_exists else 0
-    st["wgtExists"] = wgt_exists
-    st["wgtSize"] = wgt_size
-    st["wgtMtime"] = wgt_mtime
+    wgts = get_available_wgts()
+    st["wgts"] = wgts
+    st["wgtExists"] = len(wgts) > 0
+    if wgts:
+        st["wgtSize"] = wgts[0]["size"]
+        st["wgtMtime"] = wgts[0]["mtime"]
+        st["defaultWgt"] = wgts[0]["name"]
     return st
 
-def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
+def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP, wgt_path=None):
     def _task():
+        target_wgt = wgt_path if (wgt_path and os.path.exists(wgt_path)) else TIZEN_WGT_PATH
+        wgt_name = os.path.basename(target_wgt)
         with tizen_state_lock:
             tizen_deploy_state["status"] = "running"
             tizen_deploy_state["action"] = action
@@ -300,8 +356,8 @@ def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
                 tizen_deploy_state["message"] = f"Đang kiểm tra TV ({tv_ip})..."
                 tizen_deploy_state["log"] = f"[*] Kiểm tra kết nối tới Samsung TV tại {tv_ip}...\n"
             elif action == "install":
-                tizen_deploy_state["message"] = f"Đang cài đặt TVplay.wgt lên TV ({tv_ip})..."
-                tizen_deploy_state["log"] = f"[*] Bắt đầu ký và cài đặt /opt/samsung/TVplay.wgt lên TV {tv_ip}...\n"
+                tizen_deploy_state["message"] = f"Đang cài đặt {wgt_name} lên TV ({tv_ip})..."
+                tizen_deploy_state["log"] = f"[*] Bắt đầu ký và cài đặt {target_wgt} lên TV {tv_ip}...\n"
             elif action == "launch":
                 tizen_deploy_state["message"] = f"Đang mở app TV Play trên TV ({tv_ip})..."
                 tizen_deploy_state["log"] = f"[*] Gửi lệnh mở ứng dụng TVPlay0001.TVPlay lên TV {tv_ip}...\n"
@@ -312,7 +368,7 @@ def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
             if action == "check":
                 cmd = [TIZEN_CLI_PATH, "tv", tv_ip]
             elif action == "install":
-                cmd = [TIZEN_CLI_PATH, "install", TIZEN_WGT_PATH, "--tv", tv_ip, "--yes"]
+                cmd = [TIZEN_CLI_PATH, "install", target_wgt, "--tv", tv_ip, "--yes"]
             elif action == "launch":
                 cmd = [TIZEN_CLI_PATH, "launch", "TVPlay0001.TVPlay", "--tv", tv_ip]
             else:
@@ -323,7 +379,7 @@ def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                timeout=90
+                timeout=120
             )
             output = proc.stdout or ""
             with tizen_state_lock:
@@ -334,7 +390,7 @@ def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
                     if action == "check":
                         tizen_deploy_state["message"] = f"TV ({tv_ip}) đang BẬT & sẵn sàng nhận lệnh!"
                     elif action == "install":
-                        tizen_deploy_state["message"] = f"Cài đặt TV Play thành công lên TV ({tv_ip})!"
+                        tizen_deploy_state["message"] = f"Cài đặt {wgt_name} thành công lên TV ({tv_ip})!"
                     elif action == "launch":
                         tizen_deploy_state["message"] = f"Đã mở TV Play trên TV ({tv_ip})!"
                 else:
@@ -343,7 +399,7 @@ def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
         except subprocess.TimeoutExpired:
             with tizen_state_lock:
                 tizen_deploy_state["status"] = "error"
-                tizen_deploy_state["message"] = "Hết thời gian chờ (Timeout 90s)"
+                tizen_deploy_state["message"] = "Hết thời gian chờ (Timeout 120s)"
                 tizen_deploy_state["log"] += "\n[!] Lỗi: Quá thời gian chờ phản hồi từ TV.\n"
         except Exception as ex:
             with tizen_state_lock:
@@ -1558,7 +1614,269 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             opacity: 1;
             transform: translateX(-50%) translateY(4px);
         }
-    </style>
+    
+        /* SPORTS ENHANCED STYLES (Synchronized with ndkhoams.github.io) */
+        .sports-filter-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 2px 14px;
+            margin-bottom: 8px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .sports-filter-scroll::-webkit-scrollbar { display: none; }
+
+        .sports-filter-pill {
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(28, 28, 34, 0.7);
+            border: 0.5px solid rgba(255, 255, 255, 0.12);
+            color: var(--label-2);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .sports-filter-pill.active {
+            background: linear-gradient(135deg, rgba(255, 101, 0, 0.25), rgba(255, 140, 0, 0.15));
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(255, 101, 0, 0.35);
+        }
+
+        .sport-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            flex-shrink: 0;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+        }
+        .sport-football { background: rgba(14, 165, 233, 0.15); border: 0.5px solid rgba(14, 165, 233, 0.4); color: #7dd3fc; }
+        .sport-basketball { background: rgba(249, 115, 22, 0.15); border: 0.5px solid rgba(249, 115, 22, 0.4); color: #fdba74; }
+        .sport-f1 { background: rgba(244, 63, 94, 0.15); border: 0.5px solid rgba(244, 63, 94, 0.4); color: #fda4af; }
+        .sport-tennis { background: rgba(132, 204, 22, 0.15); border: 0.5px solid rgba(132, 204, 22, 0.4); color: #bef264; }
+        .sport-rugby { background: rgba(16, 185, 129, 0.15); border: 0.5px solid rgba(16, 185, 129, 0.4); color: #6ee7b7; }
+        .sport-billiards { background: rgba(168, 85, 247, 0.15); border: 0.5px solid rgba(168, 85, 247, 0.4); color: #d8b4fe; }
+        .sport-martial { background: rgba(239, 68, 68, 0.15); border: 0.5px solid rgba(239, 68, 68, 0.4); color: #fca5a5; }
+        .sport-esports { background: rgba(99, 102, 241, 0.15); border: 0.5px solid rgba(99, 102, 241, 0.4); color: #a5b4fc; }
+
+        .match-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 0.5px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .match-card:hover {
+            border-color: rgba(255, 255, 255, 0.24);
+            transform: translateY(-1px);
+        }
+        .match-card.expanded {
+            border-color: rgba(255, 101, 0, 0.5);
+            background: rgba(30, 26, 28, 0.88);
+            box-shadow: 0 12px 36px rgba(255, 101, 0, 0.18);
+        }
+
+        .match-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .match-league-name {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--blue);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 170px;
+        }
+
+        .match-teams-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        .team-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .team-box.away {
+            flex-direction: row-reverse;
+            text-align: right;
+        }
+        .team-logo-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 0.5px solid rgba(255, 255, 255, 0.16);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.12);
+        }
+        .team-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+        }
+        .team-fallback {
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: 0.04em;
+        }
+        .team-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+        }
+
+        .match-vs-pillar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+            flex-shrink: 0;
+        }
+        .vs-badge {
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--label-3);
+        }
+        .vs-time {
+            font-family: monospace;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-top: 2px;
+            letter-spacing: 0.03em;
+        }
+
+        .match-toggle-row {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+        }
+        .match-toggle-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--label-2);
+        }
+        .stream-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34d399;
+            box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+        }
+        .match-toggle-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--orange);
+            font-weight: 700;
+        }
+        .chevron-icon {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s ease;
+            stroke: currentColor;
+        }
+        .match-card.expanded .chevron-icon {
+            transform: rotate(180deg);
+        }
+
+        .sources-box {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.15);
+            display: none;
+        }
+        .sources-box.show {
+            display: block;
+            animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .sources-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--label-3);
+            margin-bottom: 8px;
+        }
+        .streams-flex-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .stream-pill-btn {
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(28, 28, 34, 0.85);
+            border: 0.5px solid rgba(255, 255, 255, 0.14);
+            color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .stream-pill-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.28);
+            color: #fff;
+        }
+        .stream-pill-btn.active {
+            background: linear-gradient(135deg, #ff6500, #ff9f0a);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(255, 101, 0, 0.45);
+        }
+</style>
 </head>
 <body>
 
@@ -1663,8 +1981,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
     <div id="tab-sports" class="tab-content">
         <div class="sports-header">
             <div class="sports-section-title">
-                <span class="status-dot" style="background:var(--green); box-shadow:0 0 8px var(--green);"></span>
-                <span>Lịch Đấu Trực Tiếp Hôm Nay</span>
+                <span class="status-dot" style="background:var(--red); box-shadow:0 0 8px var(--red); animation: pulse-live 1.6s infinite;"></span>
+                <span>TRỰC TIẾP THỂ THAO</span>
+                <span id="sportsCountBadge" class="count-pill">0 trận</span>
             </div>
             <button class="refresh-btn" onclick="loadSports()">
                 <svg style="width:12px; height:12px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -1673,7 +1992,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 <span>Tải lại</span>
             </button>
         </div>
-        <div id="sportsContainer">Đang nạp dữ liệu thể thao...</div>
+
+        <!-- Horizontal League & Sport Filter Pills (matching ndkhoams.github.io) -->
+        <div id="sportsFilters" class="sports-filter-scroll">
+            <button class="sports-filter-pill active" onclick="filterSports('all')">Tất cả</button>
+            <button class="sports-filter-pill" onclick="filterSports('live')">🔴 Đang trực tiếp</button>
+        </div>
+
+        <!-- Sports Matches Container -->
+        <div id="sportsContainer">
+            <div style="color:var(--label-2); padding:20px; text-align:center;">Đang nạp dữ liệu thể thao...</div>
+        </div>
     </div>
 
     <!-- TAB 4: DANH SÁCH PHÁT (PLAYLISTS) -->
@@ -1732,43 +2061,60 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             </div>
 
             <p style="font-size:12px; color:var(--label-2); margin-bottom:12px; line-height:1.4;">
-                Cài đặt trực tiếp file <code>TVplay.wgt</code> từ máy chủ Armbian lên Samsung TV qua mạng LAN (cài ngầm 100%, không làm gián đoạn người đang xem YouTube trên TV).
+                Cài đặt trực tiếp file <code>.wgt</code> từ máy chủ Armbian lên Samsung TV qua mạng LAN (cài ngầm 100%, không làm gián đoạn người đang xem YouTube trên TV).
             </p>
 
-            <div class="form-group" style="margin-bottom:10px;">
-                <label style="font-size:12px; color:var(--label-2); display:block; margin-bottom:4px; font-weight:600;">Địa chỉ IP Samsung TV</label>
+            <div class="form-group" style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--label-2); font-weight:600;">Địa chỉ IP Samsung TV</label>
+                    <button class="action-btn" style="padding:4px 10px; font-size:11px; background:rgba(255,255,255,0.08);" onclick="checkTizenTv()">🔍 Kiểm Tra TV</button>
+                </div>
                 <input type="text" id="tizenTvIp" class="form-input" value="10.0.0.9" placeholder="10.0.0.9">
             </div>
 
-            <div class="info-row">
-                <span>Gói cài đặt máy chủ:</span>
-                <span id="tizenWgtFileInfo" style="font-family:monospace; color:var(--accent);">Đang nạp thông tin...</span>
+            <!-- SECTION 1: CHỌN GÓI .WGT ĐỂ CÀI ĐẶT -->
+            <div style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:12px; font-weight:700; color:var(--label); display:flex; align-items:center; gap:6px;">
+                        <span>📦</span> Chọn gói .wgt để cài đặt:
+                    </label>
+                    <button style="background:none; border:none; color:var(--accent); font-size:11px; cursor:pointer;" onclick="loadTizenWgts()">🔄 Làm mới danh sách</button>
+                </div>
+                <select id="tizenWgtSelect" class="form-input" style="padding:10px; font-size:12px; font-weight:600; width:100%; margin-bottom:10px; background:#181820; color:#fff; border:1px solid rgba(255,255,255,0.18); border-radius:10px;">
+                    <option value="/opt/samsung/TVplay.wgt">TVplay.wgt (Bản chuẩn máy chủ - 375 KB)</option>
+                </select>
+                <div style="display:flex; gap:8px;">
+                    <button class="action-btn" style="flex:1; background:linear-gradient(135deg, #ff6500 0%, #ff8800 100%); border-color:rgba(255,255,255,0.3); color:#fff; font-weight:800; box-shadow:0 4px 16px rgba(255,101,0,0.35); padding:10px;" onclick="installSelectedTizenWgt()">
+                        📦 Cài Đặt Gói Đã Chọn Lên TV
+                    </button>
+                    <button class="action-btn btn-mode-tv" style="padding:10px 14px;" onclick="launchTizenApp()" title="Mở app TV Play trên TV">
+                        🚀 Mở App TV Play
+                    </button>
+                </div>
             </div>
 
-            <div class="row-actions" style="margin-top:12px; gap:8px;">
-                <button class="action-btn" style="background:rgba(255,255,255,0.08);" onclick="checkTizenTv()">
-                    🔍 Kiểm Tra TV
-                </button>
-                <button class="action-btn" style="background:linear-gradient(135deg, #ff6500 0%, #ff8800 100%); border-color:rgba(255,255,255,0.3); color:#fff; font-weight:800; box-shadow:0 4px 16px rgba(255,101,0,0.35);" onclick="installTizenWgt()">
-                    📦 Cài Đặt .wgt Lên TV
-                </button>
-            </div>
-
-            <div class="row-actions" style="margin-top:8px;">
-                <button class="action-btn btn-mode-tv" onclick="launchTizenApp()">
-                    🚀 Mở App TV Play Trên TV
-                </button>
-            </div>
-
-            <!-- Upload Custom .wgt -->
-            <div style="margin-top:14px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.12);">
-                <label style="font-size:12px; font-weight:700; color:var(--label); display:block; margin-bottom:6px;">
-                    📂 Tải file .wgt mới từ điện thoại / máy tính:
+            <!-- SECTION 2: TẢI LÊN & CÀI ĐẶT GÓI .WGT NGƯỜI DÙNG UPLOAD -->
+            <div style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.04); border:1px dashed rgba(255,255,255,0.22); border-radius:14px;">
+                <label style="font-size:12px; font-weight:700; color:var(--label); display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                    <span>⬆️</span> Tải lên file .wgt mới từ thiết bị của bạn:
                 </label>
-                <input type="file" id="tizenWgtUploadFile" accept=".wgt" class="form-input" style="padding:6px; font-size:12px;">
-                <button class="submit-btn" style="margin-top:8px; padding:10px; background:linear-gradient(135deg, #10b981 0%, #059669 100%); font-size:12px;" onclick="uploadTizenWgt()">
-                    ⬆ Tải Lên &amp; Cài Đặt Ngay
+                <input type="file" id="tizenWgtUploadFile" accept=".wgt" onchange="onTizenFileSelected(event)" style="display:none;">
+                <button type="button" onclick="document.getElementById('tizenWgtUploadFile').click()" class="action-btn" style="width:100%; padding:10px; font-size:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);">
+                    📁 Chọn file .wgt từ điện thoại / máy tính...
                 </button>
+                
+                <div id="tizenFileSelectedBox" style="display:none; margin-top:10px; padding:10px 12px; background:rgba(255,101,0,0.12); border:1px solid rgba(255,101,0,0.35); border-radius:10px;">
+                    <div style="font-size:12px; color:#fff; font-weight:700; margin-bottom:2px;" id="tizenFileNamePreview">Đã chọn: TVplay.wgt</div>
+                    <div style="font-size:11px; color:var(--label-2); margin-bottom:10px;" id="tizenFileSizePreview">Dung lượng: 384 KB</div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="action-btn" style="flex:1; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; font-weight:800; padding:8px; font-size:12px;" onclick="uploadAndInstallTizenWgt(true)">
+                            ⚡ Tải Lên &amp; Cài Đặt Ngay
+                        </button>
+                        <button class="action-btn" style="background:rgba(255,255,255,0.12); color:#fff; font-weight:600; padding:8px 12px; font-size:12px;" onclick="uploadAndInstallTizenWgt(false)">
+                            ⬆️ Chỉ Tải Lên Máy Chủ
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Deployment Log / Status Output -->
@@ -1797,7 +2143,6 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- STRAND LIQUID GLASS BOTTOM DOCK (Signature Floating Capsule) -->
     <div class="strand-dock-container">
         <nav class="strand-liquid-dock">
             <button class="dock-tab active" onclick="switchTab('remote')">
@@ -2155,93 +2500,435 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }
         }
 
+        var allLiveEvents = [];
+        var activeSportsFilter = 'all';
+        var expandedEventIdx = -1;
+        var activeStreamEventIdx = -1;
+        var activeStreamSourceIdx = -1;
+
+        function normalizeName(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[đĐ]/g, 'd')
+                .replace(/[^a-z0-9]/g, '')
+                .trim();
+        }
+
+        var countryFlagsMap = {};
+        (function initCountryFlags() {
+            var FLAGS = {
+                vn: ['vietnam', 'viet nam'],
+                tw: ['chinese taipei', 'dai loan', 'taiwan'],
+                be: ['belgium', 'bi'],
+                si: ['slovenia'],
+                in: ['india', 'an do'],
+                ru: ['russia', 'nga'],
+                fi: ['finland', 'phan lan'],
+                th: ['thailand', 'thai lan'],
+                id: ['indonesia'],
+                my: ['malaysia'],
+                sg: ['singapore'],
+                ph: ['philippines'],
+                cn: ['china', 'trung quoc'],
+                jp: ['japan', 'nhat ban'],
+                kr: ['korea', 'south korea', 'han quoc'],
+                gb: ['england', 'anh'],
+                fr: ['france', 'phap'],
+                de: ['germany', 'duc'],
+                es: ['spain', 'tay ban nha'],
+                it: ['italy', 'y'],
+                pt: ['portugal', 'bo dao nha'],
+                nl: ['netherlands', 'ha lan'],
+                ar: ['argentina'],
+                br: ['brazil'],
+                co: ['colombia'],
+                uy: ['uruguay'],
+                hr: ['croatia'],
+                ch: ['switzerland', 'thuy si'],
+                se: ['sweden', 'thuy dien'],
+                dk: ['denmark', 'dan mach'],
+                no: ['norway', 'na uy'],
+                pl: ['poland', 'ba lan'],
+                tr: ['turkey', 'tho nhi ky'],
+                ro: ['romania'],
+                gr: ['greece', 'hy lap'],
+                at: ['austria', 'ao'],
+                cz: ['czech republic', 'sec'],
+                sk: ['slovakia'],
+                hu: ['hungary'],
+                rs: ['serbia'],
+                ua: ['ukraine'],
+                ma: ['morocco', 'maroc'],
+                sn: ['senegal'],
+                sa: ['saudi arabia'],
+                qa: ['qatar'],
+                us: ['usa', 'united states', 'my'],
+                am: ['armenia'],
+                lv: ['latvia'],
+                cy: ['sip', 'cyprus'],
+                me: ['montenegro'],
+                sm: ['san marino'],
+                by: ['belarus'],
+                al: ['albania']
+            };
+            for (var code in FLAGS) {
+                var aliases = FLAGS[code];
+                var url = 'https://flagcdn.com/w80/' + code + '.png';
+                for (var i = 0; i < aliases.length; i++) {
+                    countryFlagsMap[normalizeName(aliases[i])] = url;
+                }
+            }
+        })();
+
+        var premappedClubs = {
+            arsenal: 'https://a.espncdn.com/i/teamlogos/soccer/500/359.png',
+            chelsea: 'https://a.espncdn.com/i/teamlogos/soccer/500/363.png',
+            liverpool: 'https://a.espncdn.com/i/teamlogos/soccer/500/364.png',
+            manchestercity: 'https://a.espncdn.com/i/teamlogos/soccer/500/382.png',
+            mancity: 'https://a.espncdn.com/i/teamlogos/soccer/500/382.png',
+            manchesterunited: 'https://a.espncdn.com/i/teamlogos/soccer/500/360.png',
+            manunited: 'https://a.espncdn.com/i/teamlogos/soccer/500/360.png',
+            tottenham: 'https://a.espncdn.com/i/teamlogos/soccer/500/367.png',
+            tottenhamhotspur: 'https://a.espncdn.com/i/teamlogos/soccer/500/367.png',
+            astonvilla: 'https://a.espncdn.com/i/teamlogos/soccer/500/362.png',
+            newcastle: 'https://a.espncdn.com/i/teamlogos/soccer/500/361.png',
+            newcastleunited: 'https://a.espncdn.com/i/teamlogos/soccer/500/361.png',
+            brighton: 'https://a.espncdn.com/i/teamlogos/soccer/500/331.png',
+            westham: 'https://a.espncdn.com/i/teamlogos/soccer/500/371.png',
+            everton: 'https://a.espncdn.com/i/teamlogos/soccer/500/368.png',
+            fulham: 'https://a.espncdn.com/i/teamlogos/soccer/500/370.png',
+            brentford: 'https://a.espncdn.com/i/teamlogos/soccer/500/337.png',
+            wolves: 'https://a.espncdn.com/i/teamlogos/soccer/500/380.png',
+            realmadrid: 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png',
+            barcelona: 'https://a.espncdn.com/i/teamlogos/soccer/500/83.png',
+            atleticomadrid: 'https://a.espncdn.com/i/teamlogos/soccer/500/1068.png',
+            sevilla: 'https://a.espncdn.com/i/teamlogos/soccer/500/243.png',
+            realsociedad: 'https://a.espncdn.com/i/teamlogos/soccer/500/89.png',
+            villarreal: 'https://a.espncdn.com/i/teamlogos/soccer/500/102.png',
+            athleticbilbao: 'https://a.espncdn.com/i/teamlogos/soccer/500/96.png',
+            valencia: 'https://a.espncdn.com/i/teamlogos/soccer/500/94.png',
+            bayernmunich: 'https://a.espncdn.com/i/teamlogos/soccer/500/132.png',
+            borussiadortmund: 'https://a.espncdn.com/i/teamlogos/soccer/500/124.png',
+            dortmund: 'https://a.espncdn.com/i/teamlogos/soccer/500/124.png',
+            bayerleverkusen: 'https://a.espncdn.com/i/teamlogos/soccer/500/131.png',
+            rbleipzig: 'https://a.espncdn.com/i/teamlogos/soccer/500/11420.png',
+            intermilan: 'https://a.espncdn.com/i/teamlogos/soccer/500/110.png',
+            inter: 'https://a.espncdn.com/i/teamlogos/soccer/500/110.png',
+            acmilan: 'https://a.espncdn.com/i/teamlogos/soccer/500/103.png',
+            milan: 'https://a.espncdn.com/i/teamlogos/soccer/500/103.png',
+            juventus: 'https://a.espncdn.com/i/teamlogos/soccer/500/111.png',
+            napoli: 'https://a.espncdn.com/i/teamlogos/soccer/500/114.png',
+            asroma: 'https://a.espncdn.com/i/teamlogos/soccer/500/104.png',
+            psg: 'https://a.espncdn.com/i/teamlogos/soccer/500/160.png',
+            marseille: 'https://a.espncdn.com/i/teamlogos/soccer/500/166.png'
+        };
+
+        function getSportInfo(evt) {
+            var rawLeague = (evt.league || '').toUpperCase();
+            var leagueStr = (evt.leagueName || '').toLowerCase();
+            var homeStr = (evt.homeTeam || '').toLowerCase();
+            var awayStr = (evt.awayTeam || '').toLowerCase();
+            var combined = (rawLeague + ' ' + leagueStr + ' ' + homeStr + ' ' + awayStr).toLowerCase();
+
+            if (rawLeague === 'RUGBY' || combined.indexOf('rugby') !== -1 || combined.indexOf('bóng bầu dục') !== -1) {
+                return { name: 'Bóng bầu dục', icon: '🏉', badgeClass: 'sport-rugby', cleanLeague: evt.leagueName || 'Rugby' };
+            }
+            if (rawLeague === 'F1' || combined.indexOf('f1') !== -1 || combined.indexOf('grand prix') !== -1 || combined.indexOf('đua xe') !== -1) {
+                return { name: 'Đua xe F1', icon: '🏎️', badgeClass: 'sport-f1', cleanLeague: evt.leagueName || 'Formula 1' };
+            }
+            if (rawLeague === 'TENNIS' || combined.indexOf('tennis') !== -1 || combined.indexOf('quần vợt') !== -1 || combined.indexOf('atp') !== -1 || combined.indexOf('wta') !== -1) {
+                return { name: 'Quần vợt', icon: '🎾', badgeClass: 'sport-tennis', cleanLeague: evt.leagueName || 'Tennis' };
+            }
+            if (rawLeague === 'BASKETBALL' || combined.indexOf('basketball') !== -1 || combined.indexOf('bóng rổ') !== -1 || combined.indexOf('nba') !== -1) {
+                return { name: 'Bóng rổ', icon: '🏀', badgeClass: 'sport-basketball', cleanLeague: evt.leagueName || 'Bóng rổ' };
+            }
+            if (rawLeague === 'BILLIARDS' || combined.indexOf('billiards') !== -1 || combined.indexOf('bi-a') !== -1 || combined.indexOf('snooker') !== -1) {
+                return { name: 'Bi-a', icon: '🎱', badgeClass: 'sport-billiards', cleanLeague: evt.leagueName || 'Billiards' };
+            }
+            if (combined.indexOf('ufc') !== -1 || combined.indexOf('boxing') !== -1 || combined.indexOf('mma') !== -1 || combined.indexOf('võ thuật') !== -1) {
+                return { name: 'Võ thuật', icon: '🥊', badgeClass: 'sport-martial', cleanLeague: evt.leagueName || 'Võ thuật' };
+            }
+            return {
+                name: 'Bóng đá',
+                icon: '⚽',
+                badgeClass: 'sport-football',
+                cleanLeague: evt.leagueName || 'Bóng đá'
+            };
+        }
+
+        function getTeamLogo(teamName, evt, side) {
+            if (!teamName) return '';
+            var norm = normalizeName(teamName);
+            var cNorm = normalizeName(side === 'home' ? evt.c_home : evt.c_away);
+
+            if (side === 'home' && evt.homeLogo) return evt.homeLogo;
+            if (side === 'away' && evt.awayLogo) return evt.awayLogo;
+
+            if (countryFlagsMap[norm]) return countryFlagsMap[norm];
+            if (cNorm && countryFlagsMap[cNorm]) return countryFlagsMap[cNorm];
+
+            if (premappedClubs[norm]) return premappedClubs[norm];
+            if (cNorm && premappedClubs[cNorm]) return premappedClubs[cNorm];
+
+            if (side === 'home' && evt.sources && evt.sources.length > 0) {
+                var srcLogo = evt.sources[0].logo;
+                if (srcLogo && (srcLogo.indexOf('/team') !== -1 || srcLogo.indexOf('/badge') !== -1)) return srcLogo;
+            }
+            return '';
+        }
+
+        function formatStreamButtonLabel(rawName, index) {
+            if (!rawName) return 'Luồng ' + (index + 1);
+            var m = rawName.match(/\(([^)]+)\)/g);
+            if (m && m.length > 0) {
+                var clean = m[m.length - 1].replace(/[()]/g, '').trim();
+                return 'Luồng ' + (index + 1) + ': ' + clean;
+            }
+            return 'Luồng ' + (index + 1) + ' (HD)';
+        }
+
         function loadSports() {
             var container = document.getElementById('sportsContainer');
-            container.innerHTML = '<div style="color:var(--label-2); padding:16px; text-align:center;">Đang nạp dữ liệu thể thao...</div>';
-            fetch('/api/sports/categories').then(function(res) { return res.json(); }).then(function(data) {
-                renderSports(data);
-            }).catch(function(e) {
-                container.innerHTML = '<div style="color:var(--red); padding:16px; text-align:center;">Lỗi nạp dữ liệu thể thao</div>';
+            container.innerHTML = '<div style="color:var(--label-2); padding:20px; text-align:center;">Đang nạp dữ liệu thể thao...</div>';
+
+            fetch('/data/thethao-data.json?t=' + Date.now())
+            .then(function(res) {
+                if (!res.ok) throw new Error('Data status ' + res.status);
+                return res.json();
+            })
+            .then(function(data) {
+                var events = data.live_events || [];
+                allLiveEvents = events;
+                updateSportsBadge(events.length);
+                buildSportsFilters(events);
+                renderSports(events);
+            })
+            .catch(function(e) {
+                // Fallback to /api/sports
+                fetch('/api/sports?t=' + Date.now())
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    var ev = d.live_events || [];
+                    allLiveEvents = ev;
+                    updateSportsBadge(ev.length);
+                    buildSportsFilters(ev);
+                    renderSports(ev);
+                })
+                .catch(function(err) {
+                    container.innerHTML = '<div style="color:var(--red); padding:24px; text-align:center;">Không thể tải dữ liệu thể thao từ Hub Armbian</div>';
+                });
             });
         }
 
-        var currentSportsCategories = [];
+        function updateSportsBadge(count) {
+            var badge = document.getElementById('sportsCountBadge');
+            if (badge) badge.textContent = count + ' trận';
+        }
 
-        function renderSports(data) {
-            var container = document.getElementById('sportsContainer');
-            var categories = data.categories || [];
-            currentSportsCategories = categories;
-            if (!categories.length) {
-                container.innerHTML = '<div style="color:var(--label-3); padding:24px; text-align:center;">Hiện chưa có lịch trận đấu thể thao trực tiếp</div>';
+        function buildSportsFilters(events) {
+            var filterBox = document.getElementById('sportsFilters');
+            if (!filterBox) return;
+
+            var leaguesMap = {};
+            var liveCount = 0;
+            events.forEach(function(e) {
+                if (e.isOngoing) liveCount++;
+                var l = (e.leagueName || 'Bóng đá').trim();
+                if (l) leaguesMap[l] = (leaguesMap[l] || 0) + 1;
+            });
+
+            var html = '<button class="sports-filter-pill ' + (activeSportsFilter === 'all' ? 'active' : '') + '" onclick="filterSports(\'all\')">Tất cả (' + events.length + ')</button>';
+            if (liveCount > 0) {
+                html += '<button class="sports-filter-pill ' + (activeSportsFilter === 'live' ? 'active' : '') + '" onclick="filterSports(\'live\')">🔴 Đang trực tiếp (' + liveCount + ')</button>';
+            }
+
+            for (var lName in leaguesMap) {
+                var isAct = (activeSportsFilter === lName);
+                html += '<button class="sports-filter-pill ' + (isAct ? 'active' : '') + '" onclick="filterSports(\'' + lName.replace(/'/g, "\\'") + '\')">' + lName + ' (' + leaguesMap[lName] + ')</button>';
+            }
+            filterBox.innerHTML = html;
+        }
+
+        function filterSports(filterKey) {
+            activeSportsFilter = filterKey;
+            buildSportsFilters(allLiveEvents);
+
+            if (filterKey === 'all') {
+                renderSports(allLiveEvents);
                 return;
             }
-            var html = '';
-            var boxCounter = 0;
-            categories.forEach(function(cat, catIdx) {
-                var isLive = (cat.name || '').toUpperCase().indexOf('LIVE EVENTS') !== -1;
-                html += '<div style="margin: 16px 0 10px; font-size:12px; font-weight:800; letter-spacing:0.04em; color:' + (isLive ? 'var(--red)' : 'var(--accent)') + '; font-family:var(--font-display);">' + cat.name + '</div>';
-                
-                (cat.matches || []).forEach(function(m, matchIdx) {
-                    boxCounter++;
-                    var sources = m.sources || [];
-                    
-                    // Parse teams
-                    var fullTitle = m.title || '';
-                    var homeTeam = fullTitle;
-                    var awayTeam = '';
-                    var vsSplit = fullTitle.split(/\s+vs\s+/i);
-                    if (vsSplit.length > 1) {
-                        homeTeam = vsSplit[0].trim();
-                        awayTeam = vsSplit[1].trim();
-                    }
-                    var homeInitial = homeTeam.substring(0, 3).toUpperCase();
-                    var awayInitial = awayTeam ? awayTeam.substring(0, 3).toUpperCase() : '';
+            if (filterKey === 'live') {
+                var liveList = allLiveEvents.filter(function(e) { return e.isOngoing; });
+                renderSports(liveList);
+                return;
+            }
+            var filtered = allLiveEvents.filter(function(e) { return (e.leagueName || '').trim() === filterKey; });
+            renderSports(filtered);
+        }
 
-                    html += '<div class="match-card">' +
-                        '<div onclick="toggleMatchSources(' + boxCounter + ')">' +
-                            '<div class="match-top-row">' +
-                                '<span class="match-league">⚽ BÓNG ĐÁ TRỰC TIẾP</span>' +
-                                '<div class="match-badges-right">' +
-                                    (m.time ? '<span class="time-pill">⏰ ' + m.time + '</span>' : '') +
-                                    '<span class="' + (m.isOngoing ? 'live-tag' : 'time-pill') + '">' +
-                                        (m.isOngoing ? '<span class="status-dot"></span> LIVE' : 'Sắp đấu') +
-                                    '</span>' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="match-teams-row">' +
-                                '<div class="team-box">' +
-                                    '<div class="team-avatar">' + homeInitial + '</div>' +
-                                    '<span class="team-name">' + homeTeam + '</span>' +
-                                '</div>' +
-                                (awayTeam ? '<span class="vs-pill">VS</span>' : '') +
-                                (awayTeam ? '<div class="team-box away"><div class="team-avatar">' + awayInitial + '</div><span class="team-name">' + awayTeam + '</span></div>' : '') +
-                            '</div>' +
-                        '</div>' +
-                        '<div id="match-sources-' + boxCounter + '" class="sources-box">';
-                    
-                    if (!sources.length) {
-                        html += '<div style="font-size:12px; color:var(--label-3); padding:8px 0; text-align:center;">Chưa cập nhật luồng phát</div>';
-                    } else {
-                        sources.forEach(function(s, srcIdx) {
-                            html += '<button class="source-item" onclick="onSportsSourceClick(' + catIdx + ',' + matchIdx + ',' + srcIdx + ')">' +
-                                '<span>📺 ' + s.name + '</span>' +
-                                '<span style="color:var(--accent); font-weight:700;">Chọn ▶</span>' +
-                            '</button>';
-                        });
+        function toggleMatchSources(idx) {
+            if (expandedEventIdx === idx) {
+                expandedEventIdx = -1;
+            } else {
+                expandedEventIdx = idx;
+            }
+            var card = document.getElementById('match-card-' + idx);
+            var box = document.getElementById('match-sources-' + idx);
+            if (card && box) {
+                var isExp = (expandedEventIdx === idx);
+                card.classList.toggle('expanded', isExp);
+                box.classList.toggle('show', isExp);
+                var labelEl = card.querySelector('.match-toggle-right span');
+                if (labelEl) labelEl.textContent = isExp ? 'Thu gọn' : 'Xem luồng';
+            }
+        }
+
+        function renderSports(events) {
+            var container = document.getElementById('sportsContainer');
+            if (!container) return;
+
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div style="color:var(--label-3); padding:30px; text-align:center; background:rgba(255,255,255,0.03); border-radius:18px; border:1px dashed rgba(255,255,255,0.1);">Không có trận đấu nào trong mục này</div>';
+                return;
+            }
+
+            var html = '';
+            events.forEach(function(evt, idx) {
+                var isLive = evt.isOngoing !== false;
+                var sport = getSportInfo(evt);
+                var league = sport.cleanLeague;
+                var home = evt.homeTeam || 'Đội nhà';
+                var away = evt.awayTeam || 'Đội khách';
+
+                var time = evt.time || '';
+                var date = evt.date || '';
+                if (!time && evt.displayTitle) {
+                    var m = evt.displayTitle.match(/\[(\d{1,2}:\d{2})(?:\s+([^\]]+))?\]/);
+                    if (m) {
+                        time = m[1];
+                        if (!date && m[2]) date = m[2];
                     }
-                    html += '</div></div>';
-                });
+                }
+                if (time === 'Trực tiếp') time = '';
+
+                var homeInitial = home.substring(0, 3).toUpperCase();
+                var awayInitial = away.substring(0, 3).toUpperCase();
+                var homeLogo = getTeamLogo(home, evt, 'home');
+                var awayLogo = getTeamLogo(away, evt, 'away');
+
+                var sources = evt.sources || [];
+                var isExpanded = (expandedEventIdx === idx);
+
+                html += '<div id="match-card-' + idx + '" class="match-card ' + (isExpanded ? 'expanded' : '') + '" onclick="toggleMatchSources(' + idx + ')">';
+
+                // Top Row: Sport Badge + Clean League + Kick-off Time & Live Tag
+                html += '<div class="match-top-row">' +
+                    '<div style="display:flex; align-items:center; gap:6px; min-width:0; flex:1;">' +
+                        '<span class="sport-badge ' + sport.badgeClass + '">' +
+                            '<span>' + sport.icon + '</span>' +
+                            '<span>' + sport.name + '</span>' +
+                        '</span>' +
+                        '<span class="match-league-name">' + league + '</span>' +
+                    '</div>' +
+                    '<div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">' +
+                        (time ? '<span class="time-pill">⏰ ' + time + (date ? ' (' + date + ')' : '') + '</span>' : '') +
+                        '<span class="' + (isLive ? 'live-tag' : 'time-pill') + '">' +
+                            (isLive ? '<span class="status-dot"></span> LIVE' : 'Sắp đấu') +
+                        '</span>' +
+                    '</div>' +
+                '</div>';
+
+                // Teams Row: Home Team VS Away Team (matching ndkhoams.github.io)
+                html += '<div class="match-teams-row">' +
+                    // Home
+                    '<div class="team-box">' +
+                        '<div class="team-logo-box">' +
+                            (homeLogo ? '<img src="' + homeLogo + '" alt="' + home + '" class="team-logo-img" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' : '') +
+                            '<span class="team-fallback" style="' + (homeLogo ? 'display:none;' : '') + '">' + homeInitial + '</span>' +
+                        '</div>' +
+                        '<span class="team-name">' + home + '</span>' +
+                    '</div>' +
+                    // Center VS
+                    '<div class="match-vs-pillar">' +
+                        '<span class="vs-badge">VS</span>' +
+                        (time ? '<span class="vs-time">' + time + '</span>' : '') +
+                    '</div>' +
+                    // Away
+                    '<div class="team-box away">' +
+                        '<div class="team-logo-box">' +
+                            (awayLogo ? '<img src="' + awayLogo + '" alt="' + away + '" class="team-logo-img" loading="lazy" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' : '') +
+                            '<span class="team-fallback" style="' + (awayLogo ? 'display:none;' : '') + '">' + awayInitial + '</span>' +
+                        '</div>' +
+                        '<span class="team-name" style="text-align:right;">' + away + '</span>' +
+                    '</div>' +
+                '</div>';
+
+                // Toggle Row
+                html += '<div class="match-toggle-row">' +
+                    '<div class="match-toggle-left">' +
+                        '<span class="stream-dot"></span>' +
+                        '<span style="font-weight:700; color:#fff;">' + sources.length + ' luồng phát</span>' +
+                        '<span style="color:var(--label-3);">• Nhấn để chọn kênh phát</span>' +
+                    '</div>' +
+                    '<div class="match-toggle-right">' +
+                        '<span>' + (isExpanded ? 'Thu gọn' : 'Xem luồng') + '</span>' +
+                        '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>' +
+                    '</div>' +
+                '</div>';
+
+                // Expanded Streams List
+                html += '<div id="match-sources-' + idx + '" class="sources-box ' + (isExpanded ? 'show' : '') + '" onclick="event.stopPropagation()">' +
+                    '<div class="sources-title-row">' +
+                        '<span style="font-weight:700; color:#fff;">Danh sách luồng phát trực tiếp:</span>' +
+                        '<span style="color:var(--orange); font-family:monospace;">Chạm luồng để phát lên TV</span>' +
+                    '</div>' +
+                    '<div class="streams-flex-grid">';
+
+                if (!sources.length) {
+                    html += '<div style="font-size:12px; color:var(--label-3); padding:8px 0;">Chưa cập nhật luồng phát trực tiếp</div>';
+                } else {
+                    sources.forEach(function(s, sIdx) {
+                        var isAct = (activeStreamEventIdx === idx && activeStreamSourceIdx === sIdx);
+                        var btnLabel = formatStreamButtonLabel(s.name, sIdx);
+                        html += '<button type="button" class="stream-pill-btn ' + (isAct ? 'active' : '') + '" onclick="onSportsStreamClick(' + idx + ', ' + sIdx + ')">' +
+                            '<span class="stream-dot" style="' + (isAct ? 'background:#fff;' : '') + '"></span>' +
+                            '<span>' + btnLabel + '</span>' +
+                            '<svg style="width:11px; height:11px; fill:currentColor; opacity:0.7;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>' +
+                        '</button>';
+                    });
+                }
+
+                html += '</div></div>';
+                html += '</div>';
             });
+
             container.innerHTML = html;
         }
 
-        function onSportsSourceClick(catIdx, matchIdx, srcIdx) {
-            try {
-                var cat = currentSportsCategories[catIdx];
-                var match = cat.matches[matchIdx];
-                var src = match.sources[srcIdx];
-                playSportsSource(match.title, src);
-            } catch (e) {}
+        function onSportsStreamClick(eventIdx, sourceIdx) {
+            var evt = allLiveEvents[eventIdx];
+            if (!evt) return;
+            var src = (evt.sources || [])[sourceIdx];
+            if (!src) return;
+
+            activeStreamEventIdx = eventIdx;
+            activeStreamSourceIdx = sourceIdx;
+
+            var title = (evt.displayTitle || (evt.homeTeam + ' vs ' + evt.awayTeam));
+            var streamName = formatStreamButtonLabel(src.name, sourceIdx);
+
+            showToast('▶ Đang phát lên TV: ' + title + ' (' + streamName + ')');
+
+            // Send to TV
+            playSportsSource(title + ' - ' + streamName, {
+                streamUrl: src.url || src.streamUrl,
+                name: title + ' (' + streamName + ')'
+            });
+
+            // Re-render streams to highlight active
+            renderSports(allLiveEvents);
         }
 
         // Poll TV state every 3s
@@ -2274,14 +2961,42 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }).catch(function(e) {});
         }
 
-        /* TIZEN DEPLOYMENT FUNCTIONS */
+        /* TIZEN DEPLOYMENT & WGT MANAGEMENT */
         var tizenPollTimer = null;
+        var availableWgts = [];
+        var selectedUploadFile = null;
 
         function getTizenIp() {
             var el = document.getElementById('tizenTvIp');
             var ip = (el ? el.value : '10.0.0.9').trim() || '10.0.0.9';
             try { localStorage.setItem('tvplay_tizen_ip', ip); } catch(e) {}
             return ip;
+        }
+
+        function loadTizenWgts() {
+            fetch('/api/tizen/wgts?t=' + Date.now())
+            .then(function(res) { return res.json(); })
+            .then(function(d) {
+                if (d && d.wgts) {
+                    availableWgts = d.wgts;
+                    renderTizenWgtSelect();
+                }
+            }).catch(function(e) {});
+        }
+
+        function renderTizenWgtSelect() {
+            var sel = document.getElementById('tizenWgtSelect');
+            if (!sel) return;
+            if (!availableWgts.length) {
+                sel.innerHTML = '<option value="/opt/samsung/TVplay.wgt">TVplay.wgt (Bản chuẩn máy chủ - 375 KB)</option>';
+                return;
+            }
+            var html = '';
+            availableWgts.forEach(function(w) {
+                var label = w.name + ' (' + (w.tag || '') + ' - ' + w.sizeStr + ')';
+                html += '<option value="' + w.path + '">' + label + '</option>';
+            });
+            sel.innerHTML = html;
         }
 
         function loadTizenStatus() {
@@ -2295,67 +3010,50 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             .then(function(data) {
                 var badge = document.getElementById('tizenStatusBadge');
                 var badgeText = document.getElementById('tizenBadgeText');
-                var fileInfo = document.getElementById('tizenWgtFileInfo');
                 var logWrap = document.getElementById('tizenLogWrap');
                 var logBox = document.getElementById('tizenLogBox');
-
-                if (fileInfo) {
-                    if (data.wgtExists) {
-                        var kb = Math.round(data.wgtSize / 1024);
-                        fileInfo.innerHTML = '<span style="color:var(--green)">✓ TVplay.wgt (' + kb + ' KB)</span>';
-                    } else {
-                        fileInfo.innerHTML = '<span style="color:var(--red)">Chưa có file TVplay.wgt</span>';
-                    }
-                }
 
                 if (badge && badgeText) {
                     if (data.status === 'running') {
                         badge.className = 'tv-status-badge status-connected';
-                        badge.style.background = 'rgba(255, 101, 0, 0.2)';
-                        badge.style.borderColor = 'var(--accent)';
-                        badgeText.textContent = data.message || 'Đang thực thi...';
-                        badgeText.style.color = 'var(--accent)';
-                        if (!tizenPollTimer) {
-                            tizenPollTimer = setInterval(loadTizenStatus, 1500);
-                        }
+                        badgeText.textContent = 'Đang xử lý...';
+                    } else if (data.status === 'success') {
+                        badge.className = 'tv-status-badge status-connected';
+                        badgeText.textContent = 'Hoàn tất';
+                    } else if (data.status === 'error') {
+                        badge.className = 'tv-status-badge status-disconnected';
+                        badgeText.textContent = 'Lỗi';
                     } else {
-                        if (tizenPollTimer) {
-                            clearInterval(tizenPollTimer);
-                            tizenPollTimer = null;
-                        }
-                        if (data.status === 'success') {
-                            badge.className = 'tv-status-badge status-connected';
-                            badge.style.background = '';
-                            badge.style.borderColor = '';
-                            badgeText.style.color = '';
-                            badgeText.textContent = data.message || 'Thành công';
-                        } else if (data.status === 'error') {
-                            badge.className = 'tv-status-badge status-disconnected';
-                            badge.style.background = '';
-                            badge.style.borderColor = '';
-                            badgeText.style.color = '';
-                            badgeText.textContent = data.message || 'Lỗi';
-                        } else {
-                            badge.className = 'tv-status-badge status-disconnected';
-                            badge.style.background = '';
-                            badge.style.borderColor = '';
-                            badgeText.style.color = '';
-                            badgeText.textContent = 'Sẵn sàng';
-                        }
+                        badge.className = 'tv-status-badge status-disconnected';
+                        badgeText.textContent = 'Sẵn sàng';
                     }
                 }
 
-                if (logWrap && logBox && data.log) {
-                    logWrap.style.display = 'block';
-                    logBox.textContent = data.log;
-                    logBox.scrollTop = logBox.scrollHeight;
+                if (logWrap && logBox) {
+                    if (data.log) {
+                        logWrap.style.display = 'block';
+                        logBox.textContent = data.log;
+                        logBox.scrollTop = logBox.scrollHeight;
+                    }
+                }
+
+                if (data.wgts) {
+                    availableWgts = data.wgts;
+                    renderTizenWgtSelect();
+                }
+
+                if (data.status === 'success' || data.status === 'error') {
+                    if (tizenPollTimer) {
+                        clearInterval(tizenPollTimer);
+                        tizenPollTimer = null;
+                    }
                 }
             }).catch(function(e) {});
         }
 
         function checkTizenTv() {
             var ip = getTizenIp();
-            showToast('Đang kiểm tra kết nối TV ' + ip + '...');
+            showToast('Đang kiểm tra TV Samsung (' + ip + ')...');
             var logWrap = document.getElementById('tizenLogWrap');
             var logBox = document.getElementById('tizenLogBox');
             if (logWrap) logWrap.style.display = 'block';
@@ -2374,20 +3072,24 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             });
         }
 
-        function installTizenWgt() {
+        function installSelectedTizenWgt() {
             var ip = getTizenIp();
-            if (!confirm('Cài đặt TVplay.wgt lên Samsung TV (' + ip + ')?\n\nQuá trình chạy ngầm hoàn toàn và không ảnh hưởng tới người đang xem YouTube trên TV.')) return;
+            var sel = document.getElementById('tizenWgtSelect');
+            var wgtPath = sel ? sel.value : '/opt/samsung/TVplay.wgt';
+            var wgtName = wgtPath.split('/').pop();
 
-            showToast('Bắt đầu cài đặt lên TV ' + ip + '...');
+            if (!confirm('Cài đặt gói ' + wgtName + ' lên Samsung TV (' + ip + ')?\n\nQuá trình chạy ngầm hoàn toàn và không ảnh hưởng tới người đang xem YouTube trên TV.')) return;
+
+            showToast('Bắt đầu cài đặt ' + wgtName + ' lên TV ' + ip + '...');
             var logWrap = document.getElementById('tizenLogWrap');
             var logBox = document.getElementById('tizenLogBox');
             if (logWrap) logWrap.style.display = 'block';
-            if (logBox) logBox.textContent = '[*] Đang gửi lệnh cài đặt /opt/samsung/TVplay.wgt lên ' + ip + '...\n';
+            if (logBox) logBox.textContent = '[*] Đang gửi lệnh cài đặt ' + wgtPath + ' lên TV ' + ip + '...\n';
 
             fetch('/api/tizen/install', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ tvIp: ip })
+                body: JSON.stringify({ tvIp: ip, wgtPath: wgtPath })
             }).then(function(res) { return res.json(); })
             .then(function(d) {
                 showToast('Đang cài đặt ngầm lên TV...');
@@ -2395,6 +3097,67 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }).catch(function(e) {
                 showToast('Lỗi gửi lệnh cài đặt!');
             });
+        }
+
+        function onTizenFileSelected(e) {
+            var input = e.target;
+            if (!input.files || input.files.length === 0) return;
+            selectedUploadFile = input.files[0];
+            var box = document.getElementById('tizenFileSelectedBox');
+            var nameEl = document.getElementById('tizenFileNamePreview');
+            var sizeEl = document.getElementById('tizenFileSizePreview');
+            if (box && nameEl && sizeEl) {
+                nameEl.textContent = 'Đã chọn: ' + selectedUploadFile.name;
+                var sz = selectedUploadFile.size;
+                var szStr = (sz < 1024*1024) ? Math.round(sz/1024) + ' KB' : (sz/(1024*1024)).toFixed(1) + ' MB';
+                sizeEl.textContent = 'Dung lượng: ' + szStr;
+                box.style.display = 'block';
+            }
+        }
+
+        function uploadAndInstallTizenWgt(installImmediately) {
+            if (!selectedUploadFile) {
+                showToast('Vui lòng chọn file .wgt!');
+                return;
+            }
+            var file = selectedUploadFile;
+            var ip = getTizenIp();
+            showToast('Đang tải file ' + file.name + ' lên máy chủ...');
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var base64Data = e.target.result;
+                fetch('/api/tizen/upload', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        content: base64Data,
+                        filename: file.name,
+                        tvIp: ip,
+                        installImmediately: installImmediately
+                    })
+                }).then(function(res) { return res.json(); })
+                .then(function(d) {
+                    if (d.success) {
+                        if (installImmediately) {
+                            showToast('Đã tải lên ' + file.name + '! Đang tiến hành cài đặt lên TV...');
+                            if (!tizenPollTimer) tizenPollTimer = setInterval(loadTizenStatus, 1500);
+                        } else {
+                            showToast('Đã lưu file ' + file.name + ' lên máy chủ!');
+                        }
+                        loadTizenWgts();
+                        var input = document.getElementById('tizenWgtUploadFile');
+                        if (input) input.value = '';
+                        var box = document.getElementById('tizenFileSelectedBox');
+                        if (box) box.style.display = 'none';
+                        selectedUploadFile = null;
+                    } else {
+                        showToast('Lỗi: ' + (d.error || 'Tải file thất bại'));
+                    }
+                }).catch(function(e) {
+                    showToast('Lỗi kết nối khi tải file .wgt!');
+                });
+            };
+            reader.readAsDataURL(file);
         }
 
         function launchTizenApp() {
@@ -2411,46 +3174,6 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }).catch(function(e) {
                 showToast('Lỗi gửi lệnh mở app!');
             });
-        }
-
-        function uploadTizenWgt() {
-            var fileInput = document.getElementById('tizenWgtUploadFile');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                showToast('Vui lòng chọn file TVplay.wgt!');
-                return;
-            }
-            var file = fileInput.files[0];
-            if (!file.name.toLowerCase().endsWith('.wgt')) {
-                showToast('Vui lòng chọn tệp có đuôi .wgt!');
-                return;
-            }
-            var ip = getTizenIp();
-            showToast('Đang tải file ' + file.name + ' lên máy chủ...');
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var base64Data = e.target.result;
-                fetch('/api/tizen/upload', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        content: base64Data,
-                        tvIp: ip,
-                        installImmediately: true
-                    })
-                }).then(function(res) { return res.json(); })
-                .then(function(d) {
-                    if (d.success) {
-                        showToast('Đã tải lên TVplay.wgt (' + Math.round(d.size/1024) + ' KB)! Đang tiến hành cài đặt...');
-                        fileInput.value = '';
-                        if (!tizenPollTimer) tizenPollTimer = setInterval(loadTizenStatus, 1500);
-                    } else {
-                        showToast('Lỗi: ' + (d.error || 'Tải file thất bại'));
-                    }
-                }).catch(function(e) {
-                    showToast('Lỗi kết nối khi tải file .wgt!');
-                });
-            };
-            reader.readAsDataURL(file);
         }
 
         function toggleTizenLog() {
@@ -2495,8 +3218,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             } catch(e) {}
         }
 
-        initSSE();
+                initSSE();
         checkTvStatus();
+        loadTizenWgts();
         setInterval(checkTvStatus, 3000);
     </script>
 </body>
@@ -2581,6 +3305,23 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_cors_headers()
             self.end_headers()
             self.wfile.write(json.dumps(get_tizen_status(), ensure_ascii=False).encode("utf-8"))
+            return
+
+        if path == "/api/tizen/wgts":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "wgts": get_available_wgts()}, ensure_ascii=False).encode("utf-8"))
+            return
+
+        if path in ["/api/sports", "/api/sports/raw"]:
+            content = get_local_or_remote_data("thethao-data.json", "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json", max_age_seconds=60)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(content.encode("utf-8") if isinstance(content, str) else content)
             return
 
         if path == "/api/status":
@@ -2688,12 +3429,23 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
 
         if path == "/api/tizen/install":
             tv_ip = (post_data.get("tvIp") or DEFAULT_TIZEN_IP).strip()
-            execute_tizen_task("install", tv_ip)
+            wgt_path = post_data.get("wgtPath")
+            wgt_file = post_data.get("wgtFile")
+            if not wgt_path and wgt_file:
+                candidates = [
+                    os.path.join(TIZEN_UPLOADS_DIR, wgt_file),
+                    os.path.join(os.path.dirname(TIZEN_WGT_PATH), wgt_file)
+                ]
+                for c in candidates:
+                    if os.path.exists(c):
+                        wgt_path = c
+                        break
+            execute_tizen_task("install", tv_ip, wgt_path)
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_cors_headers()
             self.end_headers()
-            self.wfile.write(json.dumps({"success": True, "message": "Đang cài đặt TVplay.wgt lên TV"}).encode("utf-8"))
+            self.wfile.write(json.dumps({"success": True, "message": "Đang cài đặt lên TV"}).encode("utf-8"))
             return
 
         if path == "/api/tizen/launch":
@@ -2708,6 +3460,10 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
 
         if path == "/api/tizen/upload":
             content_b64 = post_data.get("content", "")
+            filename = (post_data.get("filename") or "TVplay.wgt").strip()
+            filename = os.path.basename(filename)
+            if not filename.lower().endswith(".wgt"):
+                filename += ".wgt"
             tv_ip = (post_data.get("tvIp") or DEFAULT_TIZEN_IP).strip()
             install_immediately = post_data.get("installImmediately", True)
             if content_b64:
@@ -2715,19 +3471,35 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
                     if "," in content_b64:
                         content_b64 = content_b64.split(",", 1)[1]
                     file_bytes = base64.b64decode(content_b64)
-                    os.makedirs(os.path.dirname(TIZEN_WGT_PATH), exist_ok=True)
-                    with open(TIZEN_WGT_PATH, "wb") as f_wgt:
-                        f_wgt.write(file_bytes)
-                    ota_wgt_path = os.path.join(DATA_DIR, "TVplay.wgt")
-                    with open(ota_wgt_path, "wb") as f_ota:
-                        f_ota.write(file_bytes)
+                    
+                    os.makedirs(TIZEN_UPLOADS_DIR, exist_ok=True)
+                    target_saved_path = os.path.join(TIZEN_UPLOADS_DIR, filename)
+                    with open(target_saved_path, "wb") as f_up:
+                        f_up.write(file_bytes)
+                    
+                    # If file is TVplay.wgt, also overwrite system default and OTA
+                    if filename.lower() == "tvplay.wgt":
+                        target_saved_path = TIZEN_WGT_PATH
+                        with open(TIZEN_WGT_PATH, "wb") as f_wgt:
+                            f_wgt.write(file_bytes)
+                        ota_wgt_path = os.path.join(DATA_DIR, "TVplay.wgt")
+                        with open(ota_wgt_path, "wb") as f_ota:
+                            f_ota.write(file_bytes)
+                    
                     if install_immediately:
-                        execute_tizen_task("install", tv_ip)
+                        execute_tizen_task("install", tv_ip, target_saved_path)
+                    
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")
                     self.send_cors_headers()
                     self.end_headers()
-                    self.wfile.write(json.dumps({"success": True, "size": len(file_bytes), "installed": install_immediately}).encode("utf-8"))
+                    self.wfile.write(json.dumps({
+                        "success": True,
+                        "filename": filename,
+                        "path": target_saved_path,
+                        "size": len(file_bytes),
+                        "installed": install_immediately
+                    }).encode("utf-8"))
                     return
                 except Exception as ex:
                     self.send_response(400)
