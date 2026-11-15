@@ -16,6 +16,9 @@ import time
 import queue
 import urllib.request
 import urllib.parse
+import subprocess
+import threading
+import base64
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from threading import Lock
 
@@ -256,6 +259,102 @@ def get_sports():
         except Exception as e:
             print(f"[-] parse sports error: {e}")
     return cached_sports_data or {"categories": [], "liveCount": 0}
+
+# Samsung Tizen TV Configuration & Deployment
+TIZEN_CLI_PATH = "/opt/samsung/apps2samsung-cli"
+TIZEN_WGT_PATH = "/opt/samsung/TVplay.wgt"
+DEFAULT_TIZEN_IP = "10.0.0.9"
+
+tizen_state_lock = Lock()
+tizen_deploy_state = {
+    "status": "idle",       # "idle", "running", "success", "error"
+    "action": "",           # "check", "install", "launch", "upload"
+    "tvIp": DEFAULT_TIZEN_IP,
+    "message": "Sẵn sàng",
+    "log": "",
+    "timestamp": int(time.time()),
+    "wgtExists": False,
+    "wgtSize": 0,
+    "wgtMtime": 0
+}
+
+def get_tizen_status():
+    with tizen_state_lock:
+        st = dict(tizen_deploy_state)
+    wgt_exists = os.path.exists(TIZEN_WGT_PATH)
+    wgt_size = os.path.getsize(TIZEN_WGT_PATH) if wgt_exists else 0
+    wgt_mtime = int(os.path.getmtime(TIZEN_WGT_PATH)) if wgt_exists else 0
+    st["wgtExists"] = wgt_exists
+    st["wgtSize"] = wgt_size
+    st["wgtMtime"] = wgt_mtime
+    return st
+
+def execute_tizen_task(action, tv_ip=DEFAULT_TIZEN_IP):
+    def _task():
+        with tizen_state_lock:
+            tizen_deploy_state["status"] = "running"
+            tizen_deploy_state["action"] = action
+            tizen_deploy_state["tvIp"] = tv_ip
+            tizen_deploy_state["timestamp"] = int(time.time())
+            if action == "check":
+                tizen_deploy_state["message"] = f"Đang kiểm tra TV ({tv_ip})..."
+                tizen_deploy_state["log"] = f"[*] Kiểm tra kết nối tới Samsung TV tại {tv_ip}...\n"
+            elif action == "install":
+                tizen_deploy_state["message"] = f"Đang cài đặt TVplay.wgt lên TV ({tv_ip})..."
+                tizen_deploy_state["log"] = f"[*] Bắt đầu ký và cài đặt /opt/samsung/TVplay.wgt lên TV {tv_ip}...\n"
+            elif action == "launch":
+                tizen_deploy_state["message"] = f"Đang mở app TV Play trên TV ({tv_ip})..."
+                tizen_deploy_state["log"] = f"[*] Gửi lệnh mở ứng dụng TVPlay0001.TVPlay lên TV {tv_ip}...\n"
+        
+        broadcast_event("tizen_status", get_tizen_status())
+        
+        try:
+            if action == "check":
+                cmd = [TIZEN_CLI_PATH, "tv", tv_ip]
+            elif action == "install":
+                cmd = [TIZEN_CLI_PATH, "install", TIZEN_WGT_PATH, "--tv", tv_ip, "--yes"]
+            elif action == "launch":
+                cmd = [TIZEN_CLI_PATH, "launch", "TVPlay0001.TVPlay", "--tv", tv_ip]
+            else:
+                raise ValueError(f"Hành động không hợp lệ: {action}")
+            
+            proc = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=90
+            )
+            output = proc.stdout or ""
+            with tizen_state_lock:
+                tizen_deploy_state["log"] += output + "\n"
+                tizen_deploy_state["timestamp"] = int(time.time())
+                if proc.returncode == 0:
+                    tizen_deploy_state["status"] = "success"
+                    if action == "check":
+                        tizen_deploy_state["message"] = f"TV ({tv_ip}) đang BẬT & sẵn sàng nhận lệnh!"
+                    elif action == "install":
+                        tizen_deploy_state["message"] = f"Cài đặt TV Play thành công lên TV ({tv_ip})!"
+                    elif action == "launch":
+                        tizen_deploy_state["message"] = f"Đã mở TV Play trên TV ({tv_ip})!"
+                else:
+                    tizen_deploy_state["status"] = "error"
+                    tizen_deploy_state["message"] = f"Thực hiện thất bại (Mã lỗi {proc.returncode})"
+        except subprocess.TimeoutExpired:
+            with tizen_state_lock:
+                tizen_deploy_state["status"] = "error"
+                tizen_deploy_state["message"] = "Hết thời gian chờ (Timeout 90s)"
+                tizen_deploy_state["log"] += "\n[!] Lỗi: Quá thời gian chờ phản hồi từ TV.\n"
+        except Exception as ex:
+            with tizen_state_lock:
+                tizen_deploy_state["status"] = "error"
+                tizen_deploy_state["message"] = f"Lỗi: {str(ex)}"
+                tizen_deploy_state["log"] += f"\n[!] Lỗi hệ thống: {str(ex)}\n"
+        
+        broadcast_event("tizen_status", get_tizen_status())
+
+    t = threading.Thread(target=_task, daemon=True)
+    t.start()
 
 WEB_REMOTE_HTML = """<!DOCTYPE html>
 <html lang="vi">
@@ -516,6 +615,68 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 
     <!-- TAB 5: CÀI ĐẶT -->
     <div id="tab-settings" class="tab-content">
+        <!-- SAMSUNG TIZEN DEPLOYMENT CARD -->
+        <div class="settings-card" style="border:1px solid #FF6500; background:linear-gradient(180deg, #18152c 0%, #161526 100%);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin-bottom:0; display:flex; align-items:center; gap:6px; color:#FF6500; font-size:15px;">
+                    <span>📺</span> SAMSUNG TIZEN TV (.WGT)
+                </h3>
+                <span id="tizenStatusBadge" class="tv-status-badge status-disconnected">
+                    <span class="status-dot"></span>
+                    <span id="tizenBadgeText">Sẵn sàng</span>
+                </span>
+            </div>
+
+            <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px; line-height:1.4;">
+                Cài đặt trực tiếp file <code>TVplay.wgt</code> từ máy chủ Armbian lên Samsung TV qua mạng LAN (cài ngầm 100%, không làm gián đoạn người đang xem YouTube trên TV).
+            </p>
+
+            <div class="form-group" style="margin-bottom:10px;">
+                <label style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:4px; font-weight:600;">Địa chỉ IP Samsung TV</label>
+                <input type="text" id="tizenTvIp" class="form-input" value="10.0.0.9" placeholder="10.0.0.9">
+            </div>
+
+            <div class="info-row">
+                <span>Gói cài đặt máy chủ:</span>
+                <span id="tizenWgtFileInfo" style="font-family:monospace; color:var(--accent);">Đang nạp thông tin...</span>
+            </div>
+
+            <div class="row-actions" style="margin-top:12px; gap:8px;">
+                <button class="action-btn" style="background:#1e293b; border-color:#64748b;" onclick="checkTizenTv()">
+                    🔍 Kiểm Tra TV
+                </button>
+                <button class="action-btn" style="background:#FF6500; border-color:#FF8533; font-weight:800;" onclick="installTizenWgt()">
+                    📦 Cài Đặt .wgt Lên TV
+                </button>
+            </div>
+
+            <div class="row-actions" style="margin-top:8px;">
+                <button class="action-btn" style="background:#241e3d; border-color:#6366f1; color:#a5b4fc;" onclick="launchTizenApp()">
+                    🚀 Mở App TV Play Trên TV
+                </button>
+            </div>
+
+            <!-- Upload Custom .wgt -->
+            <div style="margin-top:14px; padding-top:12px; border-top:1px dashed var(--card-border);">
+                <label style="font-size:12px; font-weight:700; color:var(--text-main); display:block; margin-bottom:6px;">
+                    📂 Tải file .wgt mới từ điện thoại / máy tính:
+                </label>
+                <input type="file" id="tizenWgtUploadFile" accept=".wgt" class="form-input" style="padding:6px; font-size:12px;">
+                <button class="submit-btn" style="margin-top:8px; padding:10px; background:#10b981; font-size:13px;" onclick="uploadTizenWgt()">
+                    ⬆ Tải Lên &amp; Cài Đặt Ngay
+                </button>
+            </div>
+
+            <!-- Deployment Log / Status Output -->
+            <div id="tizenLogWrap" style="margin-top:12px; display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:11px; font-weight:700; color:var(--text-sub);">TIẾN TRÌNH &amp; NHẬT KÝ CLI:</span>
+                    <button style="background:none; border:none; color:var(--text-sub); font-size:11px; cursor:pointer;" onclick="toggleTizenLog()">Ẩn/Hiện</button>
+                </div>
+                <pre id="tizenLogBox" style="background:#090814; border:1px solid var(--card-border); border-radius:8px; padding:10px; font-size:11px; color:#10b981; max-height:160px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; font-family:monospace;"></pre>
+            </div>
+        </div>
+
         <div class="settings-card">
             <h3>📡 HỆ THỐNG MẠNG & ARMBIAN HUB</h3>
             <div class="info-row"><span>Máy chủ Web Remote:</span><span id="infoRemoteHost">10.0.0.222:8080</span></div>
@@ -582,7 +743,7 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             if (tabId === 'channels') { btns[1].classList.add('active'); if (!allChannels.length) loadChannels(); }
             if (tabId === 'sports') { btns[2].classList.add('active'); loadSports(); }
             if (tabId === 'playlists') { btns[3].classList.add('active'); loadPlaylists(); }
-            if (tabId === 'settings') btns[4].classList.add('active');
+            if (tabId === 'settings') { btns[4].classList.add('active'); loadTizenStatus(); }
         }
 
         /* PLAYLIST FUNCTIONS */
@@ -975,6 +1136,192 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
             }).catch(function(e) {});
         }
 
+        /* TIZEN DEPLOYMENT FUNCTIONS */
+        var tizenPollTimer = null;
+
+        function getTizenIp() {
+            var el = document.getElementById('tizenTvIp');
+            var ip = (el ? el.value : '10.0.0.9').trim() || '10.0.0.9';
+            try { localStorage.setItem('tvplay_tizen_ip', ip); } catch(e) {}
+            return ip;
+        }
+
+        function loadTizenStatus() {
+            var ipInput = document.getElementById('tizenTvIp');
+            var savedIp = null;
+            try { savedIp = localStorage.getItem('tvplay_tizen_ip'); } catch(e) {}
+            if (savedIp && ipInput && (!ipInput.value || ipInput.value === '10.0.0.9')) ipInput.value = savedIp;
+
+            fetch('/api/tizen/status?t=' + Date.now())
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                var badge = document.getElementById('tizenStatusBadge');
+                var badgeText = document.getElementById('tizenBadgeText');
+                var fileInfo = document.getElementById('tizenWgtFileInfo');
+                var logWrap = document.getElementById('tizenLogWrap');
+                var logBox = document.getElementById('tizenLogBox');
+
+                if (fileInfo) {
+                    if (data.wgtExists) {
+                        var kb = Math.round(data.wgtSize / 1024);
+                        fileInfo.innerHTML = '<span style="color:var(--green)">✓ TVplay.wgt (' + kb + ' KB)</span>';
+                    } else {
+                        fileInfo.innerHTML = '<span style="color:var(--red)">Chưa có file TVplay.wgt</span>';
+                    }
+                }
+
+                if (badge && badgeText) {
+                    if (data.status === 'running') {
+                        badge.className = 'tv-status-badge status-connected';
+                        badge.style.background = 'rgba(255, 101, 0, 0.2)';
+                        badge.style.borderColor = 'var(--accent)';
+                        badgeText.textContent = data.message || 'Đang thực thi...';
+                        badgeText.style.color = 'var(--accent)';
+                        if (!tizenPollTimer) {
+                            tizenPollTimer = setInterval(loadTizenStatus, 1500);
+                        }
+                    } else {
+                        if (tizenPollTimer) {
+                            clearInterval(tizenPollTimer);
+                            tizenPollTimer = null;
+                        }
+                        if (data.status === 'success') {
+                            badge.className = 'tv-status-badge status-connected';
+                            badge.style.background = '';
+                            badge.style.borderColor = '';
+                            badgeText.style.color = '';
+                            badgeText.textContent = data.message || 'Thành công';
+                        } else if (data.status === 'error') {
+                            badge.className = 'tv-status-badge status-disconnected';
+                            badge.style.background = '';
+                            badge.style.borderColor = '';
+                            badgeText.style.color = '';
+                            badgeText.textContent = data.message || 'Lỗi';
+                        } else {
+                            badge.className = 'tv-status-badge status-disconnected';
+                            badge.style.background = '';
+                            badge.style.borderColor = '';
+                            badgeText.style.color = '';
+                            badgeText.textContent = 'Sẵn sàng';
+                        }
+                    }
+                }
+
+                if (logWrap && logBox && data.log) {
+                    logWrap.style.display = 'block';
+                    logBox.textContent = data.log;
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
+            }).catch(function(e) {});
+        }
+
+        function checkTizenTv() {
+            var ip = getTizenIp();
+            showToast('Đang kiểm tra kết nối TV ' + ip + '...');
+            var logWrap = document.getElementById('tizenLogWrap');
+            var logBox = document.getElementById('tizenLogBox');
+            if (logWrap) logWrap.style.display = 'block';
+            if (logBox) logBox.textContent = '[*] Đang gửi yêu cầu kiểm tra Samsung TV ' + ip + '...\n';
+
+            fetch('/api/tizen/check', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tvIp: ip })
+            }).then(function(res) { return res.json(); })
+            .then(function(d) {
+                showToast('Đang kiểm tra kết nối TV...');
+                if (!tizenPollTimer) tizenPollTimer = setInterval(loadTizenStatus, 1000);
+            }).catch(function(e) {
+                showToast('Lỗi gửi lệnh kiểm tra!');
+            });
+        }
+
+        function installTizenWgt() {
+            var ip = getTizenIp();
+            if (!confirm('Cài đặt TVplay.wgt lên Samsung TV (' + ip + ')?\n\nQuá trình chạy ngầm hoàn toàn và không ảnh hưởng tới người đang xem YouTube trên TV.')) return;
+
+            showToast('Bắt đầu cài đặt lên TV ' + ip + '...');
+            var logWrap = document.getElementById('tizenLogWrap');
+            var logBox = document.getElementById('tizenLogBox');
+            if (logWrap) logWrap.style.display = 'block';
+            if (logBox) logBox.textContent = '[*] Đang gửi lệnh cài đặt /opt/samsung/TVplay.wgt lên ' + ip + '...\n';
+
+            fetch('/api/tizen/install', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tvIp: ip })
+            }).then(function(res) { return res.json(); })
+            .then(function(d) {
+                showToast('Đang cài đặt ngầm lên TV...');
+                if (!tizenPollTimer) tizenPollTimer = setInterval(loadTizenStatus, 1500);
+            }).catch(function(e) {
+                showToast('Lỗi gửi lệnh cài đặt!');
+            });
+        }
+
+        function launchTizenApp() {
+            var ip = getTizenIp();
+            showToast('Đang mở TV Play trên TV ' + ip + '...');
+            fetch('/api/tizen/launch', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tvIp: ip })
+            }).then(function(res) { return res.json(); })
+            .then(function(d) {
+                showToast('Đã gửi lệnh mở app TV Play!');
+                if (!tizenPollTimer) tizenPollTimer = setInterval(loadTizenStatus, 1000);
+            }).catch(function(e) {
+                showToast('Lỗi gửi lệnh mở app!');
+            });
+        }
+
+        function uploadTizenWgt() {
+            var fileInput = document.getElementById('tizenWgtUploadFile');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToast('Vui lòng chọn file TVplay.wgt!');
+                return;
+            }
+            var file = fileInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.wgt')) {
+                showToast('Vui lòng chọn tệp có đuôi .wgt!');
+                return;
+            }
+            var ip = getTizenIp();
+            showToast('Đang tải file ' + file.name + ' lên máy chủ...');
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var base64Data = e.target.result;
+                fetch('/api/tizen/upload', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        content: base64Data,
+                        tvIp: ip,
+                        installImmediately: true
+                    })
+                }).then(function(res) { return res.json(); })
+                .then(function(d) {
+                    if (d.success) {
+                        showToast('Đã tải lên TVplay.wgt (' + Math.round(d.size/1024) + ' KB)! Đang tiến hành cài đặt...');
+                        fileInput.value = '';
+                        if (!tizenPollTimer) tizenPollTimer = setInterval(loadTizenStatus, 1500);
+                    } else {
+                        showToast('Lỗi: ' + (d.error || 'Tải file thất bại'));
+                    }
+                }).catch(function(e) {
+                    showToast('Lỗi kết nối khi tải file .wgt!');
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function toggleTizenLog() {
+            var box = document.getElementById('tizenLogBox');
+            if (box) {
+                box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+            }
+        }
+
         checkTvStatus();
         setInterval(checkTvStatus, 3000);
     </script>
@@ -1052,6 +1399,14 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
                 with sse_lock:
                     if q in sse_clients:
                         sse_clients.remove(q)
+            return
+
+        if path == "/api/tizen/status":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps(get_tizen_status(), ensure_ascii=False).encode("utf-8"))
             return
 
         if path == "/api/status":
@@ -1146,6 +1501,67 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
                     post_data = dict(urllib.parse.parse_qsl(body))
                 except Exception:
                     pass
+
+        if path == "/api/tizen/check":
+            tv_ip = (post_data.get("tvIp") or DEFAULT_TIZEN_IP).strip()
+            execute_tizen_task("check", tv_ip)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "message": "Đang kiểm tra TV"}).encode("utf-8"))
+            return
+
+        if path == "/api/tizen/install":
+            tv_ip = (post_data.get("tvIp") or DEFAULT_TIZEN_IP).strip()
+            execute_tizen_task("install", tv_ip)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "message": "Đang cài đặt TVplay.wgt lên TV"}).encode("utf-8"))
+            return
+
+        if path == "/api/tizen/launch":
+            tv_ip = (post_data.get("tvIp") or DEFAULT_TIZEN_IP).strip()
+            execute_tizen_task("launch", tv_ip)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "message": "Đang mở ứng dụng trên TV"}).encode("utf-8"))
+            return
+
+        if path == "/api/tizen/upload":
+            content_b64 = post_data.get("content", "")
+            tv_ip = (post_data.get("tvIp") or DEFAULT_TIZEN_IP).strip()
+            install_immediately = post_data.get("installImmediately", True)
+            if content_b64:
+                try:
+                    if "," in content_b64:
+                        content_b64 = content_b64.split(",", 1)[1]
+                    file_bytes = base64.b64decode(content_b64)
+                    os.makedirs(os.path.dirname(TIZEN_WGT_PATH), exist_ok=True)
+                    with open(TIZEN_WGT_PATH, "wb") as f_wgt:
+                        f_wgt.write(file_bytes)
+                    ota_wgt_path = os.path.join(DATA_DIR, "TVplay.wgt")
+                    with open(ota_wgt_path, "wb") as f_ota:
+                        f_ota.write(file_bytes)
+                    if install_immediately:
+                        execute_tizen_task("install", tv_ip)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": True, "size": len(file_bytes), "installed": install_immediately}).encode("utf-8"))
+                    return
+                except Exception as ex:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.send_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"success": False, "error": str(ex)}).encode("utf-8"))
+                    return
 
         if path == "/api/key":
             key = post_data.get("key", "").strip().lower()

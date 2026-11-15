@@ -1,8 +1,8 @@
 {
-  "version": "2.2.12",
-  "versionCode": 230,
-  "releaseDate": "2026-11-07",
-  "changelog": "Đồng bộ danh sách phát M3U với Web Remote, mở nhanh bảng chọn playlist bằng phím Sang Phải trong chế độ TV, hỗ trợ cập nhật OTA trực tiếp.",
+  "version": "2.2.13",
+  "versionCode": 231,
+  "releaseDate": "2026-11-15",
+  "changelog": "Tối ưu hóa điều khiển D-Pad mượt mà, khử hoàn toàn độ trễ khựng khi duyệt danh mục và kênh thể thao, hỗ trợ cài đặt .wgt từ Web Remote.",
   "bundleUrl": "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/tizen_tvplay/js/app.js",
   "downloadUrl": "http://10.0.0.222:8080/data/TVplay.wgt"
 }

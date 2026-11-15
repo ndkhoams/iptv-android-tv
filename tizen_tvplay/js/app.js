@@ -91,7 +91,7 @@
     // ==========================================
     // 1. CẤU HÌNH & HẰNG SỐ
     // ==========================================
-    var APP_VERSION = "2.2.12";
+    var APP_VERSION = "2.2.13";
     var DEFAULT_M3U_URL = "https://raw.githubusercontent.com/ndkhoams/iptv/refs/heads/main/ktv.m3u";
     var DEFAULT_UDPXY_SERVER = "10.0.0.222:4022";
 
@@ -157,6 +157,24 @@
     // Dữ liệu thể thao (Sports)
     var sportsLiveMatches = [];
     var sportsCategories = [];
+    var sportsMatchByUrlMap = {};
+    var sportsMatchByIdMap = {};
+    var sportsMatchByCleanNameMap = {};
+    var catRenderDebounceTimer = null;
+    function scheduleRenderChannels() {
+        if (catRenderDebounceTimer) clearTimeout(catRenderDebounceTimer);
+        catRenderDebounceTimer = setTimeout(function () {
+            catRenderDebounceTimer = null;
+            renderChannels();
+        }, 75);
+    }
+    function flushRenderChannels() {
+        if (catRenderDebounceTimer) {
+            clearTimeout(catRenderDebounceTimer);
+            catRenderDebounceTimer = null;
+            renderChannels();
+        }
+    }
     var sportsFixtures = [];
     var currentSelectedMatch = null;
 
@@ -465,11 +483,18 @@
     // ==========================================
     // 5. TẢI DỮ LIỆU TÁCH BIỆT: TV & THỂ THAO
     // ==========================================
+    var leagueLogoCache = {};
     function resolveLeagueLogo(rawLogo, league, leagueName, title, sources) {
         var raw = (rawLogo || "").toLowerCase();
         var lg = (league || "").toUpperCase();
 
-        if (LEAGUE_LOGOS_BASE64[lg]) return LEAGUE_LOGOS_BASE64[lg];
+        var cacheKey = raw + "|" + lg + "|" + (leagueName || "") + "|" + (title || "");
+        if (leagueLogoCache[cacheKey]) return leagueLogoCache[cacheKey];
+
+        if (LEAGUE_LOGOS_BASE64[lg]) {
+            leagueLogoCache[cacheKey] = LEAGUE_LOGOS_BASE64[lg];
+            return LEAGUE_LOGOS_BASE64[lg];
+        }
         if (raw.indexOf("ic_league_laliga") >= 0) return LEAGUE_LOGOS_BASE64.LALIGA;
         if (raw.indexOf("ic_league_epl") >= 0) return LEAGUE_LOGOS_BASE64.EPL;
         if (raw.indexOf("ic_league_seriea") >= 0) return LEAGUE_LOGOS_BASE64.SERIE_A;
@@ -960,6 +985,9 @@
         sportsFixtures = sportsData.fixtures || [];
         sportsLiveMatches = [];
         sportsCategories = [];
+        sportsMatchByUrlMap = {};
+        sportsMatchByIdMap = {};
+        sportsMatchByCleanNameMap = {};
 
         // 1. live_events: Mỗi trận đấu chỉ hiển thị DUY NHẤT 1 DÒNG với LOGO GIẢI ĐẤU
         if (sportsData.live_events && sportsData.live_events.length > 0) {
@@ -1005,7 +1033,7 @@
                     });
                 }
 
-                sportsLiveMatches.push({
+                var matchItem = {
                     id: "match_" + evIdx,
                     number: evIdx + 1,
                     name: displayName,
@@ -1015,6 +1043,14 @@
                     isMatch: true,
                     matchData: ev,
                     sources: sourcesList
+                };
+                sportsLiveMatches.push(matchItem);
+                sportsMatchByIdMap[matchItem.id] = matchItem;
+                if (matchItem.url) sportsMatchByUrlMap[matchItem.url] = matchItem;
+                if (cleanTeams) sportsMatchByCleanNameMap[cleanTeams.toUpperCase()] = matchItem;
+                sourcesList.forEach(function (src) {
+                    sportsMatchByIdMap[src.id] = matchItem;
+                    if (src.url) sportsMatchByUrlMap[src.url] = matchItem;
                 });
             });
 
@@ -1030,14 +1066,26 @@
                 if (sg.channels && sg.channels.length > 0) {
                     var chList = [];
                     sg.channels.forEach(function (sc, scIdx) {
+                        var matchedMatch = (sc.url && sportsMatchByUrlMap[sc.url]) || null;
+                        if (!matchedMatch && sc.name) {
+                            var scUpper = sc.name.toUpperCase();
+                            for (var tKey in sportsMatchByCleanNameMap) {
+                                if (scUpper.indexOf(tKey) >= 0) {
+                                    matchedMatch = sportsMatchByCleanNameMap[tKey];
+                                    break;
+                                }
+                            }
+                        }
+                        var chLogo = (sc.logo && sc.logo.indexOf("http") === 0) ? sc.logo : (matchedMatch && matchedMatch.logo ? matchedMatch.logo : resolveLeagueLogo(sc.logo, "", sg.name, sc.name));
                         chList.push({
                             id: "sg_" + sg.name + "_" + scIdx,
                             number: scIdx + 1,
                             name: sc.name,
                             group: sg.name,
-                            logo: (sc.logo && sc.logo.indexOf("http") === 0) ? sc.logo : resolveLeagueLogo(sc.logo, "", sg.name, sc.name),
+                            logo: chLogo,
                             url: sc.url,
-                            isMatch: false
+                            isMatch: false,
+                            match: matchedMatch
                         });
                     });
                     sportsCategories.push({
@@ -1219,7 +1267,7 @@
         channelsListEl.appendChild(frag);
 
         updateFocusView();
-        updateSpotlight();
+        scheduleSpotlightUpdate();
     }
 
     function handleChannelClick(ch) {
@@ -1233,54 +1281,62 @@
     }
 
     function updateFocusView() {
-        sidebarBtns.forEach(function (btn, idx) {
-            if (btn) {
-                if (focusedColumn === 'sidebar' && idx === selectedSidebarIdx) btn.classList.add('focused');
-                else btn.classList.remove('focused');
-            }
-        });
-
-        var catItems = categoriesListEl.querySelectorAll('.cat-item');
-        catItems.forEach(function (el, idx) {
-            if (idx === selectedCatIdx) {
-                el.classList.add('selected');
-                if (focusedColumn === 'categories') {
-                    el.classList.add('focused');
-                    el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-                } else {
-                    el.classList.remove('focused');
+        if (sidebarBtns) {
+            for (var i = 0; i < sidebarBtns.length; i++) {
+                var btn = sidebarBtns[i];
+                if (btn) {
+                    if (focusedColumn === 'sidebar' && i === selectedSidebarIdx) btn.classList.add('focused');
+                    else btn.classList.remove('focused');
                 }
-            } else {
-                el.classList.remove('selected', 'focused');
             }
-        });
+        }
 
-        var chItems = channelsListEl.querySelectorAll('.ch-card');
-        chItems.forEach(function (el, idx) {
-            if (idx === selectedChIdx && (focusedColumn === 'channels' || focusedColumn === 'spotlight')) {
-                if (focusedColumn === 'channels') el.classList.add('focused');
-                else el.classList.remove('focused');
-                el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-            } else {
-                el.classList.remove('focused');
+        if (categoriesListEl) {
+            var prevCatFocused = categoriesListEl.querySelector('.cat-item.focused');
+            var prevCatSelected = categoriesListEl.querySelector('.cat-item.selected');
+            var currentCatEl = categoriesListEl.children[selectedCatIdx];
+
+            if (prevCatFocused && prevCatFocused !== currentCatEl) {
+                prevCatFocused.classList.remove('focused');
             }
-        });
-
-        // Spotlight sources focus
-        var srcChips = document.querySelectorAll('#spotlight-sources-row .src-chip-btn');
-        srcChips.forEach(function (chip, idx) {
-            if (focusedColumn === 'spotlight' && idx === selectedSpotlightSourceIdx) {
-                chip.classList.add('focused');
-                chip.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-            } else {
-                chip.classList.remove('focused');
+            if (prevCatSelected && prevCatSelected !== currentCatEl) {
+                prevCatSelected.classList.remove('selected');
             }
-        });
 
-        if (spotlightEpgContentEl) {
-            var chips = spotlightEpgContentEl.querySelectorAll('.match-source-chip');
-            chips.forEach(function (chip, idx) {
-                if (focusedColumn === 'spotlight' && idx === selectedSpotlightSourceIdx) {
+            if (currentCatEl) {
+                currentCatEl.classList.add('selected');
+                if (focusedColumn === 'categories') {
+                    currentCatEl.classList.add('focused');
+                    currentCatEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                } else {
+                    currentCatEl.classList.remove('focused');
+                }
+            }
+        }
+
+        if (channelsListEl) {
+            var prevChFocused = channelsListEl.querySelector('.ch-card.focused');
+            var currentChEl = channelsListEl.children[selectedChIdx];
+
+            if (prevChFocused && prevChFocused !== currentChEl) {
+                prevChFocused.classList.remove('focused');
+            }
+
+            if (currentChEl && (focusedColumn === 'channels' || focusedColumn === 'spotlight')) {
+                if (focusedColumn === 'channels') {
+                    currentChEl.classList.add('focused');
+                } else {
+                    currentChEl.classList.remove('focused');
+                }
+                currentChEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+            }
+        }
+
+        // Chỉ duyệt spotlight khi đang focus spotlight
+        if (focusedColumn === 'spotlight') {
+            var srcChips = document.querySelectorAll('#spotlight-sources-row .src-chip-btn');
+            srcChips.forEach(function (chip, idx) {
+                if (idx === selectedSpotlightSourceIdx) {
                     chip.classList.add('focused');
                     chip.scrollIntoView({ block: 'nearest', behavior: 'auto' });
                 } else {
@@ -1288,27 +1344,42 @@
                 }
             });
 
-            var epgItems = spotlightEpgContentEl.querySelectorAll('.epg-item');
-            epgItems.forEach(function (item, idx) {
-                if (focusedColumn === 'spotlight' && idx === selectedSpotlightSourceIdx) {
-                    item.classList.add('focused');
-                    item.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-                } else {
-                    item.classList.remove('focused');
-                }
-            });
-        }
+            if (spotlightEpgContentEl) {
+                var chips = spotlightEpgContentEl.querySelectorAll('.match-source-chip');
+                chips.forEach(function (chip, idx) {
+                    if (idx === selectedSpotlightSourceIdx) {
+                        chip.classList.add('focused');
+                        chip.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                    } else {
+                        chip.classList.remove('focused');
+                    }
+                });
 
-        var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
-        if (standingRows.length > 0) {
-            standingRows.forEach(function (row, idx) {
-                if (focusedColumn === 'spotlight' && idx === selectedSpotlightSourceIdx) {
-                    row.classList.add('focused');
-                    row.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-                } else {
-                    row.classList.remove('focused');
-                }
-            });
+                var epgItems = spotlightEpgContentEl.querySelectorAll('.epg-item');
+                epgItems.forEach(function (item, idx) {
+                    if (idx === selectedSpotlightSourceIdx) {
+                        item.classList.add('focused');
+                        item.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                    } else {
+                        item.classList.remove('focused');
+                    }
+                });
+            }
+
+            var standingRows = document.querySelectorAll('#spotlight-standings-content .standing-row');
+            if (standingRows.length > 0) {
+                standingRows.forEach(function (row, idx) {
+                    if (idx === selectedSpotlightSourceIdx) {
+                        row.classList.add('focused');
+                        row.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                    } else {
+                        row.classList.remove('focused');
+                    }
+                });
+            }
+        } else {
+            var prevSpotlight = document.querySelector('#spotlight-col .focused');
+            if (prevSpotlight) prevSpotlight.classList.remove('focused');
         }
     }
 
@@ -1652,7 +1723,6 @@
                     card.appendChild(timeBadge);
                     card.appendChild(srcTitle);
                     spotlightEpgContentEl.appendChild(card);
-                }
             }
         } else {
             // Kênh TV thông thường
@@ -2540,17 +2610,18 @@
         // Nếu kênh là kênh TV thông thường (id bắt đầu bằng 'tv_')
         if (channel.id && channel.id.indexOf('tv_') === 0) return null;
 
+        if (channel.url && sportsMatchByUrlMap[channel.url]) {
+            return sportsMatchByUrlMap[channel.url];
+        }
+        if (channel.id && sportsMatchByIdMap[channel.id]) {
+            return sportsMatchByIdMap[channel.id];
+        }
+
         if (currentPlayingMatch && currentPlayingMatch.sources && currentPlayingMatch.sources.some(function(s) { return s.url === channel.url || s.id === channel.id; })) {
             return currentPlayingMatch;
         }
 
-        var found = sportsLiveMatches.find(function (m) {
-            if (m.id === channel.id) return true;
-            if (m.url && channel.url && m.url === channel.url) return true;
-            if (m.sources && m.sources.some(function (s) { return s.url === channel.url || s.id === channel.id; })) return true;
-            return false;
-        });
-        return found || currentPlayingMatch || null;
+        return currentPlayingMatch || null;
     }
 
     function isSportsPlayback(channel) {
@@ -2570,19 +2641,7 @@
         // Kiểm tra xem kênh này có nằm trong danh sách trận đấu hoặc nhóm thể thao không
         if (findMatchForPlayingChannel(channel)) return true;
 
-        var inSportsCat = sportsCategories.some(function (cat) {
-            return cat.channels && cat.channels.some(function (c) {
-                return c.id === channel.id;
-            });
-        });
-        if (inSportsCat) return true;
-
-        var inTv = tvChannels.some(function (c) {
-            return c.id === channel.id;
-        });
-        if (inTv) return false;
-
-        return currentAppMode === APP_MODE_SPORTS;
+        return (currentAppMode === APP_MODE_SPORTS);
     }
 
     function playChannel(channel) {
@@ -2878,10 +2937,11 @@
                     if (focusedColumn === 'sidebar') {
                         triggerSidebarAction(selectedSidebarIdx);
                     } else if (focusedColumn === 'categories') {
+                        flushRenderChannels();
                         focusedColumn = 'channels';
                         selectedChIdx = 0;
                         updateFocusView();
-                        updateSpotlight();
+                        scheduleSpotlightUpdate();
                     } else if (focusedColumn === 'spotlight') {
                         if (currentAppMode === APP_MODE_TV) {
                             var currentCat = categories[selectedCatIdx];
@@ -2919,7 +2979,7 @@
                             selectedCatIdx--;
                             selectedChIdx = 0;
                             updateFocusView();
-                            renderChannels();
+                            scheduleRenderChannels();
                         }
                     } else if (focusedColumn === 'spotlight') {
                         if (selectedSpotlightSourceIdx > 0) {
@@ -2953,7 +3013,7 @@
                             selectedCatIdx++;
                             selectedChIdx = 0;
                             updateFocusView();
-                            renderChannels();
+                            scheduleRenderChannels();
                         }
                     } else if (focusedColumn === 'spotlight') {
                         var maxLenSpotlight = 0;
@@ -3010,11 +3070,12 @@
                         focusedColumn = 'categories';
                         updateFocusView();
                     } else if (focusedColumn === 'categories') {
+                        flushRenderChannels();
                         focusedColumn = 'channels';
                         selectedChIdx = 0;
                         selectedSpotlightSourceIdx = 0;
                         updateFocusView();
-                        updateSpotlight();
+                        scheduleSpotlightUpdate();
                     } else if (focusedColumn === 'channels') {
                         if (currentAppMode === APP_MODE_TV) {
                             var epgItems = spotlightEpgContentEl ? spotlightEpgContentEl.querySelectorAll('.epg-item') : [];

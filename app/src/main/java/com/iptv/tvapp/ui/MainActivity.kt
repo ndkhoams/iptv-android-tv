@@ -341,6 +341,7 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             onChannelFocused = { channel ->
+                currentFocusedChannel = channel
                 if (binding.layoutSpotlightCol.visibility == View.VISIBLE) {
                     updateSpotlight(channel, immediate = false)
                 }
@@ -393,10 +394,18 @@ class MainActivity : AppCompatActivity() {
                 if (view.hasFocus() && binding.channelGuideOverlay.visibility == View.VISIBLE) {
                     binding.rvChannels.post {
                         if (!binding.rvChannels.hasFocus() && binding.channelGuideOverlay.visibility == View.VISIBLE) {
-                            val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
-                            val first = lm?.findFirstVisibleItemPosition() ?: 0
-                            if (first != RecyclerView.NO_POSITION) {
-                                binding.rvChannels.findViewHolderForAdapterPosition(first)?.itemView?.requestFocus()
+                            val targetIdx = currentFocusedChannel?.let { ch ->
+                                currentCategoryChannels.indexOfFirst { it.streamUrl == ch.streamUrl }
+                            } ?: -1
+                            if (targetIdx != -1) {
+                                binding.rvChannels.findViewHolderForAdapterPosition(targetIdx)?.itemView?.requestFocus()
+                                    ?: binding.rvChannels.layoutManager?.findViewByPosition(targetIdx)?.requestFocus()
+                            } else {
+                                val lm = binding.rvChannels.layoutManager as? LinearLayoutManager
+                                val first = lm?.findFirstVisibleItemPosition() ?: 0
+                                if (first != RecyclerView.NO_POSITION) {
+                                    binding.rvChannels.findViewHolderForAdapterPosition(first)?.itemView?.requestFocus()
+                                }
                             }
                         }
                     }
@@ -1369,6 +1378,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSpotlight(channel: Channel, immediate: Boolean = true) {
+        currentFocusedChannel = channel
         if (binding.layoutSpotlightCol.visibility == View.GONE) {
             return
         }
@@ -2544,6 +2554,13 @@ class MainActivity : AppCompatActivity() {
                             if (targetCat != null) {
                                 targetCat.requestFocus()
                                 return true
+                            } else {
+                                val catPos = categoryAdapter.getSelectedPosition()
+                                val target = if (catPos != -1) {
+                                    binding.rvCategories.findViewHolderForAdapterPosition(catPos)?.itemView
+                                } else null
+                                (target ?: binding.rvCategories.getChildAt(0))?.requestFocus()
+                                return true
                             }
                         }
                     }
@@ -2560,6 +2577,9 @@ class MainActivity : AppCompatActivity() {
                             val targetChan = findHorizontallyAlignedChannelView(focused)
                             if (targetChan != null) {
                                 targetChan.requestFocus()
+                                return true
+                            } else {
+                                focusFirstVisibleChannel()
                                 return true
                             }
                         }
