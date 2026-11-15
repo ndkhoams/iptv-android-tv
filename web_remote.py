@@ -2625,6 +2625,59 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             marseille: 'https://a.espncdn.com/i/teamlogos/soccer/500/166.png'
         };
 
+        
+        var VN_TO_ENG = {
+            "phap": "France", "tho nhi ky": "Turkey", "sip": "Cyprus", "tay ban nha": "Spain",
+            "y": "Italy", "duc": "Germany", "anh": "England", "bo dao nha": "Portugal",
+            "ha lan": "Netherlands", "bi": "Belgium", "thuy si": "Switzerland", "dan mach": "Denmark",
+            "na uy": "Norway", "thuy dien": "Sweden", "ba lan": "Poland", "sec": "Czech Republic",
+            "cong hoa sec": "Czech Republic", "ao": "Austria", "hy lap": "Greece", "my": "USA",
+            "uc": "Australia", "nhat ban": "Japan", "nhat": "Japan", "han quoc": "South Korea",
+            "han": "South Korea", "trung quoc": "China", "trung": "China", "trieu tien": "North Korea",
+            "thai lan": "Thailand", "viet nam": "Vietnam", "vietnam": "Vietnam", "lao": "Laos",
+            "campuchia": "Cambodia", "bo bien nga": "Ivory Coast", "nam phi": "South Africa",
+            "a rap xe ut": "Saudi Arabia", "a rap saudi": "Saudi Arabia", "xu wales": "Wales",
+            "wales": "Wales", "bac ireland": "Northern Ireland", "cong hoa ireland": "Ireland",
+            "ireland": "Ireland", "nga": "Russia", "phan lan": "Finland", "dai loan": "Chinese Taipei",
+            "dai bac": "Chinese Taipei", "an do": "India", "maroc": "Morocco", "ai cap": "Egypt",
+            "mon-te-ne-gro": "Montenegro", "montenegro": "Montenegro", "armenia": "Armenia",
+            "latvia": "Latvia", "finland": "Finland", "belarus": "Belarus", "albania": "Albania",
+            "san marino": "San Marino", "kazakhstan": "Kazakhstan", "slovakia": "Slovakia",
+            "hungary": "Hungary", "serbia": "Serbia", "georgia": "Georgia", "croatia": "Croatia",
+            "scotland": "Scotland", "romania": "Romania", "slovenia": "Slovenia", "iceland": "Iceland",
+            "luxembourg": "Luxembourg", "estonia": "Estonia", "bulgaria": "Bulgaria",
+            "lithuania": "Lithuania", "liechtenstein": "Liechtenstein", "gibraltar": "Gibraltar",
+            "malta": "Malta", "faroe islands": "Faroe Islands", "faroe": "Faroe Islands",
+            "moldova": "Moldova", "north macedonia": "North Macedonia", "macedonia": "North Macedonia",
+            "venezuela": "Venezuela", "turkiye": "Turkey"
+        };
+
+        function stripVn(str) {
+            if (!str) return '';
+            return str.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[đĐ]/g, 'd')
+                .replace(/[^a-zA-Z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function toEnglishTeam(name) {
+            if (!name) return '';
+            var clean = name.replace(/^(?:đội tuyển quốc gia|đội tuyển|đtqg|đt|tuyển|clb|fc)\s+/i, '').trim();
+            var unacc = stripVn(clean).toLowerCase();
+            if (VN_TO_ENG[unacc]) return VN_TO_ENG[unacc];
+            for (var k in VN_TO_ENG) {
+                if (unacc === k || (' ' + unacc + ' ').indexOf(' ' + k + ' ') !== -1) {
+                    return VN_TO_ENG[k];
+                }
+            }
+            return unacc.split(' ').map(function(w) {
+                if (/^\d+[a-zA-Z]+$/.test(w)) return w.toLowerCase();
+                return w.charAt(0).toUpperCase() + w.slice(1);
+            }).join(' ');
+        }
+
         function getSportInfo(evt) {
             var rawLeague = (evt.league || '').toUpperCase();
             var leagueStr = (evt.leagueName || '').toLowerCase();
@@ -2799,8 +2852,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 var isLive = evt.isOngoing !== false;
                 var sport = getSportInfo(evt);
                 var league = sport.cleanLeague;
-                var home = evt.homeTeam || 'Đội nhà';
-                var away = evt.awayTeam || 'Đội khách';
+                var home = toEnglishTeam(evt.homeTeam) || 'Home Team';
+                var away = toEnglishTeam(evt.awayTeam) || 'Away Team';
 
                 var time = evt.time || '';
                 var date = evt.date || '';
@@ -2916,7 +2969,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             activeStreamEventIdx = eventIdx;
             activeStreamSourceIdx = sourceIdx;
 
-            var title = (evt.displayTitle || (evt.homeTeam + ' vs ' + evt.awayTeam));
+            var title = (evt.displayTitle || (toEnglishTeam(evt.homeTeam) + ' vs ' + toEnglishTeam(evt.awayTeam)));
             var streamName = formatStreamButtonLabel(src.name, sourceIdx);
 
             showToast('▶ Đang phát lên TV: ' + title + ' (' + streamName + ')');
