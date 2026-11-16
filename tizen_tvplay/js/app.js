@@ -673,8 +673,14 @@
     }
 
     function loadSportsData(callback) {
+        showToast("⏳ Đang tải danh mục thể thao...", 0);
         function tryFetch(idx) {
             if (idx >= SPORTS_DATA_URLS.length) {
+                if (sportsLiveMatches && sportsLiveMatches.length > 0) {
+                    showToast("⚽ Tải thành công! (" + sportsLiveMatches.length + " trận trực tiếp)", 3500);
+                } else {
+                    showToast("⚠️ Không thể tải danh mục thể thao", 3000);
+                }
                 if (callback) callback();
                 return;
             }
@@ -696,6 +702,7 @@
                             localStorage.setItem('tvplay_cached_sports', xhr.responseText);
                         } catch (e) {}
                     } catch (e) {}
+                    showToast("⚽ Tải thành công! (" + sportsLiveMatches.length + " trận trực tiếp)", 3500);
                     if (callback) callback();
                 } else {
                     tryFetch(idx + 1);
@@ -3551,15 +3558,22 @@
         if (spinnerEl) spinnerEl.classList.add('hidden');
     }
 
-    function showToast(msg) {
+    function showToast(msg, duration) {
         if (!toastEl) return;
         toastEl.textContent = msg;
         toastEl.classList.remove('hidden');
 
         if (toastTimeout) clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(function () {
-            toastEl.classList.add('hidden');
-        }, 3000);
+        if (duration !== 0) {
+            toastTimeout = setTimeout(function () {
+                toastEl.classList.add('hidden');
+            }, duration || 3000);
+        }
+    }
+
+    function hideToast() {
+        if (toastTimeout) clearTimeout(toastTimeout);
+        if (toastEl) toastEl.classList.add('hidden');
     }
 
     // Expose for external controls / debug / tests

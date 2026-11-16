@@ -150,7 +150,7 @@ class MainActivity : AppCompatActivity() {
     private var sportsFetchJob: Job? = null
     private var hasLoadedSportsOnce: Boolean = false
 
-    fun showBottomNotification(message: String) {
+    fun showBottomNotification(message: String, autoHide: Boolean = true, durationMs: Long = 3500L) {
         bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
         // Ẩn bảng thông tin kênh nhanh nếu đang mở để tránh hai thông báo bị đè lên nhau
         hideHandler.removeCallbacks(hideQuickBannerRunnable)
@@ -158,15 +158,37 @@ class MainActivity : AppCompatActivity() {
         binding.layoutQuickBuffering.visibility = View.GONE
 
         binding.tvBottomNotificationText.text = message
-        binding.layoutBottomNotification.alpha = 0f
-        binding.layoutBottomNotification.translationY = 30f
-        binding.layoutBottomNotification.visibility = View.VISIBLE
+        if (binding.layoutBottomNotification.visibility != View.VISIBLE || binding.layoutBottomNotification.alpha < 0.5f) {
+            binding.layoutBottomNotification.alpha = 0f
+            binding.layoutBottomNotification.translationY = 30f
+            binding.layoutBottomNotification.visibility = View.VISIBLE
+            binding.layoutBottomNotification.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(250)
+                .start()
+        } else {
+            // Đang hiển thị sẵn -> cập nhật nội dung mượt mà, không chớp tắt
+            binding.layoutBottomNotification.animate().cancel()
+            binding.layoutBottomNotification.alpha = 1f
+            binding.layoutBottomNotification.translationY = 0f
+        }
+
+        if (autoHide) {
+            bottomNotificationHandler.postDelayed(hideBottomNotificationRunnable, durationMs)
+        }
+    }
+
+    fun hideBottomNotification() {
+        bottomNotificationHandler.removeCallbacks(hideBottomNotificationRunnable)
         binding.layoutBottomNotification.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setDuration(250)
+            .alpha(0f)
+            .translationY(30f)
+            .setDuration(300)
+            .withEndAction {
+                binding.layoutBottomNotification.visibility = View.GONE
+            }
             .start()
-        bottomNotificationHandler.postDelayed(hideBottomNotificationRunnable, 3500)
     }
 
     private var lastRxBytes: Long = 0L
@@ -1013,7 +1035,7 @@ class MainActivity : AppCompatActivity() {
                                 // Tự động load danh mục thể thao ngầm sau khi kênh TV đầu tiên bắt đầu phát thành công
                                 if (!hasLoadedSportsOnce) {
                                     hasLoadedSportsOnce = true
-                                    fetchSportsInBackground(forceRefresh = true, showNotification = false)
+                                    fetchSportsInBackground(forceRefresh = true, showNotification = true)
                                     startPeriodicSportsRefresh()
                                 }
                             }
@@ -1166,7 +1188,7 @@ class MainActivity : AppCompatActivity() {
                     // Nếu không có kênh nào để phát, vẫn tự động nạp thể thao ngầm
                     if (!hasLoadedSportsOnce) {
                         hasLoadedSportsOnce = true
-                        fetchSportsInBackground(forceRefresh = true, showNotification = false)
+                        fetchSportsInBackground(forceRefresh = true, showNotification = true)
                         startPeriodicSportsRefresh()
                     }
                 }
@@ -1176,7 +1198,7 @@ class MainActivity : AppCompatActivity() {
                     delay(5000L)
                     if (!hasLoadedSportsOnce && !isFinishing && !isDestroyed) {
                         hasLoadedSportsOnce = true
-                        fetchSportsInBackground(forceRefresh = true, showNotification = false)
+                        fetchSportsInBackground(forceRefresh = true, showNotification = true)
                         startPeriodicSportsRefresh()
                     }
                 }
@@ -1192,6 +1214,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun fetchSportsInBackground(forceRefresh: Boolean = true, showNotification: Boolean = true) {
         sportsFetchJob?.cancel()
+        if (showNotification) {
+            showBottomNotification("⏳ Đang tải danh mục thể thao...", autoHide = false)
+        }
         sportsFetchJob = lifecycleScope.launch {
             try {
                 val sportsCategories = withContext(Dispatchers.IO) {
@@ -1202,13 +1227,17 @@ class MainActivity : AppCompatActivity() {
                     applyUpdatedSportsCategories(sportsCategories)
                     val count = sportsCategories.firstOrNull()?.channels?.count { it.id != SportsLiveManager.ACTION_REFRESH_SPORTS } ?: 0
                     if (showNotification) {
-                        showBottomNotification("⚽ Đã cập nhật xong! Tìm thấy $count trận đấu trực tiếp hôm nay.")
+                        showBottomNotification("⚽ Tải thành công! Tìm thấy $count trận đấu trực tiếp hôm nay.", autoHide = true, durationMs = 3500L)
                     }
                 } else if (showNotification && forceRefresh) {
-                    showBottomNotification("Không tìm thấy thêm trận đấu mới nào.")
+                    showBottomNotification("⚽ Tải thành công! Chưa có thêm trận đấu mới nào.", autoHide = true, durationMs = 3500L)
+                } else if (showNotification) {
+                    hideBottomNotification()
                 }
             } catch (e: Exception) {
-                // Giữ trải nghiệm phát kênh truyền hình liền mạch, không làm gián đoạn
+                if (showNotification) {
+                    showBottomNotification("⚠️ Không thể tải danh mục thể thao: ${e.localizedMessage ?: "Lỗi kết nối"}", autoHide = true, durationMs = 3500L)
+                }
             }
         }
     }
