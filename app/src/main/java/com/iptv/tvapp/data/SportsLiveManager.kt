@@ -1224,6 +1224,13 @@ class SportsLiveManager(private val context: Context) {
                 )
                 addedMatches.add(mg)
                 newMatchGroupsMap[key] = mg
+                val matchKeyVal = mObj.optString("match_key", key)
+                if (matchKeyVal.isNotBlank()) {
+                    newMatchGroupsMap[matchKeyVal] = mg
+                }
+                val canonKey = "${canonicalizeTeam(mg.homeTeam)}_vs_${canonicalizeTeam(mg.awayTeam)}"
+                newMatchGroupsMap[canonKey] = mg
+                newMatchGroupsMap["${canonicalizeTeam(mg.awayTeam)}_vs_${canonicalizeTeam(mg.homeTeam)}"] = mg
                 for (src in sourceChannels) {
                     newSourceIdToMatchMap[src.id] = mg
                     localAddUrlMapping(src.streamUrl, mg)
@@ -1353,20 +1360,26 @@ class SportsLiveManager(private val context: Context) {
                         )
                         channels.add(ch)
                         val cleanUrl = cUrl.substringBefore('|').trim()
-                        var matchedMg = newUrlToMatchesMap[cUrl]?.firstOrNull()
-                            ?: newUrlToMatchesMap[cleanUrl]?.firstOrNull()
-                            ?: newMatchGroupsMap[cName]
+                        val matchKey = cObj.optString("match_key", "")
+                        var matchedMg = if (matchKey.isNotEmpty()) newMatchGroupsMap[matchKey] else null
+                        if (matchedMg == null) {
+                            matchedMg = newUrlToMatchesMap[cUrl]?.firstOrNull()
+                                ?: newUrlToMatchesMap[cleanUrl]?.firstOrNull()
+                                ?: newMatchGroupsMap[cName]
+                        }
 
                         if (matchedMg == null) {
                             val (h, a, _) = extractTeamsAndLeague(cName)
                             val cH = canonicalizeTeam(h)
                             val cA = canonicalizeTeam(a)
                             if (cH.length >= 3 && cA.length >= 3) {
-                                matchedMg = newMatchGroupsMap.values.firstOrNull { mg ->
-                                    val mgH = canonicalizeTeam(mg.homeTeam)
-                                    val mgA = canonicalizeTeam(mg.awayTeam)
-                                    isMatchBetweenTeams(cH, cA, mgH, mgA)
-                                }
+                                matchedMg = newMatchGroupsMap["${cH}_vs_${cA}"]
+                                    ?: newMatchGroupsMap["${cA}_vs_${cH}"]
+                                    ?: newMatchGroupsMap.values.firstOrNull { mg ->
+                                        val mgH = canonicalizeTeam(mg.homeTeam)
+                                        val mgA = canonicalizeTeam(mg.awayTeam)
+                                        isMatchBetweenTeams(cH, cA, mgH, mgA)
+                                    }
                             }
                         }
 

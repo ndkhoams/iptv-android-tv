@@ -97,8 +97,8 @@
 
     var SPORTS_DATA_URLS = [
         "http://10.0.0.222:8080/data/thethao-data.json",
-        "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json",
         "https://cdn.jsdelivr.net/gh/ndkhoams/iptv@main/thethao-data.json",
+        "https://ndkhoams.github.io/thethao-data.json",
         "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json"
     ];
 
@@ -1004,6 +1004,7 @@
         sportsMatchByUrlMap = {};
         sportsMatchByIdMap = {};
         sportsMatchByCleanNameMap = {};
+        sportsMatchByKeyMap = {};
 
         // 1. live_events: Mỗi trận đấu chỉ hiển thị DUY NHẤT 1 DÒNG với LOGO GIẢI ĐẤU
         if (sportsData.live_events && sportsData.live_events.length > 0) {
@@ -1082,6 +1083,8 @@
                 };
                 sportsLiveMatches.push(matchItem);
                 sportsMatchByIdMap[matchItem.id] = matchItem;
+                if (ev.match_key) sportsMatchByKeyMap[ev.match_key] = matchItem;
+                if (ev.key) sportsMatchByKeyMap[ev.key] = matchItem;
                 if (matchItem.url) sportsMatchByUrlMap[matchItem.url] = matchItem;
                 if (cleanTeams) sportsMatchByCleanNameMap[cleanTeams.toUpperCase()] = matchItem;
                 sourcesList.forEach(function (src) {
@@ -1102,7 +1105,7 @@
                 if (sg.channels && sg.channels.length > 0) {
                     var chList = [];
                     sg.channels.forEach(function (sc, scIdx) {
-                        var matchedMatch = (sc.url && sportsMatchByUrlMap[sc.url]) || null;
+                        var matchedMatch = (sc.match_key && sportsMatchByKeyMap[sc.match_key]) || (sc.url && sportsMatchByUrlMap[sc.url]) || null;
                         if (!matchedMatch && sc.name) {
                             var scUpper = sc.name.toUpperCase();
                             for (var tKey in sportsMatchByCleanNameMap) {

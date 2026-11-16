@@ -61,10 +61,11 @@ object GitHubCdnHelper {
 
     /**
      * Sinh danh sách các URL dự phòng đa tầng (Multi-CDN Fallback):
-     * 1. Fastly jsDelivr CDN (Ưu tiên số 1 - Tốc độ cao tại VN, không bị chặn)
-     * 2. Cloudflare jsDelivr CDN (Ưu tiên số 2)
-     * 3. Statically CDN (Ưu tiên số 3)
-     * 4. URL gốc (Dự phòng cuối cùng)
+     * 1. Cloudflare jsDelivr CDN (Ưu tiên số 1 - Tốc độ cao tại VN, luôn sẵn sàng)
+     * 2. GCore jsDelivr CDN (Ưu tiên số 2 - Siêu tốc tại VN)
+     * 3. TestingCF jsDelivr CDN (Ưu tiên số 3)
+     * 4. URL gốc raw.githubusercontent.com (Dự phòng)
+     * 5. Fastly jsDelivr CDN (Dự phòng cuối cùng)
      * Nếu không phải link GitHub, trả về danh sách chỉ chứa URL ban đầu.
      */
     fun buildFallbackUrls(url: String): List<String> {
@@ -80,10 +81,11 @@ object GitHubCdnHelper {
         val q = details.query
 
         return listOf(
-            "https://fastly.jsdelivr.net/gh/$u/$r@$b/$p$q",
             "https://cdn.jsdelivr.net/gh/$u/$r@$b/$p$q",
-            "https://cdn.statically.io/gh/$u/$r/$b/$p$q",
-            trimmed
+            "https://gcore.jsdelivr.net/gh/$u/$r@$b/$p$q",
+            "https://testingcf.jsdelivr.net/gh/$u/$r@$b/$p$q",
+            trimmed,
+            "https://fastly.jsdelivr.net/gh/$u/$r@$b/$p$q"
         )
     }
 
@@ -93,7 +95,7 @@ object GitHubCdnHelper {
     fun getOptimalCdnUrl(url: String): String {
         val trimmed = url.trim()
         val details = extractGitHubDetails(trimmed) ?: return trimmed
-        return "https://fastly.jsdelivr.net/gh/${details.user}/${details.repo}@${details.branch}/${details.path}${details.query}"
+        return "https://cdn.jsdelivr.net/gh/${details.user}/${details.repo}@${details.branch}/${details.path}${details.query}"
     }
 
     private data class GitHubDetails(

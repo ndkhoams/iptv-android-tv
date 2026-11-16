@@ -19,6 +19,7 @@ import urllib.parse
 import subprocess
 import threading
 import base64
+import gzip
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from threading import Lock
 
@@ -3291,6 +3292,23 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "*")
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
 
+    def send_compressed_response(self, content_bytes, content_type="application/json; charset=utf-8"):
+        if isinstance(content_bytes, str):
+            content_bytes = content_bytes.encode("utf-8")
+        accept_encoding = self.headers.get("Accept-Encoding", "").lower()
+        use_gzip = "gzip" in accept_encoding and len(content_bytes) > 512
+        if use_gzip:
+            content_bytes = gzip.compress(content_bytes)
+
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        if use_gzip:
+            self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Length", str(len(content_bytes)))
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(content_bytes)
+
     def do_HEAD(self):
         self.do_GET()
 
@@ -3304,11 +3322,7 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
         path = url_parts.path
 
         if path in ["/", "/index.html"]:
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_cors_headers()
-            self.end_headers()
-            self.wfile.write(WEB_REMOTE_HTML.encode("utf-8"))
+            self.send_compressed_response(WEB_REMOTE_HTML.encode("utf-8"), "text/html; charset=utf-8")
             return
 
         # Real-time SSE Endpoint for Samsung Tizen & Android TV
@@ -3370,11 +3384,7 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
 
         if path in ["/api/sports", "/api/sports/raw"]:
             content = get_local_or_remote_data("thethao-data.json", "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json", max_age_seconds=60)
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_cors_headers()
-            self.end_headers()
-            self.wfile.write(content.encode("utf-8") if isinstance(content, str) else content)
+            self.send_compressed_response(content.encode("utf-8") if isinstance(content, str) else content, "application/json; charset=utf-8")
             return
 
         if path == "/api/status":
@@ -3435,17 +3445,14 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
                     get_local_or_remote_data("thethao-data.json", "https://raw.githubusercontent.com/ndkhoams/iptv/main/thethao-data.json", max_age_seconds=300)
 
             if os.path.exists(filepath):
-                self.send_response(200)
+                ct = "text/plain; charset=utf-8"
                 if filename.endswith(".m3u"):
-                    self.send_header("Content-Type", "audio/x-mpegurl; charset=utf-8")
+                    ct = "audio/x-mpegurl; charset=utf-8"
                 elif filename.endswith(".json"):
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                else:
-                    self.send_header("Content-Type", "text/plain; charset=utf-8")
-                self.send_cors_headers()
-                self.end_headers()
+                    ct = "application/json; charset=utf-8"
                 with open(filepath, "rb") as f:
-                    self.wfile.write(f.read())
+                    content_bytes = f.read()
+                self.send_compressed_response(content_bytes, ct)
                 return
 
         self.send_response(404)
