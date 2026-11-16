@@ -1224,7 +1224,7 @@ class SportsLiveManager(private val context: Context) {
                 )
                 addedMatches.add(mg)
                 newMatchGroupsMap[key] = mg
-                val matchKeyVal = mObj.optString("match_key", key)
+                val matchKeyVal = item.optString("match_key", key)
                 if (matchKeyVal.isNotBlank()) {
                     newMatchGroupsMap[matchKeyVal] = mg
                 }
