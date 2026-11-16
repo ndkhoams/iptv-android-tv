@@ -160,6 +160,7 @@
     var sportsMatchByUrlMap = {};
     var sportsMatchByIdMap = {};
     var sportsMatchByCleanNameMap = {};
+    var hasLoadedSportsOnce = false;
     var catRenderDebounceTimer = null;
     function scheduleRenderChannels() {
         if (catRenderDebounceTimer) clearTimeout(catRenderDebounceTimer);
@@ -523,7 +524,7 @@
         if (str.indexOf("BUNDESLIGA") >= 0 || str.indexOf("ĐỨC") >= 0) return LEAGUE_LOGOS_BASE64.BUNDESLIGA;
         if (str.indexOf("LIGUE") >= 0 || str.indexOf("PHÁP") >= 0) return LEAGUE_LOGOS_BASE64.LIGUE1;
         if (str.indexOf("CHAMPIONS") >= 0 || str.indexOf("C1") >= 0 || str.indexOf("UCL") >= 0) return LEAGUE_LOGOS_BASE64.UCL;
-        if (str.indexOf("F1") >= 0 || str.indexOf("RACING") >= 0 || str.indexOf("FORMULA") >= 0) return LEAGUE_LOGOS_BASE64.F1;
+        if (/\b(F1|FORMULA\s*1|GRAND\s*PRIX|RACING)\b/.test(str)) return LEAGUE_LOGOS_BASE64.F1;
         var isWimbledonFootball = str.indexOf("AFC WIMBLEDON") >= 0 || str.indexOf("WIMBLEDON FC") >= 0 || (str.indexOf("WIMBLEDON") >= 0 && (str.indexOf("BLACKPOOL") >= 0 || str.indexOf("EFL") >= 0 || str.indexOf("FA CUP") >= 0));
         if (!isWimbledonFootball && (str.indexOf("TENNIS") >= 0 || str.indexOf("QUẦN VỢT") >= 0 || str.indexOf("ATP") >= 0)) return LEAGUE_LOGOS_BASE64.TENNIS;
         if (str.indexOf("NBA") >= 0 || str.indexOf("BÓNG RỔ") >= 0 || str.indexOf("BASKETBALL") >= 0) return LEAGUE_LOGOS_BASE64.NBA;
@@ -585,31 +586,7 @@
     }
 
     function refreshDataParallel(isInitial) {
-        var m3uDone = false;
-        var sportsDone = false;
-
-        function checkComplete() {
-            if (m3uDone && sportsDone) {
-                if (isInitial) {
-                    hideSpinner();
-                    switchAppMode(currentAppMode);
-                    var lastChannelUrl = localStorage.getItem('tvplay_last_url');
-                    var startCh = null;
-                    if (lastChannelUrl) {
-                        startCh = tvChannels.find(function (c) { return c.url === lastChannelUrl; });
-                    }
-                    if (!startCh && tvChannels.length > 0) {
-                        startCh = tvChannels[0];
-                    }
-                    if (startCh && !currentPlayingChannel) {
-                        playChannel(startCh);
-                    }
-                }
-            }
-        }
-
         loadTvPlaylist(function () {
-            m3uDone = true;
             try {
                 localStorage.setItem('tvplay_cached_channels', JSON.stringify(tvChannels));
             } catch (e) {}
@@ -617,17 +594,35 @@
                 renderCategories();
                 renderChannels();
             }
-            checkComplete();
+            if (isInitial) {
+                hideSpinner();
+                switchAppMode(currentAppMode);
+                var lastChannelUrl = localStorage.getItem('tvplay_last_url');
+                var startCh = null;
+                if (lastChannelUrl) {
+                    startCh = tvChannels.find(function (c) { return c.url === lastChannelUrl; });
+                }
+                if (!startCh && tvChannels.length > 0) {
+                    startCh = tvChannels[0];
+                }
+                if (startCh && !currentPlayingChannel) {
+                    playChannel(startCh);
+                }
+            }
         });
 
-        loadSportsData(function () {
-            sportsDone = true;
-            if (isOverlayOpen && currentAppMode === APP_MODE_SPORTS) {
-                renderCategories();
-                renderChannels();
+        // Tự động load danh mục thể thao ngầm sau 3s kể từ khi khởi động (nếu sự kiện playing chưa kích hoạt)
+        setTimeout(function () {
+            if (!hasLoadedSportsOnce) {
+                hasLoadedSportsOnce = true;
+                loadSportsData(function () {
+                    if (isOverlayOpen && currentAppMode === APP_MODE_SPORTS) {
+                        renderCategories();
+                        renderChannels();
+                    }
+                });
             }
-            checkComplete();
-        });
+        }, 3000);
     }
 
     function getActivePlaylistUrl() {
@@ -855,13 +850,27 @@
             .replace(/\b(hls|sd|hd|fhd|4k|raw)\b/gi, "")
             .replace(/[\(\[\{][^\)\]\}]*[\)\]\}]/g, "")
             .replace(/•.*$/g, "")
-            .replace(/[-|].*$/g, "")
             .trim();
-        var parts = clean.split(/\s+(?:vs|Vs|VS|-)\s+/);
-        if (parts.length >= 2) {
-            return { home: parts[0].trim(), away: parts[1].trim() };
+        var vsRegex = /\s+(?:vs|Vs|VS)\s+/;
+        if (vsRegex.test(clean)) {
+            var vsParts = clean.split(vsRegex);
+            var leftPart = (vsParts[0] || "").trim();
+            var awayPart = (vsParts[1] || "").trim();
+            var subParts = leftPart.split(/(?:\s+[-–—]\s+|\s*:\s+)/);
+            if (subParts.length >= 2) {
+                var compPart = subParts.slice(0, -1).join(" ").trim();
+                var homePart = subParts[subParts.length - 1].trim();
+                return { home: homePart, away: awayPart, comp: compPart };
+            }
+            return { home: leftPart, away: awayPart, comp: "" };
         }
-        return { home: clean, away: "" };
+        var dashParts = clean.split(/\s+[-–—]\s+/);
+        if (dashParts.length >= 3) {
+            return { home: dashParts[1].trim(), away: dashParts[2].trim(), comp: dashParts[0].trim() };
+        } else if (dashParts.length === 2) {
+            return { home: dashParts[0].trim(), away: dashParts[1].trim(), comp: "" };
+        }
+        return { home: clean, away: "", comp: "" };
     }
 
     function findFixtureForMatch(ev) {
@@ -996,13 +1005,33 @@
                 return !isMatchFinished(ev);
             });
 
-            // Sắp xếp: Trận đang diễn ra (LIVE NOW) lên đầu, tiếp theo là trận sắp diễn ra theo thời gian
+            var ALL_TOP_LEAGUES = [
+                "UCL", "EPL", "VLEAGUE", "LALIGA", "SERIE_A", "BUNDESLIGA", "LIGUE1",
+                "WORLD_CUP", "EURO", "COPA_AMERICA", "ASIAN_CUP", "WC_QUAL", "NATIONS_LEAGUE", "UEL", "UECL", "AFC_CL",
+                "F1", "NBA", "TENNIS", "RUGBY", "NFL", "NCAAF", "MMA",
+                "FA_CUP", "EFL_CUP"
+            ];
+            function getPrioIdx(lg) {
+                var idx = ALL_TOP_LEAGUES.indexOf((lg || "").toUpperCase());
+                return (idx >= 0) ? idx : 999;
+            }
+
+            // Sắp xếp: Trận đang diễn ra (LIVE NOW) lên đầu, trong các trận LIVE thì ưu tiên giải hàng đầu
             activeEvents.sort(function (a, b) {
                 var aOngoing = isMatchOngoing(a);
                 var bOngoing = isMatchOngoing(b);
                 if (aOngoing && !bOngoing) return -1;
                 if (!aOngoing && bOngoing) return 1;
-                return getMatchTimestamp(a) - getMatchTimestamp(b);
+                if (aOngoing && bOngoing) {
+                    var pA = getPrioIdx(a.league);
+                    var pB = getPrioIdx(b.league);
+                    if (pA !== pB) return pA - pB;
+                    return getMatchTimestamp(a) - getMatchTimestamp(b);
+                }
+                var tsA = getMatchTimestamp(a);
+                var tsB = getMatchTimestamp(b);
+                if (tsA !== tsB && tsA > 0 && tsB > 0) return tsA - tsB;
+                return getPrioIdx(a.league) - getPrioIdx(b.league);
             });
 
             activeEvents.forEach(function (ev, evIdx) {
@@ -1132,14 +1161,16 @@
         } else if (mode === APP_MODE_SPORTS) {
             categories = sportsCategories;
             if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "DANH MỤC THỂ THAO";
-            // Tải trực tiếp sự kiện thể thao mới nhất từ Armbian/GitHub (bỏ qua cache cũ)
-            loadSportsData(function () {
-                if (currentAppMode === APP_MODE_SPORTS) {
-                    categories = sportsCategories;
-                    renderCategories();
-                    renderChannels();
-                }
-            });
+            // Nếu chưa có danh mục thể thao thì mới nạp qua mạng; nếu đã tải ngầm từ trước thì hiển thị ngay lập tức
+            if (!sportsCategories || sportsCategories.length === 0) {
+                loadSportsData(function () {
+                    if (currentAppMode === APP_MODE_SPORTS) {
+                        categories = sportsCategories;
+                        renderCategories();
+                        renderChannels();
+                    }
+                });
+            }
         } else if (mode === APP_MODE_FAVORITES) {
             buildFavoritesCategories();
             if (colCategoriesHeaderEl) colCategoriesHeaderEl.textContent = "KÊNH YÊU THÍCH";
@@ -2406,6 +2437,17 @@
             hideSpinner();
             currentMatchFallbackCount = 0;
             if (quickBufferingTagEl) quickBufferingTagEl.classList.add('hidden');
+
+            // Tự động load danh mục thể thao ngầm sau khi kênh TV đầu tiên bắt đầu phát thành công
+            if (!hasLoadedSportsOnce) {
+                hasLoadedSportsOnce = true;
+                loadSportsData(function () {
+                    if (isOverlayOpen && currentAppMode === APP_MODE_SPORTS) {
+                        renderCategories();
+                        renderChannels();
+                    }
+                });
+            }
         });
         el.addEventListener('waiting', function () {
             showSpinner("Đang đệm tín hiệu...");

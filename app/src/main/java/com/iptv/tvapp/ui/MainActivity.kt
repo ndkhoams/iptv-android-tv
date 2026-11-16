@@ -1009,6 +1009,13 @@ class MainActivity : AppCompatActivity() {
                                 binding.layoutBuffering.visibility = View.GONE
                                 binding.layoutQuickBuffering.visibility = View.GONE
                                 binding.tvErrorMessage.visibility = View.GONE
+
+                                // Tự động load danh mục thể thao ngầm sau khi kênh TV đầu tiên bắt đầu phát thành công
+                                if (!hasLoadedSportsOnce) {
+                                    hasLoadedSportsOnce = true
+                                    fetchSportsInBackground(forceRefresh = true, showNotification = false)
+                                    startPeriodicSportsRefresh()
+                                }
                             }
                             Player.STATE_ENDED -> {
                                 binding.layoutBuffering.visibility = View.GONE
@@ -1156,9 +1163,23 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else {
                     showOverlay()
+                    // Nếu không có kênh nào để phát, vẫn tự động nạp thể thao ngầm
+                    if (!hasLoadedSportsOnce) {
+                        hasLoadedSportsOnce = true
+                        fetchSportsInBackground(forceRefresh = true, showNotification = false)
+                        startPeriodicSportsRefresh()
+                    }
                 }
 
-                // Không tải ngầm trực tiếp thể thao lúc khởi động. Chỉ tải khi người dùng lần đầu chọn mục Trực tiếp Thể Thao.
+                // Dự phòng: Sau 5 giây kể từ khi mở app, nếu thể thao chưa được tải thì tự động kích hoạt ngầm
+                lifecycleScope.launch {
+                    delay(5000L)
+                    if (!hasLoadedSportsOnce && !isFinishing && !isDestroyed) {
+                        hasLoadedSportsOnce = true
+                        fetchSportsInBackground(forceRefresh = true, showNotification = false)
+                        startPeriodicSportsRefresh()
+                    }
+                }
 
             } catch (e: Exception) {
                 binding.layoutBuffering.visibility = View.GONE
@@ -1214,8 +1235,10 @@ class MainActivity : AppCompatActivity() {
             }
             allCategories.addAll(sportsCategoriesList)
 
-            val isFirstLoad = !hasLoadedSportsOnce
-            fetchSportsInBackground(forceRefresh = isFirstLoad, showNotification = isFirstLoad && sportsCategoriesList.isEmpty())
+            // Nếu thể thao chưa tải xong thì nạp lại, còn nếu đã tải xong trong nền thì hiển thị ngay lập tức không cần chờ
+            if (sportsCategoriesList.isEmpty()) {
+                fetchSportsInBackground(forceRefresh = true, showNotification = true)
+            }
             if (!hasLoadedSportsOnce) {
                 hasLoadedSportsOnce = true
                 startPeriodicSportsRefresh()

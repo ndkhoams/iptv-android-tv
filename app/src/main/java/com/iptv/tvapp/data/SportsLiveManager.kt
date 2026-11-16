@@ -876,7 +876,7 @@ class SportsLiveManager(private val context: Context) {
             val t = text.lowercase()
 
             // 1. Kiểm tra các môn thể thao nổi bật được yêu cầu (F1, Tennis Grand Slam/ATP, NBA, Rugby, American Football)
-            if (t.contains("f1") || t.contains("formula 1") || t.contains("formula one") || t.contains("grand prix") || t.contains("công thức 1")) {
+            if (Regex("""\b(f1|formula\s*1|formula\s*one|grand\s*prix|công\s*thức\s*1)\b""", RegexOption.IGNORE_CASE).containsMatchIn(t)) {
                 return "F1"
             }
             val isWimbledonFootball = t.contains("afc wimbledon") || t.contains("wimbledon fc") ||
@@ -924,12 +924,12 @@ class SportsLiveManager(private val context: Context) {
             }
 
             // UEFA Nations League (Châu Âu)
-            if (t.contains("uefa nations") || (t.contains("nations league") && !t.contains("concacaf"))) {
+            if (t.contains("uefa nations") || t.contains("uefa nl") || (t.contains("nations league") && !t.contains("concacaf"))) {
                 return "NATIONS_LEAGUE"
             }
 
             if (t.contains("world cup") || t.contains("wcq") || t.contains("vòng loại world cup") || t.contains("fifa world cup")) return "WC_QUAL"
-            if (t.contains("giao hữu") || t.contains("friendly") || t.contains("club friendly")) return "FRIENDLY"
+            if (t.contains("giao hữu") || t.contains("friendly") || t.contains("club friendly") || t.contains("interf")) return "FRIENDLY"
             if (t.contains("fa cup") || t.contains("cúp fa")) return "FA_CUP"
             if (t.contains("carabao") || t.contains("efl cup") || t.contains("cúp liên đoàn")) return "EFL_CUP"
             if (t.contains("efl championship") || t.contains("championship") || t.contains("hạng nhất anh")) return "EFL"
@@ -1257,40 +1257,41 @@ class SportsLiveManager(private val context: Context) {
             }
 
             // YÊU CẦU: Live Events CHỈ hiển thị những giải đấu ưu tiên như từ đầu mới làm app quy định
-            val priorityMatches = validLiveItems.filter {
-                it.first.league in PRIORITY_LEAGUES && !isYouthMatch(it.first.homeTeam, it.first.awayTeam) && !isWomenMatch(it.first.homeTeam, it.first.awayTeam)
-            }
-            val featuredMatches = validLiveItems.filter { it.first.league in FEATURED_SPORTS }
-            val otherMatches = validLiveItems.filter {
-                it.first.league !in PRIORITY_LEAGUES && it.first.league !in FEATURED_SPORTS &&
-                !isYouthMatch(it.first.homeTeam, it.first.awayTeam) && !isWomenMatch(it.first.homeTeam, it.first.awayTeam)
+            val allTopLeagues = listOf(
+                "UCL", "EPL", "VLEAGUE", "LALIGA", "SERIE_A", "BUNDESLIGA", "LIGUE1",
+                "WORLD_CUP", "EURO", "COPA_AMERICA", "ASIAN_CUP", "WC_QUAL", "NATIONS_LEAGUE", "UEL", "UECL", "AFC_CL",
+                "F1", "NBA", "TENNIS", "RUGBY", "NFL", "NCAAF", "MMA",
+                "FA_CUP", "EFL_CUP"
+            )
+            fun getPrioIdx(lg: String): Int {
+                val idx = allTopLeagues.indexOf(lg.uppercase())
+                return if (idx >= 0) idx else 999
             }
 
-            val livePriority = priorityMatches.filter { it.first.isOngoing }.sortedWith(
+            // 1. TẤT CẢ CÁC TRẬN ĐANG LIVE (isOngoing == True) LUÔN ĐƯỢC XẾP LÊN ĐẦU
+            // Trong các trận LIVE: Ưu tiên các giải đấu hàng đầu lên trước, rồi đến timestamp
+            val liveMatches = validLiveItems.filter { it.first.isOngoing }.sortedWith(
                 compareBy(
-                    { PRIORITY_LEAGUES.indexOf(it.first.league).let { idx -> if (idx < 0) 999 else idx } },
+                    { getPrioIdx(it.first.league) },
                     { it.first.timestamp }
                 )
             )
-            val upcomingPriority = priorityMatches.filter { !it.first.isOngoing }.sortedWith(
+
+            // 2. CÁC TRẬN CHƯA ĐÁ (SẮP DIỄN RA) HIỂN THỊ PHÍA SAU CÁC TRẬN LIVE
+            // Ưu tiên theo thời gian diễn ra gần nhất trước (hôm nay trước ngày mai), cùng giờ thì ưu tiên giải hàng đầu
+            val upcomingMatches = validLiveItems.filter { !it.first.isOngoing }
+            val upcomingPriority = upcomingMatches.filter { getPrioIdx(it.first.league) < 999 }
+            val upcomingOther = upcomingMatches.filter { getPrioIdx(it.first.league) >= 999 }
+            val upcomingSorted = (if (upcomingPriority.isNotEmpty()) upcomingPriority else upcomingOther).sortedWith(
                 compareBy(
                     { it.first.timestamp },
-                    { PRIORITY_LEAGUES.indexOf(it.first.league).let { idx -> if (idx < 0) 999 else idx } }
+                    { getPrioIdx(it.first.league) }
                 )
             )
 
-            val liveOther = otherMatches.filter { it.first.isOngoing }.sortedBy { it.first.timestamp }
-            val upcomingOther = otherMatches.filter { !it.first.isOngoing }.sortedBy { it.first.timestamp }
-
             val targetMatches = mutableListOf<Triple<MatchGroup, String, String>>()
-            if (livePriority.isNotEmpty() || upcomingPriority.isNotEmpty()) {
-                targetMatches.addAll(livePriority)
-                targetMatches.addAll(upcomingPriority)
-            } else {
-                targetMatches.addAll(liveOther)
-                targetMatches.addAll(upcomingOther)
-            }
-            targetMatches.addAll(featuredMatches.sortedBy { it.first.timestamp })
+            targetMatches.addAll(liveMatches)
+            targetMatches.addAll(upcomingSorted)
 
             targetMatches.forEachIndexed { idx, item ->
                 val mg = item.first
@@ -1475,14 +1476,27 @@ class SportsLiveManager(private val context: Context) {
         teamsAndLeagueCache[rawName]?.let { return it }
         val cleaned = cleanTeamName(rawName)
         val vsRegex = Regex("""\s+(?:vs|Vs|VS)\s+""")
-        val parts = if (cleaned.contains(vsRegex)) {
-            cleaned.split(vsRegex)
+        val (homeTeam, awayTeam, compPrefix) = if (cleaned.contains(vsRegex)) {
+            val vsMatch = cleaned.split(vsRegex, 2)
+            val leftPart = vsMatch[0].trim()
+            val away = if (vsMatch.size >= 2) vsMatch[1].trim() else ""
+            val subParts = leftPart.split(Regex("""(?:\s+[-–—]\s+|\s*:\s+)"""))
+            if (subParts.size >= 2) {
+                Triple(subParts.last().trim(), away, subParts.dropLast(1).joinToString(" ").trim())
+            } else {
+                Triple(leftPart, away, "")
+            }
         } else {
-            cleaned.split(Regex("""\s+-\s+"""))
+            val dashParts = cleaned.split(Regex("""\s+[-–—]\s+"""))
+            if (dashParts.size >= 3) {
+                Triple(dashParts[1].trim(), dashParts[2].trim(), dashParts[0].trim())
+            } else if (dashParts.size == 2) {
+                Triple(dashParts[0].trim(), dashParts[1].trim(), "")
+            } else {
+                Triple(cleaned.trim(), "", "")
+            }
         }
-        val homeTeam = if (parts.isNotEmpty()) parts[0].trim() else cleaned
-        val awayTeam = if (parts.size >= 2) parts[1].trim() else ""
-        val lg = detectLeague(rawName, homeTeam, awayTeam)
+        val lg = detectLeague(if (compPrefix.isNotEmpty()) "$rawName $compPrefix" else rawName, homeTeam, awayTeam)
         val result = Triple(homeTeam, awayTeam, lg)
         teamsAndLeagueCache[rawName] = result
         return result
@@ -1788,12 +1802,29 @@ class SportsLiveManager(private val context: Context) {
                     val mMonth = matchCal.get(Calendar.MONTH) + 1
                     val dateStr = String.format("%02d/%02d", mDay, mMonth)
 
-                    val parts = cleaned.split(Regex("""\s+(?:vs|Vs|VS|-)\s+"""))
-                    val (homeTeam, awayTeam) = if (parts.size >= 2) {
-                        parts[0].trim() to parts[1].trim()
+                    val vsRegex = Regex("""\s+(?:vs|Vs|VS)\s+""")
+                    val (rawHome, rawAway, compPrefix) = if (cleaned.contains(vsRegex)) {
+                        val vsMatch = cleaned.split(vsRegex, 2)
+                        val leftPart = vsMatch[0].trim()
+                        val away = if (vsMatch.size >= 2) vsMatch[1].trim() else ""
+                        val subParts = leftPart.split(Regex("""(?:\s+[-–—]\s+|\s*:\s+)"""))
+                        if (subParts.size >= 2) {
+                            Triple(subParts.last().trim(), away, subParts.dropLast(1).joinToString(" ").trim())
+                        } else {
+                            Triple(leftPart, away, "")
+                        }
                     } else {
-                        cleaned.trim() to ""
+                        val dashParts = cleaned.split(Regex("""\s+[-–—]\s+"""))
+                        if (dashParts.size >= 3) {
+                            Triple(dashParts[1].trim(), dashParts[2].trim(), dashParts[0].trim())
+                        } else if (dashParts.size == 2) {
+                            Triple(dashParts[0].trim(), dashParts[1].trim(), "")
+                        } else {
+                            Triple(cleaned.trim(), "", "")
+                        }
                     }
+                    val homeTeam = rawHome.replace(Regex("""(?i)^\s*(?:đội tuyển quốc gia|đội tuyển|đtqg|đt|tuyển)\s+"""), "").trim()
+                    val awayTeam = rawAway.replace(Regex("""(?i)^\s*(?:đội tuyển quốc gia|đội tuyển|đtqg|đt|tuyển)\s+"""), "").trim()
 
                     if (isWomenMatch(rawName, homeTeam, awayTeam) || isYouthMatch(rawName, homeTeam, awayTeam)) {
                         continue
@@ -1896,42 +1927,39 @@ class SportsLiveManager(private val context: Context) {
                 val priorityMatches = validMatches.filter {
                     it.league in PRIORITY_LEAGUES && !isYouthMatch(it.homeTeam, it.awayTeam) && !isWomenMatch(it.homeTeam, it.awayTeam)
                 }
-                // 2. Các trận thể thao lớn nổi bật (F1, Tennis Grand Slam/ATP, NBA)
-                val featuredSportsMatches = validMatches.filter { it.league in FEATURED_SPORTS }
-                // 3. Các trận bóng đá khác (chỉ đội chính)
-                val otherMatches = validMatches.filter {
-                    it.league !in PRIORITY_LEAGUES && it.league !in FEATURED_SPORTS &&
-                    !isYouthMatch(it.homeTeam, it.awayTeam) && !isWomenMatch(it.homeTeam, it.awayTeam)
+                val allTopLeagues = listOf(
+                    "UCL", "EPL", "VLEAGUE", "LALIGA", "SERIE_A", "BUNDESLIGA", "LIGUE1",
+                    "WORLD_CUP", "EURO", "COPA_AMERICA", "ASIAN_CUP", "WC_QUAL", "NATIONS_LEAGUE", "UEL", "UECL", "AFC_CL",
+                    "F1", "NBA", "TENNIS", "RUGBY", "NFL", "NCAAF", "MMA",
+                    "FA_CUP", "EFL_CUP"
+                )
+                fun getPrioIdx(lg: String): Int {
+                    val idx = allTopLeagues.indexOf(lg.uppercase())
+                    return if (idx >= 0) idx else 999
                 }
 
-                // Sắp xếp:
-                // - TRẬN ĐANG DIỄN RA (LIVE NOW): Đưa lên đầu danh sách để bấm vào xem ngay
-                // - TRẬN SẮP DIỄN RA: Sắp xếp theo mốc thời gian sớm nhất
-                val livePriority = priorityMatches.filter { it.isOngoing }.sortedWith(
+                // 1. TẤT CẢ CÁC TRẬN ĐANG LIVE (isOngoing == True) LUÔN ĐƯỢC XẾP LÊN ĐẦU
+                val liveMatches = validMatches.filter { it.isOngoing }.sortedWith(
                     compareBy(
-                        { PRIORITY_LEAGUES.indexOf(it.league).let { idx -> if (idx < 0) 999 else idx } },
+                        { getPrioIdx(it.league) },
                         { it.timestamp }
                     )
                 )
-                val upcomingPriority = priorityMatches.filter { !it.isOngoing }.sortedWith(
+
+                // 2. CÁC TRẬN CHƯA ĐÁ (SẮP DIỄN RA) HIỂN THỊ PHÍA SAU CÁC TRẬN LIVE
+                val upcomingMatches = validMatches.filter { !it.isOngoing }
+                val upcomingPriority = upcomingMatches.filter { getPrioIdx(it.league) < 999 }
+                val upcomingOther = upcomingMatches.filter { getPrioIdx(it.league) >= 999 }
+                val upcomingSorted = (if (upcomingPriority.isNotEmpty()) upcomingPriority else upcomingOther).sortedWith(
                     compareBy(
                         { it.timestamp },
-                        { PRIORITY_LEAGUES.indexOf(it.league).let { idx -> if (idx < 0) 999 else idx } }
+                        { getPrioIdx(it.league) }
                     )
                 )
 
-                val liveOther = otherMatches.filter { it.isOngoing }.sortedBy { it.timestamp }
-                val upcomingOther = otherMatches.filter { !it.isOngoing }.sortedBy { it.timestamp }
-
                 val targetMatches = mutableListOf<MatchGroup>()
-                if (livePriority.isNotEmpty() || upcomingPriority.isNotEmpty()) {
-                    targetMatches.addAll(livePriority)
-                    targetMatches.addAll(upcomingPriority)
-                } else {
-                    targetMatches.addAll(liveOther)
-                    targetMatches.addAll(upcomingOther)
-                }
-                targetMatches.addAll(featuredSportsMatches.sortedBy { it.timestamp })
+                targetMatches.addAll(liveMatches)
+                targetMatches.addAll(upcomingSorted)
 
                 // Lưu vào cache Map để MatchSourcesDialog và Web Remote truy xuất khi click
                 for (m in grouped.values) {
