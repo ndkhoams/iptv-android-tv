@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
 
     private var statusPollJob: Job? = null
     private var isVoiceActive = false
+    private var voiceDialog: AlertDialog? = null
 
     private val micPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -335,54 +336,97 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVoiceSearch() {
+        showVoiceListeningDialog()
+    }
+
+    private fun showVoiceListeningDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_voice_search, null)
+        val waveView = dialogView.findViewById<VoiceWaveView>(R.id.voiceWaveView)
+        val tvStatus = dialogView.findViewById<TextView>(R.id.tvVoiceStatus)
+        val tvSubtitle = dialogView.findViewById<TextView>(R.id.tvVoiceSubtitle)
+        val btnCancel = dialogView.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnVoiceCancel)
+
+        voiceDialog?.dismiss()
+        voiceDialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .setOnDismissListener {
+                stopVoiceSearch()
+            }
+            .create().apply {
+                window?.setBackgroundDrawableResource(android.R.color.transparent)
+            }
+
+        btnCancel.setOnClickListener {
+            voiceDialog?.dismiss()
+        }
+
+        voiceDialog?.show()
+        waveView.startAnimation()
+
         if (!voiceSearchManager.isAvailable()) {
-            fallbackVoiceSearch()
+            tvStatus.text = "Chưa có dịch vụ giọng nói"
+            tvSubtitle.text = "Thiết bị của bạn chưa cài đặt Dịch vụ giọng nói Google (Google Speech).\n\nHãy bấm phím ⌨ (Bàn phím) bên cạnh nếu muốn nhập tìm kiếm."
+            waveView.stopAnimation()
             return
         }
 
         isVoiceActive = true
         binding.btnMic.isActivated = true
-        binding.tvToast.text = getString(R.string.hint_voice_listening)
+        binding.tvToast.text = "Đang lắng nghe giọng nói..."
 
         voiceSearchManager.startListening(object : VoiceSearchListener {
             override fun onReady() {
-                binding.tvToast.text = "Đang lắng nghe giọng nói tiếng Việt..."
+                runOnUiThread {
+                    tvStatus.text = "Đang lắng nghe..."
+                    tvSubtitle.text = "Hãy nói từ khóa bạn muốn xem (VD: VTV1, Ca nhạc, Thời sự...)"
+                    waveView.startAnimation()
+                }
             }
 
             override fun onListening() {
-                binding.tvToast.text = "Đang nghe... Nói từ khóa muốn xem"
+                runOnUiThread {
+                    tvStatus.text = "Đang nghe bạn nói..."
+                }
             }
 
-            override fun onSpeechRms(rmsdB: Float) {}
+            override fun onSpeechRms(rmsdB: Float) {
+                runOnUiThread {
+                    waveView.setRms(rmsdB)
+                }
+            }
 
             override fun onSpeechResult(query: String) {
-                stopVoiceSearch()
-                executeYouTubeSearch(query)
+                runOnUiThread {
+                    hapticHelper.longClick()
+                    tvStatus.text = "Đã nhận dạng!"
+                    tvSubtitle.text = "🔍 \"$query\""
+                    waveView.stopAnimation()
+
+                    lifecycleScope.launch {
+                        delay(600)
+                        voiceDialog?.dismiss()
+                        executeYouTubeSearch(query)
+                    }
+                }
             }
 
             override fun onError(errorMessage: String) {
-                stopVoiceSearch()
-                fallbackVoiceSearch()
+                runOnUiThread {
+                    tvStatus.text = "Không nhận diện được"
+                    tvSubtitle.text = errorMessage
+                    waveView.stopAnimation()
+                    binding.tvToast.text = errorMessage
+                }
             }
 
             override fun onFinished() {
-                stopVoiceSearch()
+                runOnUiThread {
+                    isVoiceActive = false
+                    binding.btnMic.isActivated = false
+                }
             }
         })
-    }
-
-    private fun fallbackVoiceSearch() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Nói hoặc nhập từ khóa tìm YouTube trên TV...")
-        }
-
-        try {
-            speechIntentLauncher.launch(intent)
-        } catch (e: Exception) {
-            showKeyboardDialog()
-        }
     }
 
     private fun executeYouTubeSearch(query: String) {
@@ -404,6 +448,8 @@ class MainActivity : AppCompatActivity() {
         isVoiceActive = false
         binding.btnMic.isActivated = false
         voiceSearchManager.stopListening()
+        voiceDialog?.dismiss()
+        voiceDialog = null
     }
 
     private fun setupSettingsButton() {
@@ -498,6 +544,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        voiceDialog?.dismiss()
+        voiceDialog = null
         voiceSearchManager.destroy()
         statusPollJob?.cancel()
     }

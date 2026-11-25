@@ -73,10 +73,11 @@ jobs:
         name: "${{ github.ref_name }} - TV Remote"
         body: |
           ### Bản phát hành ${{ github.ref_name }}:
-          - Ứng dụng điều khiển TV Samsung / Android TV trên điện thoại: **TV Remote.apk** (v1.1.3)
-          - Xóa bỏ hoàn toàn thanh banner gợi ý giọng nói để giao diện cực kỳ thoáng, tinh gọn.
-          - Căn chỉnh 2 cụm phím con nhộng VOL (+ / -) và CH (∧ / ∨) thẳng cột 100% theo lưới 3 cột dọc với các phím phía trên.
-          - Tối ưu phản hồi tìm kiếm giọng nói hiển thị trực tiếp tại dòng trạng thái đáy Remote.
+          - Ứng dụng điều khiển TV Samsung / Android TV trên điện thoại: **TV Remote.apk** (v1.1.4)
+          - Căn chỉnh nút Cài đặt và nút Nguồn thẳng hàng 100% với các phím phía dưới.
+          - Bổ sung hộp thoại lắng nghe giọng nói với đồ họa sóng âm (Voice Waveform) chuyển động sinh động khi nhấn phím Mic.
+          - Loại bỏ hoàn toàn hộp thoại nhập liệu gõ chữ khi bấm Mic.
+          - Bó gọn 2 cột phím bên ngoài vào trong (+14dp mỗi bên) giúp bố cục cân đối và đẹp mắt hơn.
         files: |
           remote/build/outputs/apk/debug/TV Remote.apk
         prerelease: false

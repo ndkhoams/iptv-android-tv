@@ -17,56 +17,81 @@
         android:paddingEnd="16dp"
         android:paddingBottom="16dp">
 
-        <!-- Header: Cài đặt (trái) - Tên TV + Status (giữa) - Nguồn đỏ (phải) -->
+        <!-- Header: Cài đặt (trái) - Tên TV + Status (giữa) - Nguồn đỏ (phải) THẲNG HÀNG 100% VỚI PHÍA DƯỚI -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="56dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnSettings"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/desc_settings"
-                android:src="@drawable/ic_gear"
-                app:tint="@color/text_dim" />
-
-            <LinearLayout
+            <!-- Cột 1: Nút Cài đặt (thẳng cột 100% với Prev, Back, Mute, VOL) -->
+            <FrameLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:layout_height="match_parent"
+                android:layout_weight="1">
 
-                <View
-                    android:id="@+id/viewStatusDot"
-                    android:layout_width="9dp"
-                    android:layout_height="9dp"
-                    android:background="@drawable/status_dot_offline" />
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnSettings"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_gravity="center"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/desc_settings"
+                    android:src="@drawable/ic_gear"
+                    app:tint="@color/text_dim" />
+            </FrameLayout>
 
-                <TextView
-                    android:id="@+id/tvTvStatus"
+            <!-- Cột 2: Trạng thái TV (thẳng cột 100% với Play/Pause, Home, Mic) -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/tv_status_checking"
-                    android:textColor="@color/text_dim"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:orientation="horizontal">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/btnPower"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
-                android:background="@drawable/btn_power_selector"
-                android:contentDescription="@string/desc_power"
-                android:src="@drawable/ic_power"
-                app:tint="@color/text_white" />
+                    <View
+                        android:id="@+id/viewStatusDot"
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:background="@drawable/status_dot_offline" />
+
+                    <TextView
+                        android:id="@+id/tvTvStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/tv_status_checking"
+                        android:textColor="@color/text_dim"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- Cột 3: Nút Nguồn đỏ (thẳng cột 100% với Next, Numpad, Keyboard, CH) -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnPower"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/btn_power_selector"
+                    android:contentDescription="@string/desc_power"
+                    android:src="@drawable/ic_power"
+                    app:tint="@color/text_white" />
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Main Remote Body Container -->
@@ -77,9 +102,9 @@
             android:background="@drawable/bg_remote_body"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingStart="14dp"
+            android:paddingStart="28dp"
             android:paddingTop="18dp"
-            android:paddingEnd="14dp"
+            android:paddingEnd="28dp"
             android:paddingBottom="16dp">
 
             <!-- 1. Hàng Media (3 phím 1 hàng): Prev (|◀), Play/Pause (▶||), Next (▶|) -->
