@@ -17,10 +17,7 @@
         android:paddingEnd="16dp"
         android:paddingBottom="16dp">
 
-        <!-- 1. Thanh tren cung (Header):
-             - Nut Cai dat (banh rang) ben trai
-             - Cham trang thai ket noi + ten thiet bi TV o giua (● TV Samsung)
-             - Nut Nguon do o goc phai -->
+        <!-- Header: Cài đặt (trái) - Tên TV + Status (giữa) - Nguồn đỏ (phải) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="52dp"
@@ -85,8 +82,7 @@
             android:paddingEnd="14dp"
             android:paddingBottom="16dp">
 
-            <!-- 2. Hang phim Media (5 nut tron deu nhau):
-                 - Tua lui bai truoc (|◀), Tua lui (◀◀), Phat/Tam dung (▶||), Tua toi (▶▶), Bai ke tiep (▶|) -->
+            <!-- 1. Hàng Media (3 phím 1 hàng): Prev (|◀), Play/Pause (▶||), Next (▶|) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -101,8 +97,8 @@
 
                     <androidx.appcompat.widget.AppCompatImageButton
                         android:id="@+id/btnMediaPrev"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
                         android:layout_gravity="center"
                         android:background="@drawable/btn_circle_selector"
                         android:contentDescription="@string/desc_media_prev"
@@ -116,25 +112,9 @@
                     android:layout_weight="1">
 
                     <androidx.appcompat.widget.AppCompatImageButton
-                        android:id="@+id/btnMediaRewind"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:background="@drawable/btn_circle_selector"
-                        android:contentDescription="@string/desc_media_rewind"
-                        android:src="@drawable/ic_media_rewind"
-                        app:tint="@color/text_white" />
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1">
-
-                    <androidx.appcompat.widget.AppCompatImageButton
                         android:id="@+id/btnMediaPlayPause"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
                         android:layout_gravity="center"
                         android:background="@drawable/btn_circle_selector"
                         android:contentDescription="@string/desc_media_play_pause"
@@ -148,25 +128,9 @@
                     android:layout_weight="1">
 
                     <androidx.appcompat.widget.AppCompatImageButton
-                        android:id="@+id/btnMediaFf"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:background="@drawable/btn_circle_selector"
-                        android:contentDescription="@string/desc_media_ff"
-                        android:src="@drawable/ic_media_ff"
-                        app:tint="@color/text_white" />
-                </FrameLayout>
-
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1">
-
-                    <androidx.appcompat.widget.AppCompatImageButton
                         android:id="@+id/btnMediaNext"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
                         android:layout_gravity="center"
                         android:background="@drawable/btn_circle_selector"
                         android:contentDescription="@string/desc_media_next"
@@ -175,12 +139,10 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- 3. Cum dieu huong trung tam (D-Pad tron lon):
-                 - Vong tron dieu huong voi 4 phim mui ten Len, Xuong, Trai, Phai
-                 - Phim OK tron o chinh giua -->
+            <!-- 2. Cụm điều hướng trung tâm (D-Pad tròn lớn): Up, Down, Left, Right & OK -->
             <FrameLayout
-                android:layout_width="232dp"
-                android:layout_height="232dp"
+                android:layout_width="224dp"
+                android:layout_height="224dp"
                 android:layout_marginTop="2dp"
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/bg_dpad_surface">
@@ -189,7 +151,7 @@
                 <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnUp"
                     android:layout_width="80dp"
-                    android:layout_height="58dp"
+                    android:layout_height="56dp"
                     android:layout_gravity="top|center_horizontal"
                     android:layout_marginTop="4dp"
                     android:background="@drawable/btn_rocker_half"
@@ -201,7 +163,7 @@
                 <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnDown"
                     android:layout_width="80dp"
-                    android:layout_height="58dp"
+                    android:layout_height="56dp"
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginBottom="4dp"
                     android:background="@drawable/btn_rocker_half"
@@ -212,7 +174,7 @@
                 <!-- LEFT -->
                 <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnLeft"
-                    android:layout_width="58dp"
+                    android:layout_width="56dp"
                     android:layout_height="80dp"
                     android:layout_gravity="start|center_vertical"
                     android:layout_marginStart="4dp"
@@ -224,7 +186,7 @@
                 <!-- RIGHT -->
                 <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnRight"
-                    android:layout_width="58dp"
+                    android:layout_width="56dp"
                     android:layout_height="80dp"
                     android:layout_gravity="end|center_vertical"
                     android:layout_marginEnd="4dp"
@@ -236,8 +198,8 @@
                 <!-- CENTER OK -->
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btnOk"
-                    android:layout_width="78dp"
-                    android:layout_height="78dp"
+                    android:layout_width="76dp"
+                    android:layout_height="76dp"
                     android:layout_gravity="center"
                     android:background="@drawable/btn_dpad_center"
                     android:text="@string/btn_ok"
@@ -246,22 +208,131 @@
                     android:textStyle="bold" />
             </FrameLayout>
 
-            <!-- 4. Khu vuc dieu khien ben duoi (Thang hang theo luoi tuyet doi, nut to deu):
-                 - Ben trai: Cum phim am luong dang con nhong doc (VOL + / -)
-                 - Ben phai: Cum phim chuyen kenh dang con nhong doc (CH ∧ / ∨)
-                 - O giua (luoi 6 phim tron):
-                   + Hang tren: Ban phim go chu (Keyboard), Phim Home, Phim ban phim so (Numpad)
-                   + Hang duoi: Tat tieng (Mute), Nut Noi (Micro tim kiem giong noi), Phim Quay lai (Back) -->
+            <!-- 3. Hàng chức năng 1 (3 phím 1 hàng): Back (trái) - Home (giữa) - Numpad (phải) -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="148dp"
+                android:layout_height="56dp"
+                android:layout_marginBottom="14dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <!-- Ben trai: VOL Capsule (Con nhong doc 62dp x 148dp) -->
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnBack"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/btn_circle_selector"
+                        android:contentDescription="@string/btn_back"
+                        android:src="@drawable/ic_back"
+                        app:tint="@color/text_white" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnHome"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/btn_circle_selector"
+                        android:contentDescription="@string/btn_home"
+                        android:src="@drawable/ic_home"
+                        app:tint="@color/text_white" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnNumpad"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/btn_circle_selector"
+                        android:contentDescription="@string/dialog_numpad_title"
+                        android:src="@drawable/ic_numpad"
+                        app:tint="@color/text_white" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- 4. Hàng chức năng 2 (3 phím 1 hàng): Mute (trái) - Mic (giữa) - Keyboard (phải) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnMute"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/btn_circle_selector"
+                        android:contentDescription="Mute"
+                        android:src="@drawable/ic_mute"
+                        app:tint="@color/text_white" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnMic"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/btn_mic_selector"
+                        android:contentDescription="Voice Search"
+                        android:src="@drawable/ic_mic"
+                        app:tint="@color/text_white" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <androidx.appcompat.widget.AppCompatImageButton
+                        android:id="@+id/btnKeyboard"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/btn_circle_selector"
+                        android:contentDescription="@string/dialog_keyboard_title"
+                        android:src="@drawable/ic_keyboard"
+                        app:tint="@color/text_white" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- 5. Cụm điều khiển dưới cùng: VOL (trái), Banner giọng nói (giữa), CH (phải) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="132dp"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Bên trái: Con nhộng VOL (+ / -) -->
                 <LinearLayout
                     android:layout_width="62dp"
-                    android:layout_height="148dp"
+                    android:layout_height="match_parent"
                     android:background="@drawable/bg_capsule"
                     android:gravity="center_horizontal"
                     android:orientation="vertical">
@@ -269,7 +340,7 @@
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnVolUp"
                         android:layout_width="match_parent"
-                        android:layout_height="58dp"
+                        android:layout_height="50dp"
                         android:background="@drawable/btn_capsule_top"
                         android:text="@string/btn_plus"
                         android:textColor="@color/text_white"
@@ -289,7 +360,7 @@
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnVolDown"
                         android:layout_width="match_parent"
-                        android:layout_height="58dp"
+                        android:layout_height="50dp"
                         android:background="@drawable/btn_capsule_bottom"
                         android:text="@string/btn_minus"
                         android:textColor="@color/text_white"
@@ -297,144 +368,36 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- O giua: Luoi 6 phim tron (3 cot x 2 hang) chia deu bang weight -->
+                <!-- Ở giữa: Banner phản hồi tìm kiếm giọng nói -->
                 <LinearLayout
+                    android:id="@+id/layoutVoiceBanner"
                     android:layout_width="0dp"
-                    android:layout_height="148dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/btn_remote_selector"
                     android:gravity="center"
-                    android:orientation="vertical">
+                    android:minHeight="44dp"
+                    android:paddingStart="10dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="8dp">
 
-                    <!-- Hang tren (cao 58dp ngang bang voi nut VolUp va ChUp): Keyboard, Home, Numpad -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="58dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <!-- Cot 1: Keyboard -->
-                        <FrameLayout
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1">
-
-                            <androidx.appcompat.widget.AppCompatImageButton
-                                android:id="@+id/btnKeyboard"
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:layout_gravity="center"
-                                android:background="@drawable/btn_circle_selector"
-                                android:contentDescription="@string/dialog_keyboard_title"
-                                android:src="@drawable/ic_keyboard"
-                                app:tint="@color/text_white" />
-                        </FrameLayout>
-
-                        <!-- Cot 2: Home -->
-                        <FrameLayout
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1">
-
-                            <androidx.appcompat.widget.AppCompatImageButton
-                                android:id="@+id/btnHome"
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:layout_gravity="center"
-                                android:background="@drawable/btn_circle_selector"
-                                android:contentDescription="@string/btn_home"
-                                android:src="@drawable/ic_home"
-                                app:tint="@color/text_white" />
-                        </FrameLayout>
-
-                        <!-- Cot 3: Numpad -->
-                        <FrameLayout
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1">
-
-                            <androidx.appcompat.widget.AppCompatImageButton
-                                android:id="@+id/btnNumpad"
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:layout_gravity="center"
-                                android:background="@drawable/btn_circle_selector"
-                                android:contentDescription="@string/dialog_numpad_title"
-                                android:src="@drawable/ic_numpad"
-                                app:tint="@color/text_white" />
-                        </FrameLayout>
-                    </LinearLayout>
-
-                    <!-- Khoang cach giua 2 hang (cao 32dp ngang bang voi nhan VOL va CH) -->
-                    <Space
-                        android:layout_width="match_parent"
-                        android:layout_height="32dp" />
-
-                    <!-- Hang duoi (cao 58dp ngang bang voi nut VolDown va ChDown): Mute, Mic, Back -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="58dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <!-- Cot 1: Mute (Thang hang doc 100% voi Keyboard o tren) -->
-                        <FrameLayout
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1">
-
-                            <androidx.appcompat.widget.AppCompatImageButton
-                                android:id="@+id/btnMute"
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:layout_gravity="center"
-                                android:background="@drawable/btn_circle_selector"
-                                android:contentDescription="Mute"
-                                android:src="@drawable/ic_mute"
-                                app:tint="@color/text_white" />
-                        </FrameLayout>
-
-                        <!-- Cot 2: Mic (Thang hang doc 100% voi Home o tren, dung kich thuoc 56dp) -->
-                        <FrameLayout
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1">
-
-                            <androidx.appcompat.widget.AppCompatImageButton
-                                android:id="@+id/btnMic"
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:layout_gravity="center"
-                                android:background="@drawable/btn_mic_selector"
-                                android:contentDescription="Voice Search"
-                                android:src="@drawable/ic_mic"
-                                app:tint="@color/text_white" />
-                        </FrameLayout>
-
-                        <!-- Cot 3: Back (Thang hang doc 100% voi Numpad o tren) -->
-                        <FrameLayout
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1">
-
-                            <androidx.appcompat.widget.AppCompatImageButton
-                                android:id="@+id/btnBack"
-                                android:layout_width="56dp"
-                                android:layout_height="56dp"
-                                android:layout_gravity="center"
-                                android:background="@drawable/btn_circle_selector"
-                                android:contentDescription="@string/btn_back"
-                                android:src="@drawable/ic_back"
-                                app:tint="@color/text_white" />
-                        </FrameLayout>
-                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvVoiceFeedback"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="@string/hint_voice_idle"
+                        android:textColor="@color/text_dim"
+                        android:textSize="12sp" />
                 </LinearLayout>
 
-                <!-- Ben phai: CH Capsule (Con nhong doc 62dp x 148dp) -->
+                <!-- Bên phải: Con nhộng CH (∧ / ∨) -->
                 <LinearLayout
                     android:layout_width="62dp"
-                    android:layout_height="148dp"
+                    android:layout_height="match_parent"
                     android:background="@drawable/bg_capsule"
                     android:gravity="center_horizontal"
                     android:orientation="vertical">
@@ -442,7 +405,7 @@
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnChUp"
                         android:layout_width="match_parent"
-                        android:layout_height="58dp"
+                        android:layout_height="50dp"
                         android:background="@drawable/btn_capsule_top"
                         android:text="@string/btn_chevron_up"
                         android:textColor="@color/text_white"
@@ -462,7 +425,7 @@
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnChDown"
                         android:layout_width="match_parent"
-                        android:layout_height="58dp"
+                        android:layout_height="50dp"
                         android:background="@drawable/btn_capsule_bottom"
                         android:text="@string/btn_chevron_down"
                         android:textColor="@color/text_white"
@@ -472,37 +435,12 @@
 
             </LinearLayout>
 
-            <!-- Voice Search Feedback Banner -->
-            <LinearLayout
-                android:id="@+id/layoutVoiceBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:layout_marginBottom="4dp"
-                android:background="@drawable/btn_remote_selector"
-                android:gravity="center"
-                android:minHeight="38dp"
-                android:paddingStart="12dp"
-                android:paddingTop="6dp"
-                android:paddingEnd="12dp"
-                android:paddingBottom="6dp">
-
-                <TextView
-                    android:id="@+id/tvVoiceFeedback"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="@string/hint_voice_idle"
-                    android:textColor="@color/text_dim"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
             <!-- Bottom Toast / Execution Feedback -->
             <TextView
                 android:id="@+id/tvToast"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:minHeight="20dp"
                 android:text="Sẵn sàng"

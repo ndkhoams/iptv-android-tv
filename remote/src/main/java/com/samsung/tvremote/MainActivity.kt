@@ -121,18 +121,12 @@ class MainActivity : AppCompatActivity() {
             handleKeyClick("KEY_POWER", "Nguồn")
         }
 
-        // 2. Hàng phím Media (5 nút tròn)
+        // 2. Hàng phím Media (3 nút tròn): Prev, Play/Pause, Next
         binding.btnMediaPrev.setOnClickListener {
             handleKeyClick("KEY_PREVIOUS", "Bài trước")
         }
-        binding.btnMediaRewind.setOnClickListener {
-            handleKeyClick("KEY_REWIND", "Tua lùi")
-        }
         binding.btnMediaPlayPause.setOnClickListener {
             handleKeyClick("KEY_PLAY", "Phát / Tạm dừng")
-        }
-        binding.btnMediaFf.setOnClickListener {
-            handleKeyClick("KEY_FF", "Tua tới")
         }
         binding.btnMediaNext.setOnClickListener {
             handleKeyClick("KEY_NEXT", "Bài kế tiếp")
