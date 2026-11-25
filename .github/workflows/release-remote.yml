@@ -1,0 +1,86 @@
+# CI/CD Workflow for TV Remote
+name: Build & Release TV Remote (Phone App)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'remote/**'
+      - '.github/workflows/release-remote.yml'
+    tags:
+      - 'remote-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-remote:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Accept Android SDK Licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build TV Remote Debug APK
+      env:
+        GRADLE_OPTS: "-Dorg.gradle.internal.http.socketTimeout=120000 -Dorg.gradle.internal.http.connectionTimeout=120000"
+      run: |
+        ./gradlew :remote:assembleDebug --stacktrace --no-daemon 2>&1 | tee build_log.txt
+        echo "==================== BUILD LOG START ===================="
+        cat build_log.txt
+        echo "==================== BUILD LOG END ======================"
+        
+        FOUND_APK=0
+        for f in remote/build/outputs/apk/debug/*.apk; do
+          if [ -f "$f" ]; then
+            cp "$f" "remote/build/outputs/apk/debug/TV Remote.apk"
+            FOUND_APK=1
+            break
+          fi
+        done
+        if [ $FOUND_APK -eq 0 ]; then
+          echo "FAIL: TV Remote APK was not generated"
+          exit 1
+        fi
+
+    - name: Upload TV Remote APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TV-Remote-debug
+        path: "remote/build/outputs/apk/debug/TV Remote.apk"
+
+    - name: Publish Official TV Remote Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/remote-v')
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: "${{ github.ref_name }} - TV Remote"
+        body: |
+          ### Bản phát hành ${{ github.ref_name }}:
+          - Ứng dụng điều khiển TV Samsung / Android TV trên điện thoại: **TV Remote.apk** (v1.1.1)
+          - Cập nhật bố cục giàn phím điều khiển dạng lưới chuẩn xác, căn thẳng hàng tăm tắp.
+          - Phóng to 6 nút điều khiển trung tâm (56dp x 56dp), 5 nút Media (48dp x 48dp), D-Pad & OK (78dp x 78dp).
+          - Cụm con nhộng dọc VOL / CH mở rộng (62dp x 148dp) ăn khớp hoàn hảo theo trục ngang.
+          - Toàn bộ vector icon to rõ, sắc nét, dễ bấm một tay.
+        files: |
+          remote/build/outputs/apk/debug/TV Remote.apk
+        prerelease: false
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

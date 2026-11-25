@@ -1,0 +1,74 @@
+name: Build & Release TV Play (Android TV)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/release-tvplay.yml'
+    tags:
+      - 'v*'
+      - 'tvplay-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-tvplay:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Accept Android SDK Licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build TV Play Debug APK
+      env:
+        GRADLE_OPTS: "-Dorg.gradle.internal.http.socketTimeout=120000 -Dorg.gradle.internal.http.connectionTimeout=120000"
+      run: |
+        ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee build_log.txt
+        echo "==================== BUILD LOG START ===================="
+        cat build_log.txt
+        echo "==================== BUILD LOG END ======================"
+        if [ ! -f app/build/outputs/apk/debug/app-debug.apk ]; then
+          echo "FAIL: app-debug.apk was not generated"
+          exit 1
+        fi
+        cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/TV Play.apk"
+
+    - name: Upload TV Play APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TV-Play-debug
+        path: "app/build/outputs/apk/debug/TV Play.apk"
+
+    - name: Publish Official TV Play Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/tvplay-v')
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: "${{ github.ref_name }} - TV Play"
+        body: |
+          ### Bản phát hành ${{ github.ref_name }}:
+          - Ứng dụng xem truyền hình & thể thao trực tiếp cho Android TV: **TV Play.apk**
+        files: |
+          app/build/outputs/apk/debug/TV Play.apk
+        prerelease: false
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
