@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
+
+        <!-- Top Status Bar: TV Status & Settings -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/viewStatusDot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:background="@drawable/status_dot_offline" />
+
+            <TextView
+                android:id="@+id/tvTvStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/tv_status_checking"
+                android:textColor="@color/text_dim"
+                android:textSize="13sp" />
+
+            <ImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:src="@drawable/ic_gear" />
+        </LinearLayout>
+
+        <!-- Main Remote Body Container -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_maxWidth="360dp"
+            android:background="@drawable/bg_remote_body"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="18dp"
+            android:paddingTop="20dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="20dp">
+
+            <!-- Top Row: Power (Left), Brand (Center), Mic (Right) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnPower"
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:background="@drawable/btn_power_selector"
+                    android:text="@string/btn_power"
+                    android:textColor="@color/text_white"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:letterSpacing="0.2"
+                    android:text="SAMSUNG"
+                    android:textColor="#555558"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnMic"
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:background="@drawable/btn_mic_selector"
+                    android:text="@string/btn_mic"
+                    android:textColor="@color/text_white"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+            <!-- Voice Search Feedback Banner -->
+            <LinearLayout
+                android:id="@+id/layoutVoiceBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/btn_remote_selector"
+                android:gravity="center"
+                android:minHeight="42dp"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="8dp">
+
+                <TextView
+                    android:id="@+id/tvVoiceFeedback"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/hint_voice_idle"
+                    android:textColor="@color/text_dim"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Circular D-Pad -->
+            <FrameLayout
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_dpad_surface">
+
+                <!-- UP -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnUp"
+                    android:layout_width="80dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/btn_rocker_half"
+                    android:text="@string/btn_up"
+                    android:textColor="@color/text_white"
+                    android:textSize="20sp" />
+
+                <!-- DOWN -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnDown"
+                    android:layout_width="80dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:layout_marginBottom="4dp"
+                    android:background="@drawable/btn_rocker_half"
+                    android:text="@string/btn_down"
+                    android:textColor="@color/text_white"
+                    android:textSize="20sp" />
+
+                <!-- LEFT -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnLeft"
+                    android:layout_width="56dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/btn_rocker_half"
+                    android:text="@string/btn_left"
+                    android:textColor="@color/text_white"
+                    android:textSize="20sp" />
+
+                <!-- RIGHT -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnRight"
+                    android:layout_width="56dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/btn_rocker_half"
+                    android:text="@string/btn_right"
+                    android:textColor="@color/text_white"
+                    android:textSize="20sp" />
+
+                <!-- CENTER OK -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnOk"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/btn_dpad_center"
+                    android:text="@string/btn_ok"
+                    android:textColor="@color/text_white"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- Mid Row: Back / Home / Play-Pause -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnBack"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_remote_selector"
+                    android:text="@string/btn_back"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_white"
+                    android:textSize="14sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnHome"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_remote_selector"
+                    android:text="@string/btn_home"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_white"
+                    android:textSize="14sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_remote_selector"
+                    android:text="@string/btn_play_pause"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_white"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Rockers: VOL & CH -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:orientation="horizontal">
+
+                <!-- VOL Rocker -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_rocker"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.1"
+                        android:text="@string/btn_vol"
+                        android:textColor="@color/text_dim"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnVolUp"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:background="@drawable/btn_rocker_half"
+                        android:text="@string/btn_plus"
+                        android:textColor="@color/text_white"
+                        android:textSize="20sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginEnd="14dp"
+                        android:background="@color/divider_color" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnVolDown"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:background="@drawable/btn_rocker_half"
+                        android:text="@string/btn_minus"
+                        android:textColor="@color/text_white"
+                        android:textSize="20sp" />
+                </LinearLayout>
+
+                <!-- CH Rocker -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_rocker"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.1"
+                        android:text="@string/btn_ch"
+                        android:textColor="@color/text_dim"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnChUp"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:background="@drawable/btn_rocker_half"
+                        android:text="@string/btn_up"
+                        android:textColor="@color/text_white"
+                        android:textSize="18sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="14dp"
+                        android:layout_marginEnd="14dp"
+                        android:background="@color/divider_color" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnChDown"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:background="@drawable/btn_rocker_half"
+                        android:text="@string/btn_down"
+                        android:textColor="@color/text_white"
+                        android:textSize="18sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Quick App Launchers: YouTube & Netflix -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnAppYoutube"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_app_youtube"
+                    android:text="@string/btn_youtube"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnAppNetflix"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_app_netflix"
+                    android:text="@string/btn_netflix"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Bottom Toast / Execution Feedback -->
+            <TextView
+                android:id="@+id/tvToast"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:minHeight="24dp"
+                android:text="Sẵn sàng"
+                android:textColor="@color/text_dim"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

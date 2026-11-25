@@ -48,12 +48,22 @@ jobs:
           exit 1
         fi
         cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/TV Play.apk"
+        if [ -f remote/build/outputs/apk/debug/remote-debug.apk ]; then
+          cp remote/build/outputs/apk/debug/remote-debug.apk "remote/build/outputs/apk/debug/TV Remote.apk"
+        fi
 
-    - name: Upload APK Artifact
+    - name: Upload TV Play APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: TV-Play-debug
         path: "app/build/outputs/apk/debug/TV Play.apk"
+
+    - name: Upload TV Remote APK Artifact
+      if: hashFiles('remote/build/outputs/apk/debug/TV Remote.apk') != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: TV-Remote-debug
+        path: "remote/build/outputs/apk/debug/TV Remote.apk"
 
     - name: Publish Official Release
       uses: softprops/action-gh-release@v2
@@ -62,10 +72,12 @@ jobs:
         tag_name: ${{ github.ref_name }}
         name: "${{ github.ref_name }} - TV Play Android TV"
         body: |
-          ### Bản cập nhật ${{ github.ref_name }} cho ứng dụng TV Play:
-          - Tự động đồng bộ và cập nhật danh sách kênh truyền hình & luồng trực tiếp thể thao.
-          - Tối ưu hiệu năng, độ mượt và khử xé hình 1080i cho Android TV.
-        files: "app/build/outputs/apk/debug/TV Play.apk"
+          ### Bản cập nhật ${{ github.ref_name }}:
+          - Bổ sung ứng dụng điều khiển TV Samsung bằng giọng nói trực tiếp qua Wi-Fi (TV Remote.apk).
+          - Đồng bộ danh sách kênh và tối ưu hóa luồng phát TV Play.
+        files: |
+          app/build/outputs/apk/debug/TV Play.apk
+          remote/build/outputs/apk/debug/TV Remote.apk
         prerelease: false
         make_latest: true
       env:

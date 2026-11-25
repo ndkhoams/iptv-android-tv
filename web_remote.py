@@ -3290,6 +3290,7 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
 
     def send_compressed_response(self, content_bytes, content_type="application/json; charset=utf-8"):
@@ -3323,6 +3324,25 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
 
         if path in ["/", "/index.html"]:
             self.send_compressed_response(WEB_REMOTE_HTML.encode("utf-8"), "text/html; charset=utf-8")
+            return
+
+        # Direct udpxy proxy with CORS headers for browser players
+        if path.startswith("/udp/"):
+            udpxy_url = f"http://127.0.0.1:4022{path}"
+            try:
+                req = urllib.request.Request(udpxy_url, headers={"User-Agent": "TVPlay-WebRemote/1.0"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "video/mp2t")
+                    self.send_cors_headers()
+                    self.end_headers()
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+            except Exception:
+                pass
             return
 
         # Real-time SSE Endpoint for Samsung Tizen & Android TV
