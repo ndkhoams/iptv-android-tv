@@ -15,247 +15,252 @@
         android:paddingStart="16dp"
         android:paddingTop="12dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="24dp">
+        android:paddingBottom="16dp">
 
-        <!-- Top Status Bar: TV Status & Settings -->
+        <!-- 1. Thanh tren cung (Header):
+             - Nut Cai dat (banh rang) ben trai
+             - Cham trang thai ket noi + ten thiet bi TV o giua (● TV Samsung)
+             - Nut Nguon do o goc phai -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_height="48dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <View
-                android:id="@+id/viewStatusDot"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:background="@drawable/status_dot_offline" />
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/desc_settings"
+                android:src="@drawable/ic_gear"
+                app:tint="@color/text_dim" />
 
-            <TextView
-                android:id="@+id/tvTvStatus"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="@string/tv_status_checking"
-                android:textColor="@color/text_dim"
-                android:textSize="13sp" />
+                android:gravity="center"
+                android:orientation="horizontal">
 
-            <ImageButton
-                android:id="@+id/btnSettings"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Settings"
-                android:src="@drawable/ic_gear" />
+                <View
+                    android:id="@+id/viewStatusDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/status_dot_offline" />
+
+                <TextView
+                    android:id="@+id/tvTvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/tv_status_checking"
+                    android:textColor="@color/text_dim"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/btnPower"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/btn_power_selector"
+                android:contentDescription="@string/desc_power"
+                android:src="@drawable/ic_power"
+                app:tint="@color/text_white" />
         </LinearLayout>
 
         <!-- Main Remote Body Container -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_remote_body"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingStart="18dp"
-            android:paddingTop="20dp"
-            android:paddingEnd="18dp"
-            android:paddingBottom="20dp">
+            android:paddingStart="16dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="16dp">
 
-            <!-- Top Row: Power (Left), Brand (Center), Mic (Right) -->
+            <!-- 2. Hang phim Media (5 nut tron):
+                 - Tua lui bai truoc (|◀), Tua lui (◀◀), Phat/Tam dung (▶||), Tua toi (▶▶), Bai ke tiep (▶|) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp"
+                android:gravity="center"
                 android:orientation="horizontal">
 
                 <androidx.appcompat.widget.AppCompatImageButton
-                    android:id="@+id/btnPower"
-                    android:layout_width="54dp"
-                    android:layout_height="54dp"
-                    android:background="@drawable/btn_power_selector"
-                    app:srcCompat="@drawable/ic_power"
-                    app:tint="@color/text_white"
-                    android:contentDescription="Power" />
+                    android:id="@+id/btnMediaPrev"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/btn_circle_selector"
+                    android:contentDescription="@string/desc_media_prev"
+                    android:src="@drawable/ic_media_prev"
+                    app:tint="@color/text_white" />
 
-                <TextView
+                <Space
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:letterSpacing="0.2"
-                    android:text="SAMSUNG"
-                    android:textColor="#555558"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
 
                 <androidx.appcompat.widget.AppCompatImageButton
-                    android:id="@+id/btnMic"
-                    android:layout_width="54dp"
-                    android:layout_height="54dp"
-                    android:background="@drawable/btn_mic_selector"
-                    app:srcCompat="@drawable/ic_mic"
-                    app:tint="@color/text_white"
-                    android:contentDescription="Voice Search" />
+                    android:id="@+id/btnMediaRewind"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/btn_circle_selector"
+                    android:contentDescription="@string/desc_media_rewind"
+                    android:src="@drawable/ic_media_rewind"
+                    app:tint="@color/text_white" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnMediaPlayPause"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:background="@drawable/btn_circle_selector"
+                    android:contentDescription="@string/desc_media_play_pause"
+                    android:src="@drawable/ic_media_play_pause"
+                    app:tint="@color/text_white" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnMediaFf"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/btn_circle_selector"
+                    android:contentDescription="@string/desc_media_ff"
+                    android:src="@drawable/ic_media_ff"
+                    app:tint="@color/text_white" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <androidx.appcompat.widget.AppCompatImageButton
+                    android:id="@+id/btnMediaNext"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/btn_circle_selector"
+                    android:contentDescription="@string/desc_media_next"
+                    android:src="@drawable/ic_media_next"
+                    app:tint="@color/text_white" />
             </LinearLayout>
 
-            <!-- Voice Search Feedback Banner -->
-            <LinearLayout
-                android:id="@+id/layoutVoiceBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:layout_marginBottom="14dp"
-                android:background="@drawable/btn_remote_selector"
-                android:gravity="center"
-                android:minHeight="42dp"
-                android:paddingStart="12dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="12dp"
-                android:paddingBottom="8dp">
-
-                <TextView
-                    android:id="@+id/tvVoiceFeedback"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="@string/hint_voice_idle"
-                    android:textColor="@color/text_dim"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- Circular D-Pad -->
+            <!-- 3. Cum dieu huong trung tam (D-Pad tron lon):
+                 - Vong tron dieu huong voi 4 phim mui ten Len, Xuong, Trai, Phai
+                 - Phim OK tron o chinh giua -->
             <FrameLayout
                 android:layout_width="220dp"
                 android:layout_height="220dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/bg_dpad_surface">
 
                 <!-- UP -->
-                <androidx.appcompat.widget.AppCompatButton
+                <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnUp"
-                    android:layout_width="80dp"
+                    android:layout_width="76dp"
                     android:layout_height="56dp"
                     android:layout_gravity="top|center_horizontal"
                     android:layout_marginTop="4dp"
                     android:background="@drawable/btn_rocker_half"
-                    android:text="@string/btn_up"
-                    android:textColor="@color/text_white"
-                    android:textSize="20sp" />
+                    android:contentDescription="@string/btn_up"
+                    android:src="@drawable/ic_chevron_up"
+                    app:tint="@color/text_white" />
 
                 <!-- DOWN -->
-                <androidx.appcompat.widget.AppCompatButton
+                <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnDown"
-                    android:layout_width="80dp"
+                    android:layout_width="76dp"
                     android:layout_height="56dp"
                     android:layout_gravity="bottom|center_horizontal"
                     android:layout_marginBottom="4dp"
                     android:background="@drawable/btn_rocker_half"
-                    android:text="@string/btn_down"
-                    android:textColor="@color/text_white"
-                    android:textSize="20sp" />
+                    android:contentDescription="@string/btn_down"
+                    android:src="@drawable/ic_chevron_down"
+                    app:tint="@color/text_white" />
 
                 <!-- LEFT -->
-                <androidx.appcompat.widget.AppCompatButton
+                <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnLeft"
                     android:layout_width="56dp"
-                    android:layout_height="80dp"
+                    android:layout_height="76dp"
                     android:layout_gravity="start|center_vertical"
                     android:layout_marginStart="4dp"
                     android:background="@drawable/btn_rocker_half"
-                    android:text="@string/btn_left"
-                    android:textColor="@color/text_white"
-                    android:textSize="20sp" />
+                    android:contentDescription="@string/btn_left"
+                    android:src="@drawable/ic_chevron_left"
+                    app:tint="@color/text_white" />
 
                 <!-- RIGHT -->
-                <androidx.appcompat.widget.AppCompatButton
+                <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnRight"
                     android:layout_width="56dp"
-                    android:layout_height="80dp"
+                    android:layout_height="76dp"
                     android:layout_gravity="end|center_vertical"
                     android:layout_marginEnd="4dp"
                     android:background="@drawable/btn_rocker_half"
-                    android:text="@string/btn_right"
-                    android:textColor="@color/text_white"
-                    android:textSize="20sp" />
+                    android:contentDescription="@string/btn_right"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/text_white" />
 
                 <!-- CENTER OK -->
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btnOk"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
+                    android:layout_width="74dp"
+                    android:layout_height="74dp"
                     android:layout_gravity="center"
                     android:background="@drawable/btn_dpad_center"
                     android:text="@string/btn_ok"
                     android:textColor="@color/text_white"
-                    android:textSize="15sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
             </FrameLayout>
 
-            <!-- Mid Row: Back / Home / Play-Pause -->
+            <!-- 4. Khu vuc dieu khien ben duoi:
+                 - Ben trai: Cum phim am luong dang con nhong doc (VOL + / -)
+                 - Ben phai: Cum phim chuyen kenh dang con nhong doc (CH ∧ / ∨)
+                 - O giua (luoi 6 phim tron):
+                   + Hang tren: Ban phim go chu (Keyboard), Phim Home, Phim ban phim so (Numpad)
+                   + Hang duoi: Tat tieng (Mute), Nut Noi (Micro tim kiem giong noi), Phim Quay lai (Back) -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_height="146dp"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnBack"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_remote_selector"
-                    android:text="@string/btn_back"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_white"
-                    android:textSize="14sp" />
-
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnHome"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="3dp"
-                    android:layout_marginEnd="3dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_remote_selector"
-                    android:text="@string/btn_home"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_white"
-                    android:textSize="14sp" />
-
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnPlayPause"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_remote_selector"
-                    android:text="@string/btn_play_pause"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_white"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Rockers: VOL & CH -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal">
-
-                <!-- VOL Rocker -->
+                <!-- Ben trai: VOL Capsule (Con nhong doc) -->
                 <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_rocker"
+                    android:layout_width="58dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_capsule"
                     android:gravity="center_horizontal"
-                    android:orientation="vertical"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp">
+                    android:orientation="vertical">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnVolUp"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/btn_capsule_top"
+                        android:text="@string/btn_plus"
+                        android:textColor="@color/text_white"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -267,42 +272,121 @@
                         android:textStyle="bold" />
 
                     <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/btnVolUp"
-                        android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:background="@drawable/btn_rocker_half"
-                        android:text="@string/btn_plus"
-                        android:textColor="@color/text_white"
-                        android:textSize="20sp" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginStart="14dp"
-                        android:layout_marginEnd="14dp"
-                        android:background="@color/divider_color" />
-
-                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnVolDown"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:background="@drawable/btn_rocker_half"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/btn_capsule_bottom"
                         android:text="@string/btn_minus"
                         android:textColor="@color/text_white"
-                        android:textSize="20sp" />
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- CH Rocker -->
+                <!-- O giua: Luoi 6 phim tron (2 hang x 3 cot) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_rocker"
-                    android:gravity="center_horizontal"
+                    android:gravity="center"
                     android:orientation="vertical"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp">
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp">
+
+                    <!-- Hang tren: Keyboard, Home, Numpad -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/btnKeyboard"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/btn_circle_selector"
+                            android:contentDescription="@string/dialog_keyboard_title"
+                            android:src="@drawable/ic_keyboard"
+                            app:tint="@color/text_white" />
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/btnHome"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginEnd="10dp"
+                            android:background="@drawable/btn_circle_selector"
+                            android:contentDescription="@string/btn_home"
+                            android:src="@drawable/ic_home"
+                            app:tint="@color/text_white" />
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/btnNumpad"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/btn_circle_selector"
+                            android:contentDescription="@string/dialog_numpad_title"
+                            android:src="@drawable/ic_numpad"
+                            app:tint="@color/text_white" />
+                    </LinearLayout>
+
+                    <!-- Hang duoi: Mute, Mic, Back -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/btnMute"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/btn_circle_selector"
+                            android:contentDescription="Mute"
+                            android:src="@drawable/ic_mute"
+                            app:tint="@color/text_white" />
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/btnMic"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/btn_mic_selector"
+                            android:contentDescription="Voice Search"
+                            android:src="@drawable/ic_mic"
+                            app:tint="@color/text_white" />
+
+                        <androidx.appcompat.widget.AppCompatImageButton
+                            android:id="@+id/btnBack"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@drawable/btn_circle_selector"
+                            android:contentDescription="@string/btn_back"
+                            android:src="@drawable/ic_back"
+                            app:tint="@color/text_white" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Ben phai: CH Capsule (Con nhong doc) -->
+                <LinearLayout
+                    android:layout_width="58dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_capsule"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/btnChUp"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/btn_capsule_top"
+                        android:text="@string/btn_chevron_up"
+                        android:textColor="@color/text_white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -314,43 +398,55 @@
                         android:textStyle="bold" />
 
                     <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/btnChUp"
-                        android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:background="@drawable/btn_rocker_half"
-                        android:text="@string/btn_up"
-                        android:textColor="@color/text_white"
-                        android:textSize="18sp" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginStart="14dp"
-                        android:layout_marginEnd="14dp"
-                        android:background="@color/divider_color" />
-
-                    <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/btnChDown"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:background="@drawable/btn_rocker_half"
-                        android:text="@string/btn_down"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/btn_capsule_bottom"
+                        android:text="@string/btn_chevron_down"
                         android:textColor="@color/text_white"
-                        android:textSize="18sp" />
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
+
             </LinearLayout>
 
+            <!-- Voice Search Feedback Banner -->
+            <LinearLayout
+                android:id="@+id/layoutVoiceBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="4dp"
+                android:background="@drawable/btn_remote_selector"
+                android:gravity="center"
+                android:minHeight="38dp"
+                android:paddingStart="12dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp">
+
+                <TextView
+                    android:id="@+id/tvVoiceFeedback"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/hint_voice_idle"
+                    android:textColor="@color/text_dim"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <!-- Bottom Toast / Execution Feedback -->
             <TextView
                 android:id="@+id/tvToast"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:gravity="center"
-                android:minHeight="24dp"
+                android:minHeight="20dp"
                 android:text="Sẵn sàng"
                 android:textColor="@color/text_dim"
-                android:textSize="12sp" />
+                android:textSize="11sp" />
 
         </LinearLayout>
 

@@ -76,9 +76,14 @@ jobs:
         name: "${{ github.ref_name }} - TV Play & TV Remote"
         body: |
           ### Bản cập nhật ${{ github.ref_name }}:
-          - Cập nhật icon vector chuẩn cho nút Nguồn và nút Nói, thay mới icon ứng dụng TV Remote (v1.0.1).
-          - Bỏ phím YouTube / Netflix dưới đáy remote, thêm cơ chế Fallback nhập liệu cho giả lập MEmu Play.
-          - Ứng dụng TV Play Android TV (v2.1.38).
+          - Cập nhật giao diện mới cho app TV Remote (v1.1.0):
+            + Header: Cài đặt (bánh răng bên trái), Chấm trạng thái kết nối + tên TV ở giữa, Nút Nguồn đỏ ở góc phải.
+            + Hàng phím Media 5 nút tròn: Tua lùi bài trước, Tua lùi, Phát/Tạm dừng, Tua tới, Bài kế tiếp.
+            + Cụm điều hướng trung tâm D-Pad tròn lớn & phím OK chính giữa.
+            + Cụm phím âm lượng VOL dạng con nhộng dọc (+ / -).
+            + Cụm phím chuyển kênh CH dạng con nhộng dọc (∧ / ∨).
+            + Lưới 6 phím tròn ở giữa: Bàn phím gõ chữ (Keyboard), Home, Bàn phím số Numpad (0-9), Tắt tiếng (Mute), Nút Nói Micro tiếng Việt, Quay lại (Back).
+          - Ứng dụng TV Play Android TV (v2.1.39).
         files: |
           app/build/outputs/apk/debug/TV Play.apk
           remote/build/outputs/apk/debug/TV Remote.apk

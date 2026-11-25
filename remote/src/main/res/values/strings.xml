@@ -2,8 +2,15 @@
 <resources>
     <string name="app_name">TV Remote</string>
     <string name="tv_status_checking">Đang tìm TV...</string>
-    <string name="tv_status_online">TV Samsung Đang Bật</string>
-    <string name="tv_status_offline">TV Đang Tắt / Ngoại Tuyến</string>
+    <string name="tv_status_online">TV Samsung</string>
+    <string name="tv_status_offline">TV Ngoại Tuyến</string>
+    <string name="desc_settings">Cài đặt</string>
+    <string name="desc_power">Nguồn</string>
+    <string name="desc_media_prev">Tua lùi bài trước</string>
+    <string name="desc_media_rewind">Tua lùi</string>
+    <string name="desc_media_play_pause">Phát / Tạm dừng</string>
+    <string name="desc_media_ff">Tua tới</string>
+    <string name="desc_media_next">Bài kế tiếp</string>
     <string name="btn_power">⏻</string>
     <string name="btn_mic">🎤</string>
     <string name="btn_up">▲</string>
@@ -18,6 +25,8 @@
     <string name="btn_ch">CH</string>
     <string name="btn_plus">+</string>
     <string name="btn_minus">−</string>
+    <string name="btn_chevron_up">∧</string>
+    <string name="btn_chevron_down">∨</string>
     <string name="btn_youtube">YouTube</string>
     <string name="btn_netflix">Netflix</string>
     <string name="hint_voice_idle">Chạm 🎤 để tìm kiếm giọng nói tiếng Việt trên TV</string>
@@ -28,4 +37,9 @@
     <string name="btn_cancel">Hủy</string>
     <string name="btn_reset_token">Ghép đôi lại</string>
     <string name="permission_mic_required">Cần quyền microphone để nhận diện giọng nói tiếng Việt.</string>
+    <string name="dialog_keyboard_title">Bàn phím nhập văn bản TV</string>
+    <string name="dialog_keyboard_hint">Nhập văn bản gửi lên TV...</string>
+    <string name="dialog_keyboard_send">Gửi lên TV</string>
+    <string name="dialog_keyboard_youtube">Tìm YouTube</string>
+    <string name="dialog_numpad_title">Bàn phím số TV</string>
 </resources>

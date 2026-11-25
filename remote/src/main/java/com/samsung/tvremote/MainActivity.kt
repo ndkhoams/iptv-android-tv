@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.view.Gravity
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -82,8 +83,8 @@ class MainActivity : AppCompatActivity() {
             override fun onConnected(token: String?) {
                 runOnUiThread {
                     binding.viewStatusDot.setBackgroundResource(R.drawable.status_dot_online)
-                    val model = tvClient.tvModelName ?: "Samsung TV"
-                    binding.tvTvStatus.text = "$model (${tvClient.tvIp})"
+                    val model = tvClient.tvModelName ?: getString(R.string.tv_status_online)
+                    binding.tvTvStatus.text = model
                     binding.tvTvStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.tv_online))
                 }
             }
@@ -91,6 +92,8 @@ class MainActivity : AppCompatActivity() {
             override fun onDisconnected() {
                 runOnUiThread {
                     binding.viewStatusDot.setBackgroundResource(R.drawable.status_dot_offline)
+                    binding.tvTvStatus.text = getString(R.string.tv_status_offline)
+                    binding.tvTvStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_dim))
                 }
             }
 
@@ -113,12 +116,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupButtonListeners() {
-        // Power button (Red circle with ic_power vector)
+        // 1. Header: Nút Nguồn đỏ ở góc phải
         binding.btnPower.setOnClickListener {
             handleKeyClick("KEY_POWER", "Nguồn")
         }
 
-        // Voice button (Blue circle with ic_mic vector)
+        // 2. Hàng phím Media (5 nút tròn)
+        binding.btnMediaPrev.setOnClickListener {
+            handleKeyClick("KEY_PREVIOUS", "Bài trước")
+        }
+        binding.btnMediaRewind.setOnClickListener {
+            handleKeyClick("KEY_REWIND", "Tua lùi")
+        }
+        binding.btnMediaPlayPause.setOnClickListener {
+            handleKeyClick("KEY_PLAY", "Phát / Tạm dừng")
+        }
+        binding.btnMediaFf.setOnClickListener {
+            handleKeyClick("KEY_FF", "Tua tới")
+        }
+        binding.btnMediaNext.setOnClickListener {
+            handleKeyClick("KEY_NEXT", "Bài kế tiếp")
+        }
+
+        // 3. Cụm điều hướng trung tâm (D-Pad tròn lớn)
+        binding.btnUp.setOnClickListener { handleKeyClick("KEY_UP", "Lên") }
+        binding.btnDown.setOnClickListener { handleKeyClick("KEY_DOWN", "Xuống") }
+        binding.btnLeft.setOnClickListener { handleKeyClick("KEY_LEFT", "Trái") }
+        binding.btnRight.setOnClickListener { handleKeyClick("KEY_RIGHT", "Phải") }
+        binding.btnOk.setOnClickListener { handleKeyClick("KEY_ENTER", "OK") }
+
+        // 4. Khu vực điều khiển bên dưới
+        // Bên trái: Con nhộng VOL (+ / -)
+        binding.btnVolUp.setOnClickListener { handleKeyClick("KEY_VOLUP", "VOL +") }
+        binding.btnVolDown.setOnClickListener { handleKeyClick("KEY_VOLDOWN", "VOL −") }
+
+        // Bên phải: Con nhộng CH (∧ / ∨)
+        binding.btnChUp.setOnClickListener { handleKeyClick("KEY_CHUP", "CH ▲") }
+        binding.btnChDown.setOnClickListener { handleKeyClick("KEY_CHDOWN", "CH ▼") }
+
+        // Ở giữa: Lưới 6 phím tròn (2 hàng x 3 cột)
+        // Hàng trên: Bàn phím gõ chữ (Keyboard), Phím Home, Phím bàn phím số (Numpad)
+        binding.btnKeyboard.setOnClickListener {
+            hapticHelper.click()
+            showKeyboardDialog()
+        }
+        binding.btnHome.setOnClickListener {
+            handleKeyClick("KEY_HOME", "Home")
+        }
+        binding.btnNumpad.setOnClickListener {
+            hapticHelper.click()
+            showNumpadDialog()
+        }
+
+        // Hàng dưới: Tắt tiếng (Mute), Nút Nói (Micro tìm kiếm giọng nói), Phím Quay lại (Back)
+        binding.btnMute.setOnClickListener {
+            handleKeyClick("KEY_MUTE", "Tắt tiếng")
+        }
         binding.btnMic.setOnClickListener {
             hapticHelper.click()
             if (isVoiceActive) {
@@ -127,24 +180,9 @@ class MainActivity : AppCompatActivity() {
                 checkMicPermissionAndStart()
             }
         }
-
-        // D-pad navigation
-        binding.btnUp.setOnClickListener { handleKeyClick("KEY_UP", "Lên") }
-        binding.btnDown.setOnClickListener { handleKeyClick("KEY_DOWN", "Xuống") }
-        binding.btnLeft.setOnClickListener { handleKeyClick("KEY_LEFT", "Trái") }
-        binding.btnRight.setOnClickListener { handleKeyClick("KEY_RIGHT", "Phải") }
-        binding.btnOk.setOnClickListener { handleKeyClick("KEY_ENTER", "OK") }
-
-        // Mid row buttons
-        binding.btnBack.setOnClickListener { handleKeyClick("KEY_RETURN", "Back") }
-        binding.btnHome.setOnClickListener { handleKeyClick("KEY_HOME", "Home") }
-        binding.btnPlayPause.setOnClickListener { handleKeyClick("KEY_PLAY", "Play/Pause") }
-
-        // Rocker buttons: Volume & Channel
-        binding.btnVolUp.setOnClickListener { handleKeyClick("KEY_VOLUP", "VOL +") }
-        binding.btnVolDown.setOnClickListener { handleKeyClick("KEY_VOLDOWN", "VOL −") }
-        binding.btnChUp.setOnClickListener { handleKeyClick("KEY_CHUP", "CH ▲") }
-        binding.btnChDown.setOnClickListener { handleKeyClick("KEY_CHDOWN", "CH ▼") }
+        binding.btnBack.setOnClickListener {
+            handleKeyClick("KEY_RETURN", "Back")
+        }
     }
 
     private fun handleKeyClick(key: String, label: String) {
@@ -158,6 +196,137 @@ class MainActivity : AppCompatActivity() {
                 binding.tvToast.text = "Lỗi: ${err.localizedMessage ?: "TV chưa phản hồi"}"
             }
         }
+    }
+
+    private fun showKeyboardDialog() {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(50, 40, 50, 20)
+        }
+
+        val input = EditText(this).apply {
+            hint = getString(R.string.dialog_keyboard_hint)
+            setSingleLine(false)
+            maxLines = 3
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_white))
+        }
+        container.addView(input)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_keyboard_title)
+            .setView(container)
+            .setPositiveButton(R.string.dialog_keyboard_send) { dialog, _ ->
+                val text = input.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    sendTextInputToTv(text)
+                }
+                dialog.dismiss()
+            }
+            .setNeutralButton(R.string.dialog_keyboard_youtube) { dialog, _ ->
+                val text = input.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    executeYouTubeSearch(text)
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    private fun sendTextInputToTv(text: String) {
+        hapticHelper.click()
+        binding.tvToast.text = "Đang gửi: \"$text\"..."
+        lifecycleScope.launch {
+            val result = tvClient.sendInputString(text)
+            result.onSuccess {
+                binding.tvToast.text = "Đã gửi lên TV: \"$text\""
+            }.onFailure { err ->
+                binding.tvToast.text = "Lỗi gửi: ${err.localizedMessage ?: "TV chưa nhận"}"
+            }
+        }
+    }
+
+    private fun showNumpadDialog() {
+        val dialogView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(30, 24, 30, 24)
+        }
+
+        var enteredNumbers = ""
+        val tvDisplay = TextView(this).apply {
+            text = "Bấm số chọn kênh TV"
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_white))
+            setPadding(0, 10, 0, 20)
+        }
+        dialogView.addView(tvDisplay)
+
+        val numpadRows = arrayOf(
+            arrayOf("1" to "KEY_1", "2" to "KEY_2", "3" to "KEY_3"),
+            arrayOf("4" to "KEY_4", "5" to "KEY_5", "6" to "KEY_6"),
+            arrayOf("7" to "KEY_7", "8" to "KEY_8", "9" to "KEY_9"),
+            arrayOf("Xóa" to "DEL", "0" to "KEY_0", "OK" to "KEY_ENTER")
+        )
+
+        var dialogRef: AlertDialog? = null
+
+        for (row in numpadRows) {
+            val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                val lp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                lp.bottomMargin = 12
+                layoutParams = lp
+            }
+
+            for ((label, key) in row) {
+                val btn = androidx.appcompat.widget.AppCompatButton(this).apply {
+                    text = label
+                    textSize = if (label.length > 2) 14f else 20f
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_white))
+                    setBackgroundResource(R.drawable.btn_circle_selector)
+                    val btnLp = LinearLayout.LayoutParams(140, 140)
+                    btnLp.marginStart = 10
+                    btnLp.marginEnd = 10
+                    layoutParams = btnLp
+
+                    setOnClickListener {
+                        when (key) {
+                            "DEL" -> {
+                                hapticHelper.click()
+                                if (enteredNumbers.isNotEmpty()) {
+                                    enteredNumbers = enteredNumbers.dropLast(1)
+                                    tvDisplay.text = if (enteredNumbers.isEmpty()) "Bấm số chọn kênh TV" else "Kênh: $enteredNumbers"
+                                }
+                            }
+                            "KEY_ENTER" -> {
+                                handleKeyClick("KEY_ENTER", "OK")
+                                dialogRef?.dismiss()
+                            }
+                            else -> {
+                                hapticHelper.click()
+                                enteredNumbers += label
+                                tvDisplay.text = "Kênh: $enteredNumbers"
+                                handleKeyClick(key, label)
+                            }
+                        }
+                    }
+                }
+                rowLayout.addView(btn)
+            }
+            dialogView.addView(rowLayout)
+        }
+
+        dialogRef = AlertDialog.Builder(this)
+            .setTitle(R.string.dialog_numpad_title)
+            .setView(dialogView)
+            .setNegativeButton("Đóng", null)
+            .show()
     }
 
     private fun checkMicPermissionAndStart() {
@@ -219,30 +388,8 @@ class MainActivity : AppCompatActivity() {
         try {
             speechIntentLauncher.launch(intent)
         } catch (e: Exception) {
-            showKeyboardSearchDialog()
+            showKeyboardDialog()
         }
-    }
-
-    private fun showKeyboardSearchDialog() {
-        val input = EditText(this).apply {
-            hint = "Nhập tên video / bài hát cần tìm trên TV..."
-            setSingleLine(true)
-            setPadding(40, 30, 40, 30)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Tìm kiếm YouTube trên TV")
-            .setMessage("Nhập từ khóa bằng bàn phím hoặc dùng mic bàn phím (Gboard):")
-            .setView(input)
-            .setPositiveButton("Tìm trên TV") { dialog, _ ->
-                val q = input.text.toString().trim()
-                if (q.isNotEmpty()) {
-                    executeYouTubeSearch(q)
-                }
-                dialog.dismiss()
-            }
-            .setNegativeButton("Hủy", null)
-            .show()
     }
 
     private fun executeYouTubeSearch(query: String) {
@@ -343,8 +490,8 @@ class MainActivity : AppCompatActivity() {
             val isOnline = tvClient.checkTvStatus()
             if (isOnline) {
                 binding.viewStatusDot.setBackgroundResource(R.drawable.status_dot_online)
-                val model = tvClient.tvModelName ?: "Samsung TV"
-                binding.tvTvStatus.text = "$model (${tvClient.tvIp})"
+                val model = tvClient.tvModelName ?: getString(R.string.tv_status_online)
+                binding.tvTvStatus.text = model
                 binding.tvTvStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.tv_online))
             } else {
                 binding.viewStatusDot.setBackgroundResource(R.drawable.status_dot_offline)

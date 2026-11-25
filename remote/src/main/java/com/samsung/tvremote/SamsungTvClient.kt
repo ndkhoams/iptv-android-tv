@@ -209,6 +209,49 @@ class SamsungTvClient(private val context: Context) {
     }
 
     /**
+     * Send text input string to TV (via WebSocket SendInputString):
+     */
+    suspend fun sendInputString(text: String): Result<String> = withContext(Dispatchers.IO) {
+        if (!isWebSocketConnected || webSocket == null) {
+            connectWebSocket()
+            var waitCount = 0
+            while (!isWebSocketConnected && waitCount < 15) {
+                kotlinx.coroutines.delay(100)
+                waitCount++
+            }
+        }
+
+        val ws = webSocket
+        if (ws == null || !isWebSocketConnected) {
+            return@withContext Result.failure(
+                Exception("Chưa kết nối được với TV $tvIp:8002.")
+            )
+        }
+
+        try {
+            val base64Text = Base64.encodeToString(text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+            val inputPayload = JSONObject().apply {
+                put("method", "ms.remote.control")
+                put("params", JSONObject().apply {
+                    put("Cmd", "SendInputString")
+                    put("DataOfCmd", base64Text)
+                    put("Option", "false")
+                    put("TypeOfRemote", "SendRemoteKey")
+                })
+            }
+
+            val sent = ws.send(inputPayload.toString())
+            if (sent) {
+                Result.success("Đã gửi: \"$text\"")
+            } else {
+                Result.failure(Exception("Không gửi được chuỗi tới TV"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Direct DIAL YouTube Search:
      * POST http://10.0.0.9:8080/ws/apps/YouTube with launch=search&q=<query>
      */
