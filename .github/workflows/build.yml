@@ -48,9 +48,12 @@ jobs:
           exit 1
         fi
         cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/TV Play.apk"
-        if [ -f remote/build/outputs/apk/debug/remote-debug.apk ]; then
-          cp remote/build/outputs/apk/debug/remote-debug.apk "remote/build/outputs/apk/debug/TV Remote.apk"
-        fi
+        for f in remote/build/outputs/apk/debug/*.apk; do
+          if [ -f "$f" ]; then
+            cp "$f" "remote/build/outputs/apk/debug/TV Remote.apk"
+            break
+          fi
+        done
 
     - name: Upload TV Play APK Artifact
       uses: actions/upload-artifact@v4

@@ -54,7 +54,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_maxWidth="360dp"
             android:background="@drawable/bg_remote_body"
             android:gravity="center_horizontal"
             android:orientation="vertical"
