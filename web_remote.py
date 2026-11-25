@@ -709,192 +709,481 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         /* ========================================================================= */
-        /* TAB 1: REMOTE CONTROLLER TAB                                              */
+        /* TAB 1: MODERN TV REMOTE CONTROLLER (MATCHING TV REMOTE APP)               */
         /* ========================================================================= */
-        .remote-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(28px) saturate(180%);
-            -webkit-backdrop-filter: blur(28px) saturate(180%);
-            border: 0.5px solid rgba(255, 255, 255, 0.12);
-            border-top: 1px solid rgba(255, 255, 255, 0.24);
-            border-radius: 28px;
-            padding: 18px 16px 20px;
-            box-shadow: 0 16px 44px -4px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 101, 0, 0.12);
-            margin-bottom: 14px;
+        .remote-wrapper {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 0 4px;
         }
 
-        .dpad-container {
-            width: 236px;
-            height: 236px;
-            margin: 14px auto 18px;
-            position: relative;
-            background: radial-gradient(circle at 50% 50%, #202028 0%, #111116 70%, #08080a 100%);
+        /* Remote Header: Settings (Left) - Status (Center) - Power (Right) */
+        .remote-header-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            align-items: center;
+            height: 56px;
+            padding: 0 28px;
+            margin-bottom: 6px;
+        }
+
+        .remote-header-col {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remote-header-btn {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #8E8E93;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .remote-header-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .remote-power-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(255, 59, 48, 0.4);
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .remote-power-btn:active {
+            transform: scale(0.92);
+            background: #B71C1C;
+            box-shadow: 0 2px 8px rgba(255, 59, 48, 0.6);
+        }
+
+        .remote-status-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #8E8E93;
+        }
+
+        .remote-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #636366;
+            transition: all 0.3s;
+        }
+
+        .remote-status-dot.online {
+            background: #30D158;
+            box-shadow: 0 0 8px #30D158;
+        }
+
+        /* Remote Body Box (Bo góc 32px, padding trong 28px để bó 2 cột vào trong) */
+        .remote-body-box {
+            background: #1c1c1e;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 32px;
+            padding: 20px 28px 18px;
+            box-shadow: 0 16px 44px -4px rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* 3-Column Grid Rows (Thẳng hàng tuyệt đối 100%) */
+        .remote-grid-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            align-items: center;
+        }
+
+        .remote-grid-col {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Nút tròn chung */
+        .btn-circle {
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .btn-circle:active {
+            transform: scale(0.92);
+            background: #FF9F0A;
+            border-color: #FF9F0A;
+            color: #FFFFFF;
+        }
+
+        /* Hàng Media (52px x 52px) */
+        .btn-media {
+            width: 52px;
+            height: 52px;
+            font-size: 16px;
+        }
+
+        /* Hàng Chức năng 1 & 2 (54px x 54px) */
+        .btn-func {
+            width: 54px;
+            height: 54px;
+            font-size: 18px;
+        }
+
+        /* Nút Mic đặc biệt (màu xanh dương) */
+        .btn-mic-special {
+            background: #007AFF;
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
+        }
+
+        .btn-mic-special:active, .btn-mic-special.listening {
+            background: #30D158;
+            border-color: #30D158;
+            box-shadow: 0 0 18px rgba(48, 209, 88, 0.7);
+            animation: pulse-mic 1.4s infinite;
+        }
+
+        @keyframes pulse-mic {
+            0% { transform: scale(1); box-shadow: 0 0 8px rgba(48, 209, 88, 0.5); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(48, 209, 88, 0.9); }
+            100% { transform: scale(1); box-shadow: 0 0 8px rgba(48, 209, 88, 0.5); }
+        }
+
+        /* D-Pad Container (Đĩa tròn 224px) */
+        .dpad-container {
+            width: 224px;
+            height: 224px;
+            margin: 4px auto;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #2a2a2e 0%, #1a1a1d 70%, #121215 100%);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.12);
             box-shadow: 
-                inset 0 3px 8px rgba(255, 255, 255, 0.12),
-                inset 0 -4px 12px rgba(0, 0, 0, 0.85),
-                0 14px 40px rgba(0, 0, 0, 0.8);
+                inset 0 2px 6px rgba(255, 255, 255, 0.1),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.8),
+                0 10px 30px rgba(0, 0, 0, 0.7);
         }
 
         .dpad-btn {
             position: absolute;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: var(--label);
-            font-size: 16px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 18px;
             font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.1s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .dpad-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.1s;
         }
 
         .dpad-btn:active {
-            background: var(--accent);
-            color: #ffffff;
-            box-shadow: 0 0 16px var(--accent-glow);
-            transform: scale(0.94);
+            color: #FF9F0A;
+            transform: scale(0.92);
         }
 
         .dpad-up {
-            top: 8px;
-            left: 80px;
-            width: 76px;
+            top: 4px;
+            left: 72px;
+            width: 80px;
             height: 56px;
-            border-radius: 36px 36px 12px 12px;
         }
 
         .dpad-down {
-            bottom: 8px;
-            left: 80px;
-            width: 76px;
+            bottom: 4px;
+            left: 72px;
+            width: 80px;
             height: 56px;
-            border-radius: 12px 12px 36px 36px;
         }
 
         .dpad-left {
-            top: 80px;
-            left: 8px;
+            top: 72px;
+            left: 4px;
             width: 56px;
-            height: 76px;
-            border-radius: 36px 12px 12px 36px;
+            height: 80px;
         }
 
         .dpad-right {
-            top: 80px;
-            right: 8px;
+            top: 72px;
+            right: 4px;
             width: 56px;
-            height: 76px;
-            border-radius: 12px 36px 36px 12px;
+            height: 80px;
         }
 
         .dpad-ok {
-            top: 80px;
-            left: 80px;
+            top: 74px;
+            left: 74px;
             width: 76px;
             height: 76px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #ff6500 0%, #ff8800 50%, #ffaa00 100%);
+            background: #2c2c2e;
             color: #ffffff;
-            font-size: 18px;
-            font-weight: 900;
-            letter-spacing: 0.05em;
-            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            font-size: 17px;
+            font-weight: 800;
+            border: 1px solid rgba(255, 255, 255, 0.18);
             box-shadow: 
-                inset 0 1px 2px rgba(255, 255, 255, 0.6),
-                0 8px 24px rgba(255, 101, 0, 0.45);
+                inset 0 1px 2px rgba(255, 255, 255, 0.25),
+                0 6px 18px rgba(0, 0, 0, 0.5);
+            transition: all 0.12s;
         }
 
         .dpad-ok:active {
             transform: scale(0.92);
-            box-shadow: 0 2px 10px rgba(255, 101, 0, 0.6);
+            background: #FF9F0A;
+            border-color: #FF9F0A;
         }
 
-        .row-actions {
+        /* Cụm con nhộng VOL và CH (Dọc 140px, rộng 54px, bo tròn 27px) */
+        .capsule-box {
+            width: 54px;
+            height: 140px;
+            background: #252528;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 27px;
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
         }
 
-        .action-btn {
-            flex: 1;
-            padding: 12px 8px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 14px;
-            color: var(--label);
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
+        .capsule-btn-top, .capsule-btn-bottom {
+            width: 100%;
+            height: 54px;
+            background: transparent;
+            border: none;
+            color: #FFFFFF;
+            font-size: 20px;
+            font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.1s;
         }
 
-        .action-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
+        .capsule-btn-top:active, .capsule-btn-bottom:active {
+            background: #FF9F0A;
+            color: #FFFFFF;
         }
 
-        .action-btn:active {
-            transform: scale(0.95);
-            background: rgba(255, 101, 0, 0.25);
-            border-color: var(--accent);
-            color: #fff;
+        .capsule-label {
+            width: 100%;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8E8E93;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            user-select: none;
         }
 
-        .btn-mode-tv {
-            background: linear-gradient(135deg, rgba(10, 132, 255, 0.15) 0%, rgba(10, 132, 255, 0.05) 100%);
-            border-color: rgba(10, 132, 255, 0.3);
-            color: #93c5fd;
+        /* Dòng trạng thái đáy Remote */
+        .remote-toast-text {
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: #8E8E93;
+            min-height: 20px;
+            margin-top: 4px;
+            transition: color 0.3s;
         }
 
-        .btn-mode-sports {
-            background: linear-gradient(135deg, rgba(255, 101, 0, 0.18) 0%, rgba(255, 159, 10, 0.08) 100%);
-            border-color: rgba(255, 101, 0, 0.35);
-            color: #fdba74;
+        /* ========================================================================= */
+        /* MODALS (NUMPAD, KEYBOARD, VOICE DIALOG)                                   */
+        /* ========================================================================= */
+        .remote-modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .keypad-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        .remote-modal-backdrop.show {
+            display: flex;
         }
 
-        .key-num {
-            padding: 12px 0;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.09);
+        .remote-modal-content {
+            background: #222225;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 28px;
+            width: 100%;
+            max-width: 340px;
+            padding: 24px 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modal-pop {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            color: #FFFFFF;
+            font-size: 17px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .modal-sub {
+            color: #8E8E93;
+            font-size: 12px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .modal-close-btn {
+            margin-top: 18px;
+            padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
             border-radius: 12px;
-            color: var(--label);
-            font-size: 15px;
+            color: #FFFFFF;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
-            text-align: center;
-            transition: all 0.12s;
+            transition: all 0.15s;
         }
 
-        .key-num:hover {
-            background: rgba(255, 255, 255, 0.08);
+        .modal-close-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
         }
 
-        .key-num:active {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent-hover);
-            transform: scale(0.94);
+        /* Numpad Grid inside Modal */
+        .modal-numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 260px;
+        }
+
+        .modal-num-btn {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: #2c2c2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .modal-num-btn:active {
+            transform: scale(0.92);
+            background: #FF9F0A;
+        }
+
+        .modal-num-display {
+            font-size: 20px;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-bottom: 16px;
+            min-height: 28px;
+            letter-spacing: 0.1em;
+        }
+
+        /* Keyboard Form inside Modal */
+        .modal-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: #FFFFFF;
+            font-size: 15px;
+            margin-bottom: 14px;
+            outline: none;
+        }
+
+        .modal-input:focus {
+            border-color: #007AFF;
+        }
+
+        .modal-btn-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .modal-btn-primary {
+            flex: 1;
+            padding: 12px 10px;
+            background: #007AFF;
+            border: none;
+            border-radius: 14px;
+            color: #FFFFFF;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .modal-btn-yt {
+            flex: 1;
+            padding: 12px 10px;
+            background: #FF0000;
+            border: none;
+            border-radius: 14px;
+            color: #FFFFFF;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Voice Visualizer Waveform Canvas */
+        .voice-wave-canvas {
+            width: 200px;
+            height: 60px;
+            margin: 12px 0;
         }
 
         /* ========================================================================= */
@@ -1919,49 +2208,124 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
 
     <!-- TAB 1: REMOTE CONTROLLER -->
     <div id="tab-remote" class="tab-content active">
-        <div class="remote-card">
-            <div class="dpad-container">
-                <button class="dpad-btn dpad-up" onclick="sendKey('up')">▲</button>
-                <button class="dpad-btn dpad-down" onclick="sendKey('down')">▼</button>
-                <button class="dpad-btn dpad-left" onclick="sendKey('left')">◄</button>
-                <button class="dpad-btn dpad-right" onclick="sendKey('right')">►</button>
-                <button class="dpad-btn dpad-ok" onclick="sendKey('center')">OK</button>
+        <div class="remote-wrapper">
+            <!-- Header: Cài đặt (trái) - Tên TV + Status (giữa) - Nguồn đỏ (phải) -->
+            <div class="remote-header-grid">
+                <div class="remote-header-col">
+                    <button class="remote-header-btn" onclick="sendKey('menu')" title="Cài đặt / Menu">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    </button>
+                </div>
+                <div class="remote-header-col">
+                    <div class="remote-status-box">
+                        <span id="remoteHeaderDot" class="remote-status-dot online"></span>
+                        <span id="remoteHeaderStatus">TV Play</span>
+                    </div>
+                </div>
+                <div class="remote-header-col">
+                    <button class="remote-power-btn" onclick="sendKey('power')" title="Nguồn">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+                    </button>
+                </div>
             </div>
 
-            <div class="row-actions">
-                <button class="action-btn" onclick="sendKey('back')">↩ Quay Lại</button>
-                <button class="action-btn" onclick="sendKey('menu')">☰ Menu / Cài Đặt</button>
-            </div>
+            <!-- Remote Body Container (Bo góc 32px, padding 28px) -->
+            <div class="remote-body-box">
 
-            <div class="row-actions">
-                <button class="action-btn" onclick="sendKey('ch_prev')">⏮ Kênh Trước</button>
-                <button class="action-btn" onclick="sendKey('ch_next')">⏭ Kênh Tiếp</button>
-            </div>
+                <!-- 1. Hàng Media: Prev (|◀), Play/Pause (▶||), Next (▶|) -->
+                <div class="remote-grid-row">
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-media" onclick="sendKey('ch_prev')" title="Kênh trước / Lùi">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                        </button>
+                    </div>
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-media" onclick="sendKey('play_pause')" title="Phát / Tạm dừng">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                        </button>
+                    </div>
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-media" onclick="sendKey('ch_next')" title="Kênh tiếp / Tới">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                        </button>
+                    </div>
+                </div>
 
-            <div class="row-actions">
-                <button class="action-btn" onclick="sendKey('vol_down')">🔉 Giảm Âm</button>
-                <button class="action-btn" onclick="sendKey('mute')">🔇 Tắt Tiếng</button>
-                <button class="action-btn" onclick="sendKey('vol_up')">🔊 Tăng Âm</button>
-            </div>
+                <!-- 2. Cụm D-Pad tròn lớn (224px) -->
+                <div class="dpad-container">
+                    <button class="dpad-btn dpad-up" onclick="sendKey('up')">▲</button>
+                    <button class="dpad-btn dpad-down" onclick="sendKey('down')">▼</button>
+                    <button class="dpad-btn dpad-left" onclick="sendKey('left')">◄</button>
+                    <button class="dpad-btn dpad-right" onclick="sendKey('right')">►</button>
+                    <button class="dpad-btn dpad-ok" onclick="sendKey('center')">OK</button>
+                </div>
 
-            <div class="row-actions">
-                <button class="action-btn btn-mode-tv" onclick="sendKey('mode_tv')">📺 Xem TV</button>
-                <button class="action-btn btn-mode-sports" onclick="sendKey('mode_sports')">⚽ Trực tiếp Thể Thao</button>
-            </div>
+                <!-- 3. Hàng chức năng 1: Back (↩), Home (🏠), Numpad (🔢) -->
+                <div class="remote-grid-row">
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-func" onclick="sendKey('back')" title="Quay lại">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                        </button>
+                    </div>
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-func" onclick="sendKey('home')" title="Trang chủ">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        </button>
+                    </div>
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-func" onclick="openNumpadModal()" title="Bàn phím số">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+                        </button>
+                    </div>
+                </div>
 
-            <div class="keypad-grid">
-                <button class="key-num" onclick="sendKey('1')">1</button>
-                <button class="key-num" onclick="sendKey('2')">2</button>
-                <button class="key-num" onclick="sendKey('3')">3</button>
-                <button class="key-num" onclick="sendKey('4')">4</button>
-                <button class="key-num" onclick="sendKey('5')">5</button>
-                <button class="key-num" onclick="sendKey('6')">6</button>
-                <button class="key-num" onclick="sendKey('7')">7</button>
-                <button class="key-num" onclick="sendKey('8')">8</button>
-                <button class="key-num" onclick="sendKey('9')">9</button>
-                <button class="key-num" onclick="sendKey('mode_fav')">★</button>
-                <button class="key-num" onclick="sendKey('0')">0</button>
-                <button class="key-num" onclick="sendKey('exit')">Thoát</button>
+                <!-- 4. Hàng chức năng 2: Mute (🔇), Mic (🎤), Keyboard (⌨) -->
+                <div class="remote-grid-row">
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-func" onclick="sendKey('mute')" title="Tắt tiếng">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                        </button>
+                    </div>
+                    <div class="remote-grid-col">
+                        <button id="btnWebMic" class="btn-circle btn-func btn-mic-special" onclick="openVoiceModal()" title="Tìm kiếm giọng nói">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                        </button>
+                    </div>
+                    <div class="remote-grid-col">
+                        <button class="btn-circle btn-func" onclick="openKeyboardModal()" title="Bàn phím nhập chữ">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. Hàng con nhộng VOL và CH (thẳng cột 100% với Cột 1 và Cột 3) -->
+                <div class="remote-grid-row" style="margin-top: 4px;">
+                    <!-- Cột 1: VOL (+ / VOL / −) -->
+                    <div class="remote-grid-col">
+                        <div class="capsule-box">
+                            <button class="capsule-btn-top" onclick="sendKey('vol_up')" title="Tăng âm lượng">+</button>
+                            <span class="capsule-label">VOL</span>
+                            <button class="capsule-btn-bottom" onclick="sendKey('vol_down')" title="Giảm âm lượng">−</button>
+                        </div>
+                    </div>
+                    <!-- Cột 2: Khoảng đệm giữa -->
+                    <div class="remote-grid-col">
+                        <button class="action-btn" style="padding: 10px 12px; font-size: 11px; max-width: 90px; border-radius: 20px;" onclick="sendKey('overlay')" title="Bật/Tắt OSD Kênh">
+                            📺 OSD
+                        </button>
+                    </div>
+                    <!-- Cột 3: CH (∧ / CH / ∨) -->
+                    <div class="remote-grid-col">
+                        <div class="capsule-box">
+                            <button class="capsule-btn-top" onclick="sendKey('ch_next')" title="Kênh tiếp">∧</button>
+                            <span class="capsule-label">CH</span>
+                            <button class="capsule-btn-bottom" onclick="sendKey('ch_prev')" title="Kênh trước">∨</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Dưới cùng: Dòng thông báo trạng thái -->
+                <div id="remoteToastStatus" class="remote-toast-text">Sẵn sàng</div>
             </div>
         </div>
     </div>
@@ -2169,6 +2533,56 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         </nav>
     </div>
 
+    <!-- Modal 1: Bàn phím số Numpad -->
+    <div id="remoteNumpadModal" class="remote-modal-backdrop" onclick="if(event.target===this)closeNumpadModal()">
+        <div class="remote-modal-content">
+            <div class="modal-title">Bàn Phím Số TV</div>
+            <div id="numpadEnteredText" class="modal-num-display">Bấm số chọn kênh</div>
+            <div class="modal-numpad-grid">
+                <button class="modal-num-btn" onclick="onNumpadPress('1')">1</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('2')">2</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('3')">3</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('4')">4</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('5')">5</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('6')">6</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('7')">7</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('8')">8</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('9')">9</button>
+                <button class="modal-num-btn" style="font-size: 15px;" onclick="onNumpadPress('DEL')">Xóa</button>
+                <button class="modal-num-btn" onclick="onNumpadPress('0')">0</button>
+                <button class="modal-num-btn" style="background:#FF9F0A; font-size:16px;" onclick="onNumpadPress('OK')">OK</button>
+            </div>
+            <button class="modal-close-btn" onclick="closeNumpadModal()">Đóng</button>
+        </div>
+    </div>
+
+    <!-- Modal 2: Bàn phím gõ chữ & Tìm YouTube -->
+    <div id="remoteKeyboardModal" class="remote-modal-backdrop" onclick="if(event.target===this)closeKeyboardModal()">
+        <div class="remote-modal-content">
+            <div class="modal-title">Bàn Phím TV</div>
+            <div class="modal-sub">Gõ nội dung văn bản để gửi lên TV hoặc tìm kiếm YouTube</div>
+            <input type="text" id="keyboardTextInput" class="modal-input" placeholder="Nhập từ khóa hoặc văn bản..." onkeydown="if(event.key==='Enter')sendKeyboardText()">
+            <div class="modal-btn-row">
+                <button class="modal-btn-primary" onclick="sendKeyboardText()">Gửi TV</button>
+                <button class="modal-btn-yt" onclick="searchYouTubeFromKeyboard()">🔍 YouTube</button>
+            </div>
+            <button class="modal-close-btn" onclick="closeKeyboardModal()">Đóng</button>
+        </div>
+    </div>
+
+    <!-- Modal 3: Tìm kiếm giọng nói tiếng Việt với Sóng âm -->
+    <div id="remoteVoiceModal" class="remote-modal-backdrop" onclick="if(event.target===this)closeVoiceModal()">
+        <div class="remote-modal-content">
+            <div style="width:68px; height:68px; border-radius:50%; background:#2c2c2e; display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="#007AFF"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </div>
+            <canvas id="voiceWaveCanvas" class="voice-wave-canvas" width="200" height="60"></canvas>
+            <div id="voiceModalStatus" class="modal-title">Đang lắng nghe...</div>
+            <div id="voiceModalSub" class="modal-sub">Nói tên video, ca sĩ, kênh hoặc phim...</div>
+            <button class="modal-close-btn" onclick="closeVoiceModal()">Hủy</button>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast"></div>
 
@@ -2366,16 +2780,219 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             });
         }
 
+        /* ========================================================================= */
+        /* TV REMOTE MODAL & CONTROLLER FUNCTIONS                                   */
+        /* ========================================================================= */
+        var currentNumpadValue = '';
+        function openNumpadModal() {
+            var m = document.getElementById('remoteNumpadModal');
+            if (m) {
+                currentNumpadValue = '';
+                document.getElementById('numpadEnteredText').textContent = 'Bấm số chọn kênh';
+                m.classList.add('show');
+            }
+        }
+
+        function closeNumpadModal() {
+            var m = document.getElementById('remoteNumpadModal');
+            if (m) m.classList.remove('show');
+        }
+
+        function onNumpadPress(val) {
+            if (val === 'DEL') {
+                currentNumpadValue = currentNumpadValue.slice(0, -1);
+                document.getElementById('numpadEnteredText').textContent = currentNumpadValue ? ('Kênh: ' + currentNumpadValue) : 'Bấm số chọn kênh';
+            } else if (val === 'OK') {
+                sendKey('center');
+                closeNumpadModal();
+                currentNumpadValue = '';
+            } else {
+                currentNumpadValue += val;
+                document.getElementById('numpadEnteredText').textContent = 'Kênh: ' + currentNumpadValue;
+                sendKey(val);
+            }
+        }
+
+        function openKeyboardModal() {
+            var m = document.getElementById('remoteKeyboardModal');
+            if (m) {
+                document.getElementById('keyboardTextInput').value = '';
+                m.classList.add('show');
+                setTimeout(function() { document.getElementById('keyboardTextInput').focus(); }, 150);
+            }
+        }
+
+        function closeKeyboardModal() {
+            var m = document.getElementById('remoteKeyboardModal');
+            if (m) m.classList.remove('show');
+        }
+
+        function sendKeyboardText() {
+            var txt = document.getElementById('keyboardTextInput').value.trim();
+            if (txt) {
+                showToast('Gửi lên TV: ' + txt);
+                fetch('/api/key', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ key: 'text:' + txt })
+                });
+                closeKeyboardModal();
+            }
+        }
+
+        function searchYouTubeFromKeyboard() {
+            var txt = document.getElementById('keyboardTextInput').value.trim();
+            if (txt) {
+                showToast('🔍 Tìm YouTube: ' + txt);
+                fetch('/api/key', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ key: 'search:' + txt })
+                });
+                closeKeyboardModal();
+            }
+        }
+
+        var voiceWaveAnimId = null;
+        var voiceSpeechRec = null;
+
+        function openVoiceModal() {
+            var m = document.getElementById('remoteVoiceModal');
+            if (!m) return;
+            m.classList.add('show');
+            var statusEl = document.getElementById('voiceModalStatus');
+            var subEl = document.getElementById('voiceModalSub');
+            statusEl.textContent = 'Đang lắng nghe...';
+            subEl.textContent = 'Nói tên kênh, video hoặc phim tiếng Việt...';
+            
+            startVoiceWaveCanvas();
+
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                try {
+                    voiceSpeechRec = new SpeechRecognition();
+                    voiceSpeechRec.lang = 'vi-VN';
+                    voiceSpeechRec.continuous = false;
+                    voiceSpeechRec.interimResults = true;
+
+                    voiceSpeechRec.onresult = function(event) {
+                        var transcript = '';
+                        for (var i = event.resultIndex; i < event.results.length; ++i) {
+                            transcript += event.results[i][0].transcript;
+                        }
+                        transcript = transcript.trim();
+                        if (transcript) {
+                            subEl.textContent = '🔍 "' + transcript + '"';
+                            if (event.results[0].isFinal) {
+                                statusEl.textContent = 'Đã nhận dạng!';
+                                setTimeout(function() {
+                                    closeVoiceModal();
+                                    showToast('Tìm YouTube: ' + transcript);
+                                    fetch('/api/key', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({ key: 'search:' + transcript })
+                                    });
+                                }, 600);
+                            }
+                        }
+                    };
+
+                    voiceSpeechRec.onerror = function(e) {
+                        statusEl.textContent = 'Không nhận dạng được';
+                        subEl.textContent = 'Lỗi mic hoặc chưa cấp quyền. Hãy thử lại.';
+                    };
+
+                    voiceSpeechRec.onend = function() {
+                        // Finished
+                    };
+
+                    voiceSpeechRec.start();
+                } catch(ex) {
+                    subEl.textContent = 'Trình duyệt không hỗ trợ nhận diện giọng nói.';
+                }
+            } else {
+                subEl.textContent = 'Vui lòng dùng trình duyệt Chrome/Safari có hỗ trợ mic.';
+            }
+        }
+
+        function closeVoiceModal() {
+            var m = document.getElementById('remoteVoiceModal');
+            if (m) m.classList.remove('show');
+            if (voiceSpeechRec) {
+                try { voiceSpeechRec.stop(); } catch(e){}
+                voiceSpeechRec = null;
+            }
+            stopVoiceWaveCanvas();
+        }
+
+        function startVoiceWaveCanvas() {
+            var cvs = document.getElementById('voiceWaveCanvas');
+            if (!cvs) return;
+            var ctx = cvs.getContext('2d');
+            var phase = 0;
+
+            function render() {
+                ctx.clearRect(0, 0, cvs.width, cvs.height);
+                phase += 0.08;
+                var barCount = 7;
+                var baseFractions = [0.3, 0.52, 0.8, 1.0, 0.8, 0.52, 0.3];
+                var totalSpacing = cvs.width * 0.38;
+                var spacing = totalSpacing / (barCount + 1);
+                var barWidth = (cvs.width - totalSpacing) / barCount;
+                var minBarHeight = cvs.height * 0.16;
+                var maxAvailable = cvs.height * 0.88;
+
+                for (var i = 0; i < barCount; i++) {
+                    var cx = spacing * (i + 1) + barWidth * (i + 0.5);
+                    var baseFrac = baseFractions[i];
+                    var waveOffset = Math.sin(phase + i * 0.85) * 0.28;
+                    var dynamicFactor = Math.min(1.0, Math.max(0.12, baseFrac * (0.4 + waveOffset)));
+                    var barHeight = minBarHeight + (maxAvailable - minBarHeight) * dynamicFactor;
+
+                    var top = (cvs.height - barHeight) / 2;
+                    var left = cx - barWidth / 2;
+
+                    var grad = ctx.createLinearGradient(cx, top, cx, top + barHeight);
+                    grad.addColorStop(0, '#00E5FF');
+                    grad.addColorStop(1, '#007AFF');
+                    ctx.fillStyle = grad;
+
+                    ctx.beginPath();
+                    if (ctx.roundRect) {
+                        ctx.roundRect(left, top, barWidth, barHeight, barWidth / 2);
+                    } else {
+                        ctx.rect(left, top, barWidth, barHeight);
+                    }
+                    ctx.fill();
+                }
+                voiceWaveAnimId = requestAnimationFrame(render);
+            }
+            stopVoiceWaveCanvas();
+            render();
+        }
+
+        function stopVoiceWaveCanvas() {
+            if (voiceWaveAnimId) {
+                cancelAnimationFrame(voiceWaveAnimId);
+                voiceWaveAnimId = null;
+            }
+        }
+
         function sendKey(key) {
             if (navigator.vibrate) navigator.vibrate(25);
+            var stEl = document.getElementById('remoteToastStatus');
+            if (stEl) stEl.textContent = 'Bấm ' + key.toUpperCase() + '...';
             fetch('/api/key', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ key: key })
             }).then(function(res) { return res.json(); }).then(function(data) {
                 showToast('Đã gửi: ' + key.toUpperCase());
+                if (stEl) stEl.textContent = 'OK (' + key.toUpperCase() + ')';
             }).catch(function(e) {
                 showToast('Lỗi gửi lệnh!');
+                if (stEl) stEl.textContent = 'Lỗi gửi lệnh';
             });
         }
 
