@@ -342,16 +342,15 @@ class MainActivity : AppCompatActivity() {
 
         isVoiceActive = true
         binding.btnMic.isActivated = true
-        binding.tvVoiceFeedback.text = getString(R.string.hint_voice_listening)
-        binding.tvVoiceFeedback.setTextColor(ContextCompat.getColor(this, R.color.btn_mic_listening))
+        binding.tvToast.text = getString(R.string.hint_voice_listening)
 
         voiceSearchManager.startListening(object : VoiceSearchListener {
             override fun onReady() {
-                binding.tvVoiceFeedback.text = "Đang lắng nghe giọng nói tiếng Việt..."
+                binding.tvToast.text = "Đang lắng nghe giọng nói tiếng Việt..."
             }
 
             override fun onListening() {
-                binding.tvVoiceFeedback.text = "Đang nghe... Nói từ khóa muốn xem"
+                binding.tvToast.text = "Đang nghe... Nói từ khóa muốn xem"
             }
 
             override fun onSpeechRms(rmsdB: Float) {}
@@ -388,9 +387,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun executeYouTubeSearch(query: String) {
         hapticHelper.longClick()
-        binding.tvVoiceFeedback.text = "🔍 Tìm: \"$query\""
-        binding.tvVoiceFeedback.setTextColor(ContextCompat.getColor(this, R.color.text_white))
-        binding.tvToast.text = "Đang gửi tìm kiếm tới TV: \"$query\"..."
+        binding.tvToast.text = "🔍 Tìm YouTube: \"$query\"..."
 
         // Send directly to TV via DIAL (port 8080)
         lifecycleScope.launch {

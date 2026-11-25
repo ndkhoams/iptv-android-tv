@@ -90,6 +90,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
+                <!-- Cột 1: Prev -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -106,6 +107,7 @@
                         app:tint="@color/text_white" />
                 </FrameLayout>
 
+                <!-- Cột 2: Play/Pause -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -122,6 +124,7 @@
                         app:tint="@color/text_white" />
                 </FrameLayout>
 
+                <!-- Cột 3: Next -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -208,7 +211,7 @@
                     android:textStyle="bold" />
             </FrameLayout>
 
-            <!-- 3. Hàng chức năng 1 (3 phím 1 hàng): Back (trái) - Home (giữa) - Numpad (phải) -->
+            <!-- 3. Hàng chức năng 1 (3 phím 1 hàng): Back (Cột 1) - Home (Cột 2) - Numpad (Cột 3) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
@@ -216,6 +219,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
+                <!-- Cột 1: Back (thẳng cột với Prev) -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
@@ -232,6 +236,7 @@
                         app:tint="@color/text_white" />
                 </FrameLayout>
 
+                <!-- Cột 2: Home (thẳng cột với Play/Pause) -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
@@ -248,6 +253,7 @@
                         app:tint="@color/text_white" />
                 </FrameLayout>
 
+                <!-- Cột 3: Numpad (thẳng cột với Next) -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
@@ -265,13 +271,14 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- 4. Hàng chức năng 2 (3 phím 1 hàng): Mute (trái) - Mic (giữa) - Keyboard (phải) -->
+            <!-- 4. Hàng chức năng 2 (3 phím 1 hàng): Mute (Cột 1) - Mic (Cột 2) - Keyboard (Cột 3) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
+                <!-- Cột 1: Mute (thẳng cột với Back & Prev) -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
@@ -288,6 +295,7 @@
                         app:tint="@color/text_white" />
                 </FrameLayout>
 
+                <!-- Cột 2: Mic (thẳng cột với Home & Play/Pause) -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
@@ -304,6 +312,7 @@
                         app:tint="@color/text_white" />
                 </FrameLayout>
 
+                <!-- Cột 3: Keyboard (thẳng cột với Numpad & Next) -->
                 <FrameLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
@@ -321,131 +330,126 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- 5. Cụm điều khiển dưới cùng: VOL (trái), Banner giọng nói (giữa), CH (phải) -->
+            <!-- 5. Hàng 3: Cụm phím con nhộng VOL (Cột 1) và CH (Cột 3) THẲNG CỘT 100% VỚI PHÍA TRÊN -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="132dp"
+                android:layout_height="140dp"
                 android:layout_marginTop="16dp"
+                android:layout_marginBottom="12dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <!-- Bên trái: Con nhộng VOL (+ / -) -->
-                <LinearLayout
-                    android:layout_width="62dp"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/bg_capsule"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical">
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/btnVolUp"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:background="@drawable/btn_capsule_top"
-                        android:text="@string/btn_plus"
-                        android:textColor="@color/text_white"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="32dp"
-                        android:gravity="center"
-                        android:letterSpacing="0.1"
-                        android:text="@string/btn_vol"
-                        android:textColor="@color/text_dim"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/btnVolDown"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:background="@drawable/btn_capsule_bottom"
-                        android:text="@string/btn_minus"
-                        android:textColor="@color/text_white"
-                        android:textSize="24sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <!-- Ở giữa: Banner phản hồi tìm kiếm giọng nói -->
-                <LinearLayout
-                    android:id="@+id/layoutVoiceBanner"
+                <!-- Cột 1: Con nhộng VOL (+ / -) nằm chính giữa Cột 1, thẳng hàng với Mute, Back, Prev -->
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginEnd="10dp"
-                    android:background="@drawable/btn_remote_selector"
-                    android:gravity="center"
-                    android:minHeight="44dp"
-                    android:paddingStart="10dp"
-                    android:paddingTop="8dp"
-                    android:paddingEnd="10dp"
-                    android:paddingBottom="8dp">
-
-                    <TextView
-                        android:id="@+id/tvVoiceFeedback"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:text="@string/hint_voice_idle"
-                        android:textColor="@color/text_dim"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <!-- Bên phải: Con nhộng CH (∧ / ∨) -->
-                <LinearLayout
-                    android:layout_width="62dp"
                     android:layout_height="match_parent"
-                    android:background="@drawable/bg_capsule"
-                    android:gravity="center_horizontal"
-                    android:orientation="vertical">
+                    android:layout_weight="1">
 
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/btnChUp"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:background="@drawable/btn_capsule_top"
-                        android:text="@string/btn_chevron_up"
-                        android:textColor="@color/text_white"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
+                    <LinearLayout
+                        android:layout_width="56dp"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_capsule"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="32dp"
-                        android:gravity="center"
-                        android:letterSpacing="0.1"
-                        android:text="@string/btn_ch"
-                        android:textColor="@color/text_dim"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnVolUp"
+                            android:layout_width="match_parent"
+                            android:layout_height="54dp"
+                            android:background="@drawable/btn_capsule_top"
+                            android:text="@string/btn_plus"
+                            android:textColor="@color/text_white"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
 
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/btnChDown"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:background="@drawable/btn_capsule_bottom"
-                        android:text="@string/btn_chevron_down"
-                        android:textColor="@color/text_white"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="32dp"
+                            android:gravity="center"
+                            android:letterSpacing="0.1"
+                            android:text="@string/btn_vol"
+                            android:textColor="@color/text_dim"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnVolDown"
+                            android:layout_width="match_parent"
+                            android:layout_height="54dp"
+                            android:background="@drawable/btn_capsule_bottom"
+                            android:text="@string/btn_minus"
+                            android:textColor="@color/text_white"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <!-- Cột 2: Khoảng đệm ở giữa để giữ đúng lưới 3 cột đối xứng -->
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+                <!-- Cột 3: Con nhộng CH (∧ / ∨) nằm chính giữa Cột 3, thẳng hàng với Keyboard, Numpad, Next -->
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <LinearLayout
+                        android:layout_width="56dp"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_capsule"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnChUp"
+                            android:layout_width="match_parent"
+                            android:layout_height="54dp"
+                            android:background="@drawable/btn_capsule_top"
+                            android:text="@string/btn_chevron_up"
+                            android:textColor="@color/text_white"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="32dp"
+                            android:gravity="center"
+                            android:letterSpacing="0.1"
+                            android:text="@string/btn_ch"
+                            android:textColor="@color/text_dim"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnChDown"
+                            android:layout_width="match_parent"
+                            android:layout_height="54dp"
+                            android:background="@drawable/btn_capsule_bottom"
+                            android:text="@string/btn_chevron_down"
+                            android:textColor="@color/text_white"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </FrameLayout>
 
             </LinearLayout>
 
-            <!-- Bottom Toast / Execution Feedback -->
+            <!-- 6. Bottom Toast / Execution Feedback -->
             <TextView
                 android:id="@+id/tvToast"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="4dp"
                 android:gravity="center"
-                android:minHeight="20dp"
+                android:minHeight="22dp"
                 android:text="Sẵn sàng"
                 android:textColor="@color/text_dim"
-                android:textSize="11sp" />
+                android:textSize="12sp" />
 
         </LinearLayout>
 
