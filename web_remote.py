@@ -27,6 +27,230 @@ PORT = int(os.environ.get("PORT", "8080"))
 DATA_DIR = os.environ.get("IPTV_DATA_DIR", "/opt/iptv-sports/data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
+# ==============================================================================
+# SAMSUNG SMART TV WEBSOCKET (samsungtvws, PORT 8002) DIRECT CONTROLLER
+# ==============================================================================
+try:
+    from samsungtvws import SamsungTVWS
+    HAS_SAMSUNGTVWS = True
+except ImportError:
+    HAS_SAMSUNGTVWS = False
+
+SAMSUNG_DEFAULT_IP = "10.0.0.9"
+SAMSUNG_TOKEN_FILE = os.path.join(DATA_DIR, "samsung_tv_token.txt")
+SAMSUNG_SETTINGS_FILE = os.path.join(DATA_DIR, "samsung_tv_settings.json")
+
+class SamsungTvManager:
+    def __init__(self):
+        self.lock = Lock()
+        self.tv_ip = self.load_tv_ip()
+        self.tv_client = None
+        self.is_online = False
+        self.last_check_time = 0
+        self.model_name = "Samsung Smart TV"
+        self.pairing_requested = False
+        self.last_error = ""
+
+    def load_tv_ip(self):
+        if os.path.exists(SAMSUNG_SETTINGS_FILE):
+            try:
+                with open(SAMSUNG_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("tvIp", SAMSUNG_DEFAULT_IP).strip()
+            except Exception:
+                pass
+        return SAMSUNG_DEFAULT_IP
+
+    def save_tv_ip(self, ip):
+        self.tv_ip = ip.strip()
+        with self.lock:
+            self.tv_client = None
+        try:
+            with open(SAMSUNG_SETTINGS_FILE, "w", encoding="utf-8") as f:
+                json.dump({"tvIp": self.tv_ip}, f)
+        except Exception:
+            pass
+
+    def get_token(self):
+        if os.path.exists(SAMSUNG_TOKEN_FILE):
+            try:
+                with open(SAMSUNG_TOKEN_FILE, "r", encoding="utf-8") as f:
+                    return f.read().strip()
+            except Exception:
+                pass
+        return None
+
+    def clear_token(self):
+        with self.lock:
+            if os.path.exists(SAMSUNG_TOKEN_FILE):
+                try:
+                    os.remove(SAMSUNG_TOKEN_FILE)
+                except Exception:
+                    pass
+            self.reset_client()
+            self.pairing_requested = False
+
+    def get_client(self):
+        if not HAS_SAMSUNGTVWS:
+            return None
+        with self.lock:
+            if self.tv_client is None:
+                try:
+                    self.tv_client = SamsungTVWS(
+                        host=self.tv_ip,
+                        port=8002,
+                        token_file=SAMSUNG_TOKEN_FILE,
+                        timeout=5,
+                        name="TV Play Web Remote"
+                    )
+                except Exception as ex:
+                    self.last_error = str(ex)
+                    return None
+            return self.tv_client
+
+    def reset_client(self):
+        with self.lock:
+            if self.tv_client:
+                try:
+                    self.tv_client.close()
+                except Exception:
+                    pass
+            self.tv_client = None
+
+    def check_status(self):
+        now = time.time()
+        if now - self.last_check_time < 3:
+            return {
+                "online": self.is_online,
+                "tvIp": self.tv_ip,
+                "model": self.model_name,
+                "paired": bool(self.get_token()),
+                "pairingRequested": self.pairing_requested
+            }
+        self.last_check_time = now
+
+        client = self.get_client()
+        if not client:
+            self.is_online = False
+            return {
+                "online": False,
+                "tvIp": self.tv_ip,
+                "model": self.model_name,
+                "paired": bool(self.get_token()),
+                "pairingRequested": self.pairing_requested
+            }
+
+        try:
+            info = client.rest_device_info()
+            if info and "device" in info:
+                self.is_online = True
+                self.model_name = info["device"].get("modelName", "Samsung Smart TV")
+                self.pairing_requested = False
+            else:
+                self.is_online = False
+        except Exception:
+            self.is_online = False
+
+        return {
+            "online": self.is_online,
+            "tvIp": self.tv_ip,
+            "model": self.model_name,
+            "paired": bool(self.get_token()),
+            "pairingRequested": self.pairing_requested
+        }
+
+    def send_key(self, key_name):
+        client = self.get_client()
+        if not client:
+            return False, "Chưa cài samsungtvws"
+
+        KEY_MAP = {
+            "power": "KEY_POWER",
+            "up": "KEY_UP",
+            "down": "KEY_DOWN",
+            "left": "KEY_LEFT",
+            "right": "KEY_RIGHT",
+            "center": "KEY_ENTER",
+            "ok": "KEY_ENTER",
+            "back": "KEY_RETURN",
+            "return": "KEY_RETURN",
+            "home": "KEY_HOME",
+            "menu": "KEY_MENU",
+            "mute": "KEY_MUTE",
+            "vol_up": "KEY_VOLUP",
+            "vol_down": "KEY_VOLDOWN",
+            "ch_next": "KEY_CHUP",
+            "ch_prev": "KEY_CHDOWN",
+            "prev": "KEY_PREVIOUS",
+            "next": "KEY_NEXT",
+            "play_pause": "KEY_PLAY",
+            "play": "KEY_PLAY",
+            "pause": "KEY_PAUSE",
+            "overlay": "KEY_CHLIST",
+            "guide": "KEY_GUIDE",
+            "exit": "KEY_RETURN",
+            "0": "KEY_0", "1": "KEY_1", "2": "KEY_2", "3": "KEY_3", "4": "KEY_4",
+            "5": "KEY_5", "6": "KEY_6", "7": "KEY_7", "8": "KEY_8", "9": "KEY_9"
+        }
+
+        tizen_key = KEY_MAP.get(key_name.lower())
+        if not tizen_key:
+            if key_name.upper().startswith("KEY_"):
+                tizen_key = key_name.upper()
+            else:
+                tizen_key = f"KEY_{key_name.upper()}"
+
+        try:
+            client.send_key(tizen_key)
+            self.is_online = True
+            self.pairing_requested = False
+            return True, f"OK ({tizen_key})"
+        except Exception as ex:
+            err_str = str(ex).lower()
+            if "unauthorized" in err_str or "pair" in err_str or "token" in err_str or "permission" in err_str:
+                self.pairing_requested = True
+                self.reset_client()
+                return False, "TV yêu cầu ghép đôi. Hãy bấm 'Cho phép' trên màn hình TV!"
+            self.reset_client()
+            return False, f"TV chưa phản hồi: {ex}"
+
+    def send_text(self, text_str):
+        client = self.get_client()
+        if not client:
+            return False, "Chưa kết nối TV"
+        try:
+            client.send_text(text_str)
+            return True, f"Đã gửi text: {text_str}"
+        except Exception as ex:
+            self.reset_client()
+            return False, f"Lỗi gửi text: {ex}"
+
+    def search_youtube(self, query):
+        # 1. Thử gửi qua DIAL REST port 8080 của TV Samsung
+        try:
+            dial_url = f"http://{self.tv_ip}:8080/ws/apps/YouTube"
+            data_bytes = f"data={urllib.parse.quote(query)}".encode("utf-8")
+            req = urllib.request.Request(dial_url, data=data_bytes, headers={"Content-Type": "application/x-www-form-urlencoded"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                if resp.status in (200, 201):
+                    return True, f"Đã mở YouTube tìm: \"{query}\""
+        except Exception:
+            pass
+
+        # 2. Thử mở YouTube qua samsungtvws
+        client = self.get_client()
+        if client:
+            try:
+                client.open_app("111299001912")
+                time.sleep(1.2)
+                client.send_text(query)
+                return True, f"Đã mở YouTube tìm: \"{query}\""
+            except Exception as ex:
+                return False, f"Lỗi mở YouTube: {ex}"
+        return False, "Không thể kết nối tới TV Samsung"
+
+samsung_tv_mgr = SamsungTvManager()
+
 # Playlist Management
 playlists_lock = Lock()
 
@@ -793,6 +1017,23 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         .remote-status-dot.online {
             background: #30D158;
             box-shadow: 0 0 8px #30D158;
+        }
+
+        .remote-status-dot.pairing {
+            background: #FF9F0A;
+            box-shadow: 0 0 8px #FF9F0A;
+            animation: pulse-pairing 1.5s infinite;
+        }
+
+        .remote-status-dot.offline {
+            background: #636366;
+            box-shadow: none;
+        }
+
+        @keyframes pulse-pairing {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         /* Remote Body Box (Bo góc 32px, padding trong 28px để bó 2 cột vào trong) */
@@ -2212,7 +2453,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             <!-- Header: Cài đặt (trái) - Tên TV + Status (giữa) - Nguồn đỏ (phải) -->
             <div class="remote-header-grid">
                 <div class="remote-header-col">
-                    <button class="remote-header-btn" onclick="sendKey('menu')" title="Cài đặt / Menu">
+                    <button class="remote-header-btn" onclick="openTvSettingsModal()" title="Cài đặt kết nối TV Samsung (Cổng 8002)">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     </button>
                 </div>
@@ -2583,6 +2824,26 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Modal 4: Cài đặt kết nối TV Samsung -->
+    <div id="remoteSettingsModal" class="remote-modal-backdrop" onclick="if(event.target===this)closeTvSettingsModal()">
+        <div class="remote-modal-content">
+            <div class="modal-title">Cài Đặt TV Samsung</div>
+            <div class="modal-sub">Điều khiển trực tiếp TV Samsung qua WebSocket (Cổng 8002)</div>
+            <div style="width: 100%; margin-bottom: 12px; text-align: left;">
+                <label style="font-size: 12px; color: #8E8E93; margin-bottom: 4px; display: block; font-weight: 600;">Địa chỉ IP TV Samsung (LAN):</label>
+                <input type="text" id="samsungTvIpInput" class="modal-input" style="margin-bottom: 8px;" placeholder="10.0.0.9" value="10.0.0.9">
+            </div>
+            <div id="samsungPairingStatus" style="font-size: 12px; color: #30D158; margin-bottom: 16px; text-align: center; width: 100%; line-height: 1.5;">
+                Đang kiểm tra kết nối...
+            </div>
+            <div class="modal-btn-row">
+                <button class="modal-btn-primary" onclick="saveTvSettings()">Lưu IP</button>
+                <button class="modal-close-btn" style="margin: 0; padding: 12px 10px; flex: 1;" onclick="resetTvToken()">Ghép đôi lại</button>
+            </div>
+            <button class="modal-close-btn" style="width: 100%; margin-top: 10px;" onclick="closeTvSettingsModal()">Đóng</button>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast"></div>
 
@@ -2607,7 +2868,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             if (targetTab) targetTab.classList.add('active');
             
             var btns = document.querySelectorAll('.dock-tab');
-            if (tabId === 'remote' && btns[0]) btns[0].classList.add('active');
+            if (tabId === 'remote' && btns[0]) { btns[0].classList.add('active'); pollTvStatus(); }
             if (tabId === 'channels' && btns[1]) { btns[1].classList.add('active'); if (!allChannels.length) loadChannels(); }
             if (tabId === 'sports' && btns[2]) { btns[2].classList.add('active'); loadSports(); }
             if (tabId === 'playlists' && btns[3]) { btns[3].classList.add('active'); loadPlaylists(); }
@@ -2979,6 +3240,89 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }
         }
 
+        function updateTvStatusDisplay(status) {
+            if (!status) return;
+            var isOnline = status.online || status.isOnline || false;
+            var isPaired = status.paired || status.hasToken || false;
+            var dot = document.getElementById('remoteHeaderDot');
+            var text = document.getElementById('remoteHeaderStatus');
+            var pairSt = document.getElementById('samsungPairingStatus');
+            var ipInp = document.getElementById('samsungTvIpInput');
+            if (ipInp && status.tvIp && document.activeElement !== ipInp) {
+                ipInp.value = status.tvIp;
+            }
+
+            if (isOnline) {
+                if (isPaired) {
+                    if (dot) { dot.className = 'remote-status-dot online'; }
+                    if (text) { text.textContent = 'Samsung TV (Sẵn sàng)'; }
+                    if (pairSt) { pairSt.innerHTML = '<span style="color:#30D158; font-weight:600;">🟢 TV Đang Bật & Đã Ghép Đôi</span><br><span style="font-size:11px; color:#8E8E93;">Có thể điều khiển mọi nơi qua cổng 8002</span>'; }
+                } else {
+                    if (dot) { dot.className = 'remote-status-dot pairing'; }
+                    if (text) { text.textContent = 'TV (Chờ ghép đôi...)'; }
+                    if (pairSt) { pairSt.innerHTML = '<span style="color:#FF9F0A; font-weight:600;">⚠️ TV Đang Bật - Chưa có Token</span><br><span style="font-size:11px; color:#FFD60A;">Bấm phím bất kỳ rồi chọn [Cho phép] trên TV</span>'; }
+                }
+            } else {
+                if (dot) { dot.className = 'remote-status-dot offline'; }
+                if (text) { text.textContent = 'Samsung TV (Ngoại tuyến)'; }
+                if (pairSt) { pairSt.innerHTML = '<span style="color:#8E8E93;">⚪ TV Ngoại tuyến hoặc Tắt nguồn (' + (status.tvIp || '10.0.0.9') + ')</span>'; }
+            }
+        }
+
+        function pollTvStatus() {
+            fetch('/api/samsung/status')
+                .then(function(res) { return res.json(); })
+                .then(function(data) { updateTvStatusDisplay(data); })
+                .catch(function(e) {});
+        }
+
+        function openTvSettingsModal() {
+            var m = document.getElementById('remoteSettingsModal');
+            if (m) m.classList.add('show');
+            pollTvStatus();
+        }
+
+        function closeTvSettingsModal() {
+            var m = document.getElementById('remoteSettingsModal');
+            if (m) m.classList.remove('show');
+        }
+
+        function saveTvSettings() {
+            var ip = document.getElementById('samsungTvIpInput').value.trim();
+            if (!ip) {
+                showToast('Vui lòng nhập IP TV!');
+                return;
+            }
+            showToast('Đang lưu IP TV: ' + ip);
+            fetch('/api/samsung/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tvIp: ip })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(d) {
+                showToast('Đã lưu cấu hình TV!');
+                if (d.status) updateTvStatusDisplay(d.status);
+            })
+            .catch(function() { showToast('Lỗi lưu IP TV'); });
+        }
+
+        function resetTvToken() {
+            if (!confirm('Xóa token và yêu cầu TV hiện popup ghép đôi lại?')) return;
+            showToast('Đang đặt lại token ghép đôi...');
+            fetch('/api/samsung/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ resetToken: true })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(d) {
+                showToast('Đã xóa token. Hãy bấm 1 phím trên remote để TV hiện popup [Cho phép]!');
+                if (d.status) updateTvStatusDisplay(d.status);
+            })
+            .catch(function() { showToast('Lỗi đặt lại token'); });
+        }
+
         function sendKey(key) {
             if (navigator.vibrate) navigator.vibrate(25);
             var stEl = document.getElementById('remoteToastStatus');
@@ -2988,13 +3332,32 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ key: key })
             }).then(function(res) { return res.json(); }).then(function(data) {
-                showToast('Đã gửi: ' + key.toUpperCase());
-                if (stEl) stEl.textContent = 'OK (' + key.toUpperCase() + ')';
+                if (data.pairingRequested) {
+                    showToast('⚠️ VUI LÒNG BẤM [CHO PHÉP] TRÊN MÀN HÌNH TV');
+                    if (stEl) stEl.textContent = 'Chờ chấp nhận trên TV...';
+                    var dot = document.getElementById('remoteHeaderDot');
+                    if (dot) dot.className = 'remote-status-dot pairing';
+                } else if (data.tvAction && data.tvAction.indexOf('Lỗi') !== -1) {
+                    showToast('TV: ' + data.tvAction);
+                    if (stEl) stEl.textContent = data.tvAction;
+                } else {
+                    showToast('Đã gửi: ' + key.toUpperCase());
+                    if (stEl) stEl.textContent = 'OK (' + key.toUpperCase() + ')';
+                }
             }).catch(function(e) {
                 showToast('Lỗi gửi lệnh!');
                 if (stEl) stEl.textContent = 'Lỗi gửi lệnh';
             });
         }
+
+        // Tự động kiểm tra trạng thái TV định kỳ
+        setTimeout(pollTvStatus, 1200);
+        setInterval(function() {
+            var remTab = document.getElementById('tab-remote');
+            if (remTab && remTab.classList.contains('active')) {
+                pollTvStatus();
+            }
+        }, 12000);
 
         function playChannel(ch) {
             if (navigator.vibrate) navigator.vibrate(30);
@@ -3962,6 +4325,14 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
                 pass
             return
 
+        if path == "/api/samsung/status":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps(samsung_tv_mgr.check_status(), ensure_ascii=False).encode("utf-8"))
+            return
+
         # Real-time SSE Endpoint for Samsung Tizen & Android TV
         if path == "/events":
             self.send_response(200)
@@ -4206,16 +4577,56 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"success": False, "error": str(ex)}).encode("utf-8"))
                     return
 
-        if path == "/api/key":
-            key = post_data.get("key", "").strip().lower()
-            if key:
-                print(f"[Remote] Key: {key}")
-                broadcast_event("key", {"key": key})
+        if path == "/api/samsung/status":
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_cors_headers()
             self.end_headers()
-            self.wfile.write(json.dumps({"success": True, "key": key}).encode("utf-8"))
+            self.wfile.write(json.dumps(samsung_tv_mgr.check_status(), ensure_ascii=False).encode("utf-8"))
+            return
+
+        if path == "/api/samsung/settings":
+            new_ip = (post_data.get("tvIp") or "").strip()
+            reset_token = bool(post_data.get("resetToken", False))
+            if new_ip:
+                samsung_tv_mgr.save_tv_ip(new_ip)
+            if reset_token:
+                samsung_tv_mgr.clear_token()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({"success": True, "status": samsung_tv_mgr.check_status()}, ensure_ascii=False).encode("utf-8"))
+            return
+
+        if path == "/api/key":
+            raw_key = post_data.get("key", "").strip()
+            tv_result = ""
+            tv_ok = True
+            if raw_key:
+                print(f"[Remote] Key: {raw_key}")
+                # 1. Gửi trực tiếp tới Samsung Smart TV qua WebSocket cổng 8002 (samsungtvws)
+                if raw_key.startswith("text:"):
+                    tv_ok, tv_result = samsung_tv_mgr.send_text(raw_key[5:])
+                elif raw_key.startswith("search:"):
+                    tv_ok, tv_result = samsung_tv_mgr.search_youtube(raw_key[7:])
+                else:
+                    tv_ok, tv_result = samsung_tv_mgr.send_key(raw_key)
+
+                # 2. Đồng thời broadcast SSE cho TV Play app (nếu app đang mở)
+                broadcast_event("key", {"key": raw_key.lower()})
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": True,
+                "key": raw_key,
+                "tvAction": tv_result,
+                "tvOnline": samsung_tv_mgr.is_online,
+                "pairingRequested": samsung_tv_mgr.pairing_requested
+            }, ensure_ascii=False).encode("utf-8"))
             return
 
         if path == "/api/play":
