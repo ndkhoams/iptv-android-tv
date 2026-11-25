@@ -73,11 +73,12 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/v')
       with:
         tag_name: ${{ github.ref_name }}
-        name: "${{ github.ref_name }} - TV Play Android TV"
+        name: "${{ github.ref_name }} - TV Play & TV Remote"
         body: |
           ### Bản cập nhật ${{ github.ref_name }}:
-          - Bổ sung ứng dụng điều khiển TV Samsung bằng giọng nói trực tiếp qua Wi-Fi (TV Remote.apk).
-          - Đồng bộ danh sách kênh và tối ưu hóa luồng phát TV Play.
+          - Cập nhật icon vector chuẩn cho nút Nguồn và nút Nói, thay mới icon ứng dụng TV Remote (v1.0.1).
+          - Bỏ phím YouTube / Netflix dưới đáy remote, thêm cơ chế Fallback nhập liệu cho giả lập MEmu Play.
+          - Ứng dụng TV Play Android TV (v2.1.38).
         files: |
           app/build/outputs/apk/debug/TV Play.apk
           remote/build/outputs/apk/debug/TV Remote.apk

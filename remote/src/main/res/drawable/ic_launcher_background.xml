@@ -4,7 +4,12 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Dark modern premium background -->
     <path
-        android:fillColor="#121212"
+        android:fillColor="#151518"
         android:pathData="M0,0h108v108h-108z" />
+    <!-- Subtle circular radial glow -->
+    <path
+        android:fillColor="#222227"
+        android:pathData="M54,12a42,42 0 1,0 0.01,0z" />
 </vector>

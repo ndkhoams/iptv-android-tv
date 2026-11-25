@@ -2,8 +2,10 @@ package com.samsung.tvremote
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -35,6 +37,18 @@ class MainActivity : AppCompatActivity() {
             startVoiceSearch()
         } else {
             showToast(getString(R.string.permission_mic_required))
+        }
+    }
+
+    private val speechIntentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK && result.data != null) {
+            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (!matches.isNullOrEmpty()) {
+                val query = matches[0].trim()
+                executeYouTubeSearch(query)
+            }
         }
     }
 
@@ -92,19 +106,19 @@ class MainActivity : AppCompatActivity() {
 
             override fun onError(error: String) {
                 runOnUiThread {
-                    // Subtle background warning if needed
+                    // Log or subtle status
                 }
             }
         })
     }
 
     private fun setupButtonListeners() {
-        // Power button
+        // Power button (Red circle with ic_power vector)
         binding.btnPower.setOnClickListener {
             handleKeyClick("KEY_POWER", "Nguồn")
         }
 
-        // Voice button
+        // Voice button (Blue circle with ic_mic vector)
         binding.btnMic.setOnClickListener {
             hapticHelper.click()
             if (isVoiceActive) {
@@ -131,33 +145,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnVolDown.setOnClickListener { handleKeyClick("KEY_VOLDOWN", "VOL −") }
         binding.btnChUp.setOnClickListener { handleKeyClick("KEY_CHUP", "CH ▲") }
         binding.btnChDown.setOnClickListener { handleKeyClick("KEY_CHDOWN", "CH ▼") }
-
-        // Quick App buttons
-        binding.btnAppYoutube.setOnClickListener {
-            hapticHelper.click()
-            binding.tvToast.text = "Đang mở YouTube trên TV..."
-            lifecycleScope.launch {
-                val res = tvClient.launchApp("youtube")
-                res.onSuccess { msg ->
-                    binding.tvToast.text = msg
-                }.onFailure { err ->
-                    binding.tvToast.text = "Lỗi: ${err.localizedMessage}"
-                }
-            }
-        }
-
-        binding.btnAppNetflix.setOnClickListener {
-            hapticHelper.click()
-            binding.tvToast.text = "Đang mở Netflix trên TV..."
-            lifecycleScope.launch {
-                val res = tvClient.launchApp("netflix")
-                res.onSuccess { msg ->
-                    binding.tvToast.text = msg
-                }.onFailure { err ->
-                    binding.tvToast.text = "Lỗi: ${err.localizedMessage}"
-                }
-            }
-        }
     }
 
     private fun handleKeyClick(key: String, label: String) {
@@ -185,6 +172,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVoiceSearch() {
+        if (!voiceSearchManager.isAvailable()) {
+            fallbackVoiceSearch()
+            return
+        }
+
         isVoiceActive = true
         binding.btnMic.isActivated = true
         binding.tvVoiceFeedback.text = getString(R.string.hint_voice_listening)
@@ -202,34 +194,72 @@ class MainActivity : AppCompatActivity() {
             override fun onSpeechRms(rmsdB: Float) {}
 
             override fun onSpeechResult(query: String) {
-                hapticHelper.longClick()
                 stopVoiceSearch()
-                binding.tvVoiceFeedback.text = "🔍 Tìm: \"$query\""
-                binding.tvVoiceFeedback.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_white))
-                binding.tvToast.text = "Đang gửi tìm kiếm tới TV: \"$query\"..."
-
-                // Send directly to TV via DIAL (port 8080)
-                lifecycleScope.launch {
-                    val result = tvClient.searchYouTube(query)
-                    result.onSuccess { msg ->
-                        binding.tvToast.text = msg
-                    }.onFailure { err ->
-                        binding.tvToast.text = "Lỗi DIAL: ${err.localizedMessage ?: "Không thể mở YouTube trên TV"}"
-                    }
-                }
+                executeYouTubeSearch(query)
             }
 
             override fun onError(errorMessage: String) {
                 stopVoiceSearch()
-                binding.tvVoiceFeedback.text = errorMessage
-                binding.tvVoiceFeedback.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.btn_power))
-                binding.tvToast.text = errorMessage
+                fallbackVoiceSearch()
             }
 
             override fun onFinished() {
                 stopVoiceSearch()
             }
         })
+    }
+
+    private fun fallbackVoiceSearch() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Nói hoặc nhập từ khóa tìm YouTube trên TV...")
+        }
+
+        try {
+            speechIntentLauncher.launch(intent)
+        } catch (e: Exception) {
+            showKeyboardSearchDialog()
+        }
+    }
+
+    private fun showKeyboardSearchDialog() {
+        val input = EditText(this).apply {
+            hint = "Nhập tên video / bài hát cần tìm trên TV..."
+            setSingleLine(true)
+            setPadding(40, 30, 40, 30)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Tìm kiếm YouTube trên TV")
+            .setMessage("Nhập từ khóa bằng bàn phím hoặc dùng mic bàn phím (Gboard):")
+            .setView(input)
+            .setPositiveButton("Tìm trên TV") { dialog, _ ->
+                val q = input.text.toString().trim()
+                if (q.isNotEmpty()) {
+                    executeYouTubeSearch(q)
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton("Hủy", null)
+            .show()
+    }
+
+    private fun executeYouTubeSearch(query: String) {
+        hapticHelper.longClick()
+        binding.tvVoiceFeedback.text = "🔍 Tìm: \"$query\""
+        binding.tvVoiceFeedback.setTextColor(ContextCompat.getColor(this, R.color.text_white))
+        binding.tvToast.text = "Đang gửi tìm kiếm tới TV: \"$query\"..."
+
+        // Send directly to TV via DIAL (port 8080)
+        lifecycleScope.launch {
+            val result = tvClient.searchYouTube(query)
+            result.onSuccess { msg ->
+                binding.tvToast.text = msg
+            }.onFailure { err ->
+                binding.tvToast.text = "Lỗi DIAL: ${err.localizedMessage ?: "Không thể mở YouTube trên TV"}"
+            }
+        }
     }
 
     private fun stopVoiceSearch() {

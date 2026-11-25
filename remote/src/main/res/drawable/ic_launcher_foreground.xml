@@ -4,19 +4,49 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- TV Remote Body: rounded slim modern remote -->
     <path
-        android:fillColor="#FF6500"
-        android:pathData="M84,24H24c-4.4,0 -8,3.6 -8,8v44c0,4.4 3.6,8 8,8h20v8h-12v6h44v-6H64v-8h20c4.4,0 8,-3.6 8,-8V32c0,-4.4 -3.6,-8 -8,-8zM82,74H26V34h56v40z" />
+        android:fillColor="#2B2B30"
+        android:pathData="M40,20h28c5.5,0 10,4.5 10,10v48c0,5.5 -4.5,10 -10,10H40c-5.5,0 -10,-4.5 -10,-10V30c0,-5.5 4.5,-10 10,-10z" />
+
+    <!-- Top Power Dot: Red -->
     <path
-        android:fillColor="#1e1e1e"
-        android:pathData="M26,34h56v40h-56z" />
+        android:fillColor="#FF3B30"
+        android:pathData="M39,28a3.5,3.5 0 1,0 0.01,0z" />
+
+    <!-- Top Mic Dot: Blue -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M34,44h18v5h-6.5v15h-5v-15H34z" />
+        android:fillColor="#007AFF"
+        android:pathData="M69,28a3.5,3.5 0 1,0 0.01,0z" />
+
+    <!-- Circular D-Pad Outer Ring -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M56,44l5.5,0 3.5,12 3.5,-12 5.5,0 -6,20 -6,0z" />
+        android:fillColor="#3A3A40"
+        android:pathData="M54,39a13,13 0 1,0 0.01,0z" />
+
+    <!-- Circular D-Pad Center OK Button -->
     <path
-        android:fillColor="#34D399"
-        android:pathData="M80,71a1.5,1.5 0 1,0 0.01,0z" />
+        android:fillColor="#FF9F0A"
+        android:pathData="M54,46a6,6 0 1,0 0.01,0z" />
+
+    <!-- Navigation Buttons Row (3 small dots/pills) -->
+    <path
+        android:fillColor="#5A5A62"
+        android:pathData="M38,68h6v3h-6zM51,68h6v3h-6zM64,68h6v3h-6z" />
+
+    <!-- Volume / Channel Dual Rockers -->
+    <path
+        android:fillColor="#44444C"
+        android:pathData="M38,74h12c1.5,0 2.5,1 2.5,2.5v7c0,1.5 -1,2.5 -2.5,2.5H38c-1.5,0 -2.5,-1 -2.5,-2.5v-7c0,-1.5 1,-2.5 2.5,-2.5z" />
+    <path
+        android:fillColor="#44444C"
+        android:pathData="M58,74h12c1.5,0 2.5,1 2.5,2.5v7c0,1.5 -1,2.5 -2.5,2.5H58c-1.5,0 -2.5,-1 -2.5,-2.5v-7c0,-1.5 1,-2.5 2.5,-2.5z" />
+
+    <!-- Plus / Minus indicators on rockers -->
+    <path
+        android:fillColor="#E0E0E6"
+        android:pathData="M43,76.5h2v4h-2zM42,77.5h4v2h-4z" />
+    <path
+        android:fillColor="#E0E0E6"
+        android:pathData="M62,77.5h4v2h-4z" />
 </vector>

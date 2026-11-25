@@ -69,15 +69,14 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <androidx.appcompat.widget.AppCompatButton
+                <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnPower"
                     android:layout_width="54dp"
                     android:layout_height="54dp"
                     android:background="@drawable/btn_power_selector"
-                    android:text="@string/btn_power"
-                    android:textColor="@color/text_white"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
+                    app:srcCompat="@drawable/ic_power"
+                    app:tint="@color/text_white"
+                    android:contentDescription="Power" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -90,14 +89,14 @@
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <androidx.appcompat.widget.AppCompatButton
+                <androidx.appcompat.widget.AppCompatImageButton
                     android:id="@+id/btnMic"
                     android:layout_width="54dp"
                     android:layout_height="54dp"
                     android:background="@drawable/btn_mic_selector"
-                    android:text="@string/btn_mic"
-                    android:textColor="@color/text_white"
-                    android:textSize="22sp" />
+                    app:srcCompat="@drawable/ic_mic"
+                    app:tint="@color/text_white"
+                    android:contentDescription="Voice Search" />
             </LinearLayout>
 
             <!-- Voice Search Feedback Banner -->
@@ -341,39 +340,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Quick App Launchers: YouTube & Netflix -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                android:orientation="horizontal">
-
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnAppYoutube"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_app_youtube"
-                    android:text="@string/btn_youtube"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_white"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btnAppNetflix"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/btn_app_netflix"
-                    android:text="@string/btn_netflix"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_white"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
 
             <!-- Bottom Toast / Execution Feedback -->
             <TextView
