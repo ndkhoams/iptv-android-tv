@@ -3078,7 +3078,6 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         function sendKeyboardText() {
             var txt = document.getElementById('keyboardTextInput').value.trim();
             if (txt) {
-                showToast('Gửi lên TV: ' + txt);
                 fetch('/api/key', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -3368,14 +3367,11 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                     var dot = document.getElementById('remoteHeaderDot');
                     if (dot) dot.className = 'remote-status-dot pairing';
                 } else if (data.tvAction && data.tvAction.indexOf('Lỗi') !== -1) {
-                    showToast('TV: ' + data.tvAction);
                     if (stEl) stEl.textContent = data.tvAction;
                 } else {
-                    showToast('Đã gửi: ' + key.toUpperCase());
                     if (stEl) stEl.textContent = 'OK (' + key.toUpperCase() + ')';
                 }
             }).catch(function(e) {
-                showToast('Lỗi gửi lệnh!');
                 if (stEl) stEl.textContent = 'Lỗi gửi lệnh';
             });
         }
