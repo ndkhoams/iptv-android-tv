@@ -977,13 +977,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             box-shadow: 
                 0 4px 0 #121214,
                 0 6px 14px rgba(0, 0, 0, 0.45);
             transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
         }
 
-        .remote-header-btn:active {
+        .remote-header-btn:active, .remote-header-btn.pressed {
             transform: translateY(3px);
             box-shadow: 
                 0 1px 0 #121214,
@@ -1004,6 +1008,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             box-shadow: 
                 0 4px 0 #850f08,
                 0 8px 18px rgba(255, 59, 48, 0.45),
@@ -1011,7 +1019,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             transition: transform 0.06s ease, box-shadow 0.06s ease;
         }
 
-        .remote-power-btn:active {
+        .remote-power-btn:active, .remote-power-btn.pressed {
             transform: translateY(3px);
             background: radial-gradient(circle at 50% 50%, #b81b12 0%, #850f08 100%);
             box-shadow: 
@@ -1098,6 +1106,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             justify-content: center;
             cursor: pointer;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             box-shadow: 
                 0 5px 0 #121214,
                 0 8px 18px rgba(0, 0, 0, 0.6),
@@ -1105,7 +1116,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
         }
 
-        .btn-circle:active {
+        .btn-circle:active, .btn-circle.pressed {
             transform: translateY(4px);
             background: radial-gradient(circle at 50% 50%, #1c1c1f 0%, #161618 100%);
             box-shadow: 
@@ -1140,7 +1151,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 inset 0 1px 1px rgba(255, 255, 255, 0.4);
         }
 
-        .btn-mic-special:active {
+        .btn-mic-special:active, .btn-mic-special.pressed {
             transform: translateY(4px);
             background: radial-gradient(circle at 50% 50%, #0056cc 0%, #003d8f 100%);
             box-shadow: 
@@ -1190,6 +1201,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             justify-content: center;
             cursor: pointer;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             transition: transform 0.06s ease, color 0.06s ease, filter 0.06s ease;
         }
 
@@ -1200,7 +1214,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             height: 60px;
         }
 
-        .dpad-up:active {
+        .dpad-up:active, .dpad-up.pressed {
             transform: translateY(3px) scale(0.94);
             color: #FF9F0A;
             filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
@@ -1213,7 +1227,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             height: 60px;
         }
 
-        .dpad-down:active {
+        .dpad-down:active, .dpad-down.pressed {
             transform: translateY(-3px) scale(0.94);
             color: #FF9F0A;
             filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
@@ -1226,7 +1240,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             height: 80px;
         }
 
-        .dpad-left:active {
+        .dpad-left:active, .dpad-left.pressed {
             transform: translateX(3px) scale(0.94);
             color: #FF9F0A;
             filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
@@ -1239,7 +1253,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             height: 80px;
         }
 
-        .dpad-right:active {
+        .dpad-right:active, .dpad-right.pressed {
             transform: translateX(-3px) scale(0.94);
             color: #FF9F0A;
             filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
@@ -1257,6 +1271,11 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             font-weight: 800;
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-top: 1px solid rgba(255, 255, 255, 0.35);
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             box-shadow: 
                 0 5px 0 #101012,
                 0 10px 24px rgba(0, 0, 0, 0.7),
@@ -1264,7 +1283,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
         }
 
-        .dpad-ok:active {
+        .dpad-ok:active, .dpad-ok.pressed {
             transform: translateY(4px);
             background: radial-gradient(circle at 50% 50%, #1a1a1d 0%, #121214 100%);
             box-shadow: 
@@ -1306,17 +1325,20 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             justify-content: center;
             cursor: pointer;
             user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
             transition: transform 0.06s ease, background 0.06s ease, box-shadow 0.06s ease;
         }
 
-        .capsule-btn-top:active {
+        .capsule-btn-top:active, .capsule-btn-top.pressed {
             transform: translateY(3px);
             background: rgba(0, 0, 0, 0.35);
             box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.7);
             color: #FF9F0A;
         }
 
-        .capsule-btn-bottom:active {
+        .capsule-btn-bottom:active, .capsule-btn-bottom.pressed {
             transform: translateY(-3px);
             background: rgba(0, 0, 0, 0.35);
             box-shadow: inset 0 -3px 8px rgba(0, 0, 0, 0.7);
@@ -1433,7 +1455,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             transition: all 0.1s;
         }
 
-        .modal-num-btn:active {
+        .modal-num-btn:active, .modal-num-btn.pressed {
             transform: scale(0.92);
             background: #FF9F0A;
         }
@@ -2483,7 +2505,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 </style>
 </head>
-<body>
+<body ontouchstart="">
 
     <!-- Ambient Dynamic Glow (Strand Backdrop Lighting) -->
     <div class="ambient-glow"></div>
@@ -4329,7 +4351,34 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             } catch(e) {}
         }
 
-                initSSE();
+                // Xử lý hiệu ứng lún ấn xúc giác vật lý tức thì (0ms latency) trên iOS & Mobile Touch
+        function initTactileFeedback() {
+            var selector = '.remote-header-btn, .remote-power-btn, .btn-circle, .dpad-btn, .capsule-btn-top, .capsule-btn-bottom, .modal-num-btn, .modal-close-btn, .dock-tab';
+            
+            document.addEventListener('touchstart', function(e) {
+                var btn = e.target.closest(selector);
+                if (btn) {
+                    btn.classList.add('pressed');
+                }
+            }, {passive: true});
+
+            document.addEventListener('touchend', function(e) {
+                var pressedElements = document.querySelectorAll('.pressed');
+                pressedElements.forEach(function(el) {
+                    el.classList.remove('pressed');
+                });
+            }, {passive: true});
+
+            document.addEventListener('touchcancel', function(e) {
+                var pressedElements = document.querySelectorAll('.pressed');
+                pressedElements.forEach(function(el) {
+                    el.classList.remove('pressed');
+                });
+            }, {passive: true});
+        }
+
+        initTactileFeedback();
+        initSSE();
         checkTvStatus();
         loadTizenWgts();
         setInterval(checkTvStatus, 3000);
