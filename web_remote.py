@@ -922,6 +922,13 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             z-index: 10;
         }
 
+        #tab-remote {
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 6px), 8px);
+            padding-bottom: 4px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
         .tab-content.active {
             display: block;
             animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -936,9 +943,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         /* TAB 1: MODERN TV REMOTE CONTROLLER (MATCHING TV REMOTE APP)               */
         /* ========================================================================= */
         .remote-wrapper {
-            max-width: 400px;
+            max-width: 380px;
             margin: 0 auto;
-            padding: 0 4px;
+            padding: 0;
         }
 
         /* Remote Header: Settings (Left) - Status (Center) - Power (Right) */
@@ -946,9 +953,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             align-items: center;
-            height: 56px;
-            padding: 0 28px;
-            margin-bottom: 6px;
+            height: 46px;
+            padding: 0 20px;
+            margin-bottom: 4px;
         }
 
         .remote-header-col {
@@ -958,8 +965,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         .remote-header-btn {
-            width: 48px;
-            height: 48px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -977,8 +984,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         .remote-power-btn {
-            width: 48px;
-            height: 48px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             background: linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1001,7 +1008,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             color: #8E8E93;
         }
@@ -1036,17 +1043,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* Remote Body Box (Bo góc 32px, padding trong 28px để bó 2 cột vào trong) */
+        /* Remote Body Box (Bo góc 28px, padding 12px 20px 8px) */
         .remote-body-box {
             background: #1c1c1e;
             border: 1px solid rgba(255, 255, 255, 0.09);
-            border-radius: 32px;
-            padding: 20px 28px 18px;
+            border-radius: 28px;
+            padding: 12px 20px 8px;
             box-shadow: 0 16px 44px -4px rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 8px;
         }
 
         /* 3-Column Grid Rows (Thẳng hàng tuyệt đối 100%) */
@@ -1085,18 +1092,18 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             color: #FFFFFF;
         }
 
-        /* Hàng Media (52px x 52px) */
+        /* Hàng Media (46px x 46px) */
         .btn-media {
-            width: 52px;
-            height: 52px;
-            font-size: 16px;
+            width: 46px;
+            height: 46px;
+            font-size: 15px;
         }
 
-        /* Hàng Chức năng 1 & 2 (54px x 54px) */
+        /* Hàng Chức năng 1 & 2 (46px x 46px) */
         .btn-func {
-            width: 54px;
-            height: 54px;
-            font-size: 18px;
+            width: 46px;
+            height: 46px;
+            font-size: 16px;
         }
 
         /* Nút Mic đặc biệt (màu xanh dương) */
@@ -1119,11 +1126,11 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             100% { transform: scale(1); box-shadow: 0 0 8px rgba(48, 209, 88, 0.5); }
         }
 
-        /* D-Pad Container (Đĩa tròn 224px) */
+        /* D-Pad Container (Đĩa tròn 196px) */
         .dpad-container {
-            width: 224px;
-            height: 224px;
-            margin: 4px auto;
+            width: 196px;
+            height: 196px;
+            margin: 2px auto;
             position: relative;
             background: radial-gradient(circle at 50% 50%, #2a2a2e 0%, #1a1a1d 70%, #121215 100%);
             border-radius: 50%;
@@ -1139,7 +1146,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             background: transparent;
             border: none;
             color: rgba(255, 255, 255, 0.85);
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -1154,42 +1161,42 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         .dpad-up {
-            top: 4px;
-            left: 72px;
+            top: 2px;
+            left: 58px;
             width: 80px;
-            height: 56px;
+            height: 48px;
         }
 
         .dpad-down {
-            bottom: 4px;
-            left: 72px;
+            bottom: 2px;
+            left: 58px;
             width: 80px;
-            height: 56px;
+            height: 48px;
         }
 
         .dpad-left {
-            top: 72px;
-            left: 4px;
-            width: 56px;
+            top: 58px;
+            left: 2px;
+            width: 48px;
             height: 80px;
         }
 
         .dpad-right {
-            top: 72px;
-            right: 4px;
-            width: 56px;
+            top: 58px;
+            right: 2px;
+            width: 48px;
             height: 80px;
         }
 
         .dpad-ok {
-            top: 74px;
-            left: 74px;
-            width: 76px;
-            height: 76px;
+            top: 64px;
+            left: 64px;
+            width: 68px;
+            height: 68px;
             border-radius: 50%;
             background: #2c2c2e;
             color: #ffffff;
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 800;
             border: 1px solid rgba(255, 255, 255, 0.18);
             box-shadow: 
@@ -1204,13 +1211,13 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             border-color: #FF9F0A;
         }
 
-        /* Cụm con nhộng VOL và CH (Dọc 140px, rộng 54px, bo tròn 27px) */
+        /* Cụm con nhộng VOL và CH (Dọc 118px, rộng 46px, bo tròn 23px) */
         .capsule-box {
-            width: 54px;
-            height: 140px;
+            width: 46px;
+            height: 118px;
             background: #252528;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 27px;
+            border-radius: 23px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1220,11 +1227,11 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
 
         .capsule-btn-top, .capsule-btn-bottom {
             width: 100%;
-            height: 54px;
+            height: 44px;
             background: transparent;
             border: none;
             color: #FFFFFF;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -1240,12 +1247,12 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
 
         .capsule-label {
             width: 100%;
-            height: 32px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #8E8E93;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.1em;
             user-select: none;
@@ -1255,10 +1262,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         .remote-toast-text {
             width: 100%;
             text-align: center;
-            font-size: 12px;
+            font-size: 11px;
             color: #8E8E93;
-            min-height: 20px;
-            margin-top: 4px;
+            min-height: 16px;
+            margin-top: 2px;
             transition: color 0.3s;
         }
 
@@ -2414,37 +2421,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
     <!-- Ambient Dynamic Glow (Strand Backdrop Lighting) -->
     <div class="ambient-glow"></div>
 
-    <!-- 1. Sticky Strand Header -->
-    <header class="app-header-sticky">
-        <div class="header-inner">
-            <div class="brand-title">
-                <div class="brand-logo-box">
-                    <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
-                </div>
-                <div>
-                    <div class="brand-name">TV Play</div>
-                    <div class="brand-sub">Web Remote</div>
-                </div>
-            </div>
-            <div id="tvStatusBadge" class="tv-status-badge status-disconnected">
-                <span class="status-dot"></span>
-                <span id="tvStatusText">Chờ TV kết nối...</span>
-            </div>
-        </div>
-    </header>
-
-    <!-- 2. Now Playing Mini-Hero Card -->
-    <div class="now-playing-wrap">
-        <div class="now-playing-card">
-            <div class="now-playing-left">
-                <span class="live-badge">
-                    <span class="status-dot"></span>
-                    <span>ĐANG PHÁT</span>
-                </span>
-                <span id="bannerChName" class="ch-name">Chưa có luồng phát</span>
-            </div>
-            <button class="osd-pill-btn" onclick="sendKey('overlay')">Bật OSD 📺</button>
-        </div>
+    <!-- Hidden compatibility elements for background SSE/Status update -->
+    <div style="display:none;" aria-hidden="true">
+        <div id="tvStatusBadge"><span id="tvStatusText"></span></div>
+        <span id="bannerChName"></span>
     </div>
 
     <!-- TAB 1: REMOTE CONTROLLER -->
