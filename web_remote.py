@@ -21,7 +21,7 @@ import threading
 import base64
 import gzip
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from threading import Lock
+from threading import Lock, RLock
 
 PORT = int(os.environ.get("PORT", "8080"))
 DATA_DIR = os.environ.get("IPTV_DATA_DIR", "/opt/iptv-sports/data")
@@ -42,7 +42,7 @@ SAMSUNG_SETTINGS_FILE = os.path.join(DATA_DIR, "samsung_tv_settings.json")
 
 class SamsungTvManager:
     def __init__(self):
-        self.lock = Lock()
+        self.lock = RLock()
         self.tv_ip = self.load_tv_ip()
         self.tv_client = None
         self.is_online = False
@@ -62,9 +62,19 @@ class SamsungTvManager:
         return SAMSUNG_DEFAULT_IP
 
     def save_tv_ip(self, ip):
-        self.tv_ip = ip.strip()
+        ip = (ip or "").strip()
+        if not ip:
+            return
         with self.lock:
-            self.tv_client = None
+            old_ip = self.tv_ip
+            self.tv_ip = ip
+            if ip != old_ip:
+                # Đổi IP sang TV khác: tự động xóa token TV cũ để ghép đôi mới
+                self.clear_token()
+            else:
+                self.reset_client()
+            self.is_online = False
+            self.last_check_time = 0
         try:
             with open(SAMSUNG_SETTINGS_FILE, "w", encoding="utf-8") as f:
                 json.dump({"tvIp": self.tv_ip}, f)
@@ -89,6 +99,27 @@ class SamsungTvManager:
                     pass
             self.reset_client()
             self.pairing_requested = False
+            self.is_online = False
+            self.last_check_time = 0
+
+    def trigger_pairing(self):
+        """Kích hoạt màn hình hỏi quyền ghép đôi trên TV Samsung ngay lập tức."""
+        def _do_pair():
+            try:
+                self.reset_client()
+                client = self.get_client()
+                if client:
+                    client.open()
+                    self.pairing_requested = False
+            except Exception as ex:
+                err_str = str(ex).lower()
+                if "unauthorized" in err_str or "pair" in err_str or "token" in err_str or "permission" in err_str:
+                    self.pairing_requested = True
+                self.reset_client()
+
+        t = threading.Thread(target=_do_pair, daemon=True)
+        t.start()
+        return True
 
     def get_client(self):
         if not HAS_SAMSUNGTVWS:
@@ -100,7 +131,7 @@ class SamsungTvManager:
                         host=self.tv_ip,
                         port=8002,
                         token_file=SAMSUNG_TOKEN_FILE,
-                        timeout=5,
+                        timeout=3,
                         name="TV Play Web Remote"
                     )
                 except Exception as ex:
@@ -2900,14 +2931,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             <div class="modal-sub">Điều khiển trực tiếp TV Samsung qua WebSocket (Cổng 8002)</div>
             <div style="width: 100%; margin-bottom: 12px; text-align: left;">
                 <label style="font-size: 12px; color: #8E8E93; margin-bottom: 4px; display: block; font-weight: 600;">Địa chỉ IP TV Samsung (LAN):</label>
-                <input type="text" id="samsungTvIpInput" class="modal-input" style="margin-bottom: 8px;" placeholder="10.0.0.9" value="10.0.0.9">
+                <input type="text" id="samsungTvIpInput" class="modal-input" style="margin-bottom: 8px;" placeholder="10.0.0.9" oninput="isTvIpInputDirty=true">
             </div>
             <div id="samsungPairingStatus" style="font-size: 12px; color: #30D158; margin-bottom: 16px; text-align: center; width: 100%; line-height: 1.5;">
                 Đang kiểm tra kết nối...
             </div>
-            <div class="modal-btn-row">
-                <button class="modal-btn-primary" onclick="saveTvSettings()">Lưu IP</button>
-                <button class="modal-close-btn" style="margin: 0; padding: 12px 10px; flex: 1;" onclick="resetTvToken()">Ghép đôi lại</button>
+            <div class="modal-btn-row" style="flex-direction: column; gap: 8px;">
+                <button class="modal-btn-primary" style="width: 100%; padding: 13px;" onclick="saveAndPairTv()">Lưu IP & Ghép đôi với TV</button>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <button class="modal-close-btn" style="margin: 0; padding: 10px; flex: 1; font-size: 13px;" onclick="saveTvSettingsOnly()">Chỉ Lưu IP</button>
+                    <button class="modal-close-btn" style="margin: 0; padding: 10px; flex: 1; font-size: 13px; color: #FF453A;" onclick="resetTvToken()">Xóa token cũ</button>
+                </div>
             </div>
             <button class="modal-close-btn" style="width: 100%; margin-top: 10px;" onclick="closeTvSettingsModal()">Đóng</button>
         </div>
@@ -3351,6 +3385,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }
         }
 
+        var isTvIpInputDirty = false;
+
         function updateTvStatusDisplay(status) {
             if (!status) return;
             var isOnline = status.online || status.isOnline || false;
@@ -3359,7 +3395,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             var text = document.getElementById('remoteHeaderStatus');
             var pairSt = document.getElementById('samsungPairingStatus');
             var ipInp = document.getElementById('samsungTvIpInput');
-            if (ipInp && status.tvIp && document.activeElement !== ipInp) {
+            
+            // Chỉ cập nhật giá trị ô nhập IP nếu người dùng chưa chủ động gõ/sửa
+            if (ipInp && status.tvIp && !isTvIpInputDirty) {
                 ipInp.value = status.tvIp;
             }
 
@@ -3367,11 +3405,11 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 if (isPaired) {
                     if (dot) { dot.className = 'remote-status-dot online'; }
                     if (text) { text.textContent = 'Samsung TV (Sẵn sàng)'; }
-                    if (pairSt) { pairSt.innerHTML = '<span style="color:#30D158; font-weight:600;">🟢 TV Đang Bật & Đã Ghép Đôi</span><br><span style="font-size:11px; color:#8E8E93;">Có thể điều khiển mọi nơi qua cổng 8002</span>'; }
+                    if (pairSt) { pairSt.innerHTML = '<span style="color:#30D158; font-weight:600;">🟢 TV Đang Bật & Đã Ghép Đôi</span><br><span style="font-size:11px; color:#8E8E93;">IP: ' + (status.tvIp || '') + ' (WebSocket cổng 8002)</span>'; }
                 } else {
                     if (dot) { dot.className = 'remote-status-dot pairing'; }
                     if (text) { text.textContent = 'TV (Chờ ghép đôi...)'; }
-                    if (pairSt) { pairSt.innerHTML = '<span style="color:#FF9F0A; font-weight:600;">⚠️ TV Đang Bật - Chưa có Token</span><br><span style="font-size:11px; color:#FFD60A;">Bấm phím bất kỳ rồi chọn [Cho phép] trên TV</span>'; }
+                    if (pairSt) { pairSt.innerHTML = '<span style="color:#FF9F0A; font-weight:600;">⚠️ Đã kết nối tới TV - Chưa cấp quyền</span><br><span style="font-size:11px; color:#FFD60A;">Vui lòng nhìn lên màn hình TV và bấm <b>[Cho phép]</b>!</span>'; }
                 }
             } else {
                 if (dot) { dot.className = 'remote-status-dot offline'; }
@@ -3388,17 +3426,48 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         function openTvSettingsModal() {
+            isTvIpInputDirty = false;
             var m = document.getElementById('remoteSettingsModal');
             if (m) m.classList.add('show');
             pollTvStatus();
         }
 
         function closeTvSettingsModal() {
+            isTvIpInputDirty = false;
             var m = document.getElementById('remoteSettingsModal');
             if (m) m.classList.remove('show');
         }
 
-        function saveTvSettings() {
+        // Lưu IP & gửi yêu cầu ghép đôi mới tới TV
+        function saveAndPairTv() {
+            var ip = document.getElementById('samsungTvIpInput').value.trim();
+            if (!ip) {
+                showToast('Vui lòng nhập IP TV!');
+                return;
+            }
+            showToast('Đang kết nối TV ' + ip + '...');
+            var pairSt = document.getElementById('samsungPairingStatus');
+            if (pairSt) {
+                pairSt.innerHTML = '<span style="color:#FF9F0A; font-weight:600;">⏳ Đang gửi yêu cầu ghép đôi tới ' + ip + '...</span><br><span style="font-size:11px; color:#FFD60A;">Hãy nhìn lên màn hình TV và bấm <b>[Cho phép]</b>!</span>';
+            }
+            fetch('/api/samsung/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ tvIp: ip, resetToken: true, pairNow: true })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(d) {
+                isTvIpInputDirty = false;
+                showToast('Đã gửi yêu cầu! Bấm [Cho phép] trên TV');
+                if (d.status) updateTvStatusDisplay(d.status);
+                setTimeout(pollTvStatus, 1800);
+                setTimeout(pollTvStatus, 4000);
+            })
+            .catch(function() { showToast('Lỗi gửi yêu cầu ghép đôi'); });
+        }
+
+        // Chỉ lưu IP TV
+        function saveTvSettingsOnly() {
             var ip = document.getElementById('samsungTvIpInput').value.trim();
             if (!ip) {
                 showToast('Vui lòng nhập IP TV!');
@@ -3412,24 +3481,34 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             })
             .then(function(res) { return res.json(); })
             .then(function(d) {
-                showToast('Đã lưu cấu hình TV!');
+                isTvIpInputDirty = false;
+                showToast('Đã lưu IP TV: ' + ip);
                 if (d.status) updateTvStatusDisplay(d.status);
             })
             .catch(function() { showToast('Lỗi lưu IP TV'); });
         }
 
+        // Xóa token cũ
         function resetTvToken() {
+            var ip = document.getElementById('samsungTvIpInput').value.trim();
             if (!confirm('Xóa token và yêu cầu TV hiện popup ghép đôi lại?')) return;
-            showToast('Đang đặt lại token ghép đôi...');
+            showToast('Đang xóa token & yêu cầu ghép đôi...');
+            var pairSt = document.getElementById('samsungPairingStatus');
+            if (pairSt) {
+                pairSt.innerHTML = '<span style="color:#FF9F0A; font-weight:600;">⏳ Đang xóa token & gửi yêu cầu...</span><br><span style="font-size:11px; color:#FFD60A;">Hãy nhìn lên màn hình TV và bấm <b>[Cho phép]</b>!</span>';
+            }
             fetch('/api/samsung/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ resetToken: true })
+                body: JSON.stringify({ tvIp: ip, resetToken: true, pairNow: true })
             })
             .then(function(res) { return res.json(); })
             .then(function(d) {
-                showToast('Đã xóa token. Hãy bấm 1 phím trên remote để TV hiện popup [Cho phép]!');
+                isTvIpInputDirty = false;
+                showToast('Đã xóa token. Hãy bấm [Cho phép] trên TV!');
                 if (d.status) updateTvStatusDisplay(d.status);
+                setTimeout(pollTvStatus, 1800);
+                setTimeout(pollTvStatus, 4000);
             })
             .catch(function() { showToast('Lỗi đặt lại token'); });
         }
@@ -4714,10 +4793,16 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/samsung/settings":
             new_ip = (post_data.get("tvIp") or "").strip()
             reset_token = bool(post_data.get("resetToken", False))
+            pair_now = bool(post_data.get("pairNow", False))
+
             if new_ip:
                 samsung_tv_mgr.save_tv_ip(new_ip)
             if reset_token:
                 samsung_tv_mgr.clear_token()
+
+            if pair_now or reset_token:
+                samsung_tv_mgr.trigger_pairing()
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_cors_headers()
