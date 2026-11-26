@@ -923,10 +923,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         #tab-remote {
-            padding-top: max(calc(env(safe-area-inset-top, 0px) + 6px), 8px);
-            padding-bottom: 4px;
-            padding-left: 8px;
-            padding-right: 8px;
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 8px), 10px);
+            padding-bottom: 10px;
+            padding-left: 10px;
+            padding-right: 10px;
         }
 
         .tab-content.active {
@@ -943,9 +943,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         /* TAB 1: MODERN TV REMOTE CONTROLLER (MATCHING TV REMOTE APP)               */
         /* ========================================================================= */
         .remote-wrapper {
-            max-width: 380px;
+            max-width: 440px;
+            width: 100%;
             margin: 0 auto;
-            padding: 0;
+            padding: 0 4px;
         }
 
         /* Remote Header: Settings (Left) - Status (Center) - Power (Right) */
@@ -953,9 +954,9 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             align-items: center;
-            height: 46px;
-            padding: 0 20px;
-            margin-bottom: 4px;
+            height: 52px;
+            padding: 0 24px;
+            margin-bottom: 8px;
         }
 
         .remote-header-col {
@@ -965,8 +966,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         .remote-header-btn {
-            width: 42px;
-            height: 42px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -984,8 +985,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         .remote-power-btn {
-            width: 42px;
-            height: 42px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background: linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1007,8 +1008,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         .remote-status-box {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
+            gap: 8px;
+            font-size: 13px;
             font-weight: 700;
             color: #8E8E93;
         }
@@ -1043,17 +1044,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* Remote Body Box (Bo góc 28px, padding 12px 20px 8px) */
+        /* Remote Body Box (Bo góc 36px, padding rộng rãi, gap 16px để điều khiển tràn đẹp) */
         .remote-body-box {
             background: #1c1c1e;
             border: 1px solid rgba(255, 255, 255, 0.09);
-            border-radius: 28px;
-            padding: 12px 20px 8px;
+            border-radius: 36px;
+            padding: 22px 24px 18px;
             box-shadow: 0 16px 44px -4px rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 16px;
         }
 
         /* 3-Column Grid Rows (Thẳng hàng tuyệt đối 100%) */
@@ -1082,7 +1083,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             cursor: pointer;
             user-select: none;
             transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
         }
 
         .btn-circle:active {
@@ -1092,18 +1093,18 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             color: #FFFFFF;
         }
 
-        /* Hàng Media (46px x 46px) */
+        /* Hàng Media (54px x 54px - To hơn) */
         .btn-media {
-            width: 46px;
-            height: 46px;
-            font-size: 15px;
+            width: 54px;
+            height: 54px;
+            font-size: 18px;
         }
 
-        /* Hàng Chức năng 1 & 2 (46px x 46px) */
+        /* Hàng Chức năng 1 & 2 (58px x 58px - To hơn) */
         .btn-func {
-            width: 46px;
-            height: 46px;
-            font-size: 16px;
+            width: 58px;
+            height: 58px;
+            font-size: 18px;
         }
 
         /* Nút Mic đặc biệt (màu xanh dương) */
@@ -1126,10 +1127,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             100% { transform: scale(1); box-shadow: 0 0 8px rgba(48, 209, 88, 0.5); }
         }
 
-        /* D-Pad Container (Đĩa tròn 196px) */
+        /* D-Pad Container (Đĩa tròn 236px - To, dễ bấm ngón cái) */
         .dpad-container {
-            width: 196px;
-            height: 196px;
+            width: 236px;
+            height: 236px;
             margin: 2px auto;
             position: relative;
             background: radial-gradient(circle at 50% 50%, #2a2a2e 0%, #1a1a1d 70%, #121215 100%);
@@ -1138,7 +1139,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             box-shadow: 
                 inset 0 2px 6px rgba(255, 255, 255, 0.1),
                 inset 0 -3px 8px rgba(0, 0, 0, 0.8),
-                0 10px 30px rgba(0, 0, 0, 0.7);
+                0 12px 36px rgba(0, 0, 0, 0.75);
         }
 
         .dpad-btn {
@@ -1146,7 +1147,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             background: transparent;
             border: none;
             color: rgba(255, 255, 255, 0.85);
-            font-size: 17px;
+            font-size: 20px;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -1161,42 +1162,42 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         .dpad-up {
-            top: 2px;
-            left: 58px;
+            top: 4px;
+            left: 78px;
             width: 80px;
-            height: 48px;
+            height: 60px;
         }
 
         .dpad-down {
-            bottom: 2px;
-            left: 58px;
+            bottom: 4px;
+            left: 78px;
             width: 80px;
-            height: 48px;
+            height: 60px;
         }
 
         .dpad-left {
-            top: 58px;
-            left: 2px;
-            width: 48px;
+            top: 78px;
+            left: 4px;
+            width: 60px;
             height: 80px;
         }
 
         .dpad-right {
-            top: 58px;
-            right: 2px;
-            width: 48px;
+            top: 78px;
+            right: 4px;
+            width: 60px;
             height: 80px;
         }
 
         .dpad-ok {
-            top: 64px;
-            left: 64px;
-            width: 68px;
-            height: 68px;
+            top: 78px;
+            left: 78px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             background: #2c2c2e;
             color: #ffffff;
-            font-size: 16px;
+            font-size: 19px;
             font-weight: 800;
             border: 1px solid rgba(255, 255, 255, 0.18);
             box-shadow: 
@@ -1211,13 +1212,13 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             border-color: #FF9F0A;
         }
 
-        /* Cụm con nhộng VOL và CH (Dọc 118px, rộng 46px, bo tròn 23px) */
+        /* Cụm con nhộng VOL và CH (Dọc 148px, rộng 58px, bo tròn 29px) */
         .capsule-box {
-            width: 46px;
-            height: 118px;
+            width: 58px;
+            height: 148px;
             background: #252528;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 23px;
+            border-radius: 29px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1227,11 +1228,11 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
 
         .capsule-btn-top, .capsule-btn-bottom {
             width: 100%;
-            height: 44px;
+            height: 58px;
             background: transparent;
             border: none;
             color: #FFFFFF;
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -1247,12 +1248,12 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
 
         .capsule-label {
             width: 100%;
-            height: 30px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #8E8E93;
-            font-size: 10px;
+            font-size: 12px;
             font-weight: 800;
             letter-spacing: 0.1em;
             user-select: none;
@@ -1262,10 +1263,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         .remote-toast-text {
             width: 100%;
             text-align: center;
-            font-size: 11px;
+            font-size: 13px;
             color: #8E8E93;
-            min-height: 16px;
-            margin-top: 2px;
+            min-height: 20px;
+            margin-top: 4px;
             transition: color 0.3s;
         }
 
@@ -2434,7 +2435,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             <div class="remote-header-grid">
                 <div class="remote-header-col">
                     <button class="remote-header-btn" onclick="openTvSettingsModal()" title="Cài đặt kết nối TV Samsung (Cổng 8002)">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
                     </button>
                 </div>
                 <div class="remote-header-col">
@@ -2445,34 +2446,34 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 </div>
                 <div class="remote-header-col">
                     <button class="remote-power-btn" onclick="sendKey('power')" title="Nguồn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
                     </button>
                 </div>
             </div>
 
-            <!-- Remote Body Container (Bo góc 32px, padding 28px) -->
+            <!-- Remote Body Container (Bo góc 36px, tràn màn hình) -->
             <div class="remote-body-box">
 
                 <!-- 1. Hàng Media: Prev (|◀), Play/Pause (▶||), Next (▶|) -->
                 <div class="remote-grid-row">
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-media" onclick="sendKey('ch_prev')" title="Kênh trước / Lùi">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                         </button>
                     </div>
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-media" onclick="sendKey('play_pause')" title="Phát / Tạm dừng">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
                         </button>
                     </div>
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-media" onclick="sendKey('ch_next')" title="Kênh tiếp / Tới">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
                         </button>
                     </div>
                 </div>
 
-                <!-- 2. Cụm D-Pad tròn lớn (224px) -->
+                <!-- 2. Cụm D-Pad tròn lớn (236px) -->
                 <div class="dpad-container">
                     <button class="dpad-btn dpad-up" onclick="sendKey('up')">▲</button>
                     <button class="dpad-btn dpad-down" onclick="sendKey('down')">▼</button>
@@ -2485,17 +2486,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 <div class="remote-grid-row">
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-func" onclick="sendKey('back')" title="Quay lại">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
                         </button>
                     </div>
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-func" onclick="sendKey('home')" title="Trang chủ">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                         </button>
                     </div>
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-func" onclick="openNumpadModal()" title="Bàn phím số">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -2504,17 +2505,17 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 <div class="remote-grid-row">
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-func" onclick="sendKey('mute')" title="Tắt tiếng">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
                         </button>
                     </div>
                     <div class="remote-grid-col">
                         <button id="btnWebMic" class="btn-circle btn-func btn-mic-special" onclick="openVoiceModal()" title="Tìm kiếm giọng nói">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
                         </button>
                     </div>
                     <div class="remote-grid-col">
                         <button class="btn-circle btn-func" onclick="openKeyboardModal()" title="Bàn phím nhập chữ">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
                         </button>
                     </div>
                 </div>
@@ -2529,12 +2530,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                             <button class="capsule-btn-bottom" onclick="sendKey('vol_down')" title="Giảm âm lượng">−</button>
                         </div>
                     </div>
-                    <!-- Cột 2: Khoảng đệm giữa -->
-                    <div class="remote-grid-col">
-                        <button class="action-btn" style="padding: 10px 12px; font-size: 11px; max-width: 90px; border-radius: 20px;" onclick="sendKey('overlay')" title="Bật/Tắt OSD Kênh">
-                            📺 OSD
-                        </button>
-                    </div>
+                    <!-- Cột 2: Khoảng đệm giữa (đã bỏ nút OSD) -->
+                    <div class="remote-grid-col"></div>
                     <!-- Cột 3: CH (∧ / CH / ∨) -->
                     <div class="remote-grid-col">
                         <div class="capsule-box">
