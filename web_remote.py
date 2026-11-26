@@ -969,40 +969,55 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.06);
+            background: radial-gradient(circle at 35% 30%, #323236 0%, #242427 100%);
             border: 1px solid rgba(255, 255, 255, 0.12);
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
             color: #8E8E93;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 
+                0 4px 0 #121214,
+                0 6px 14px rgba(0, 0, 0, 0.45);
+            transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
         }
 
         .remote-header-btn:active {
-            transform: scale(0.92);
-            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(3px);
+            box-shadow: 
+                0 1px 0 #121214,
+                inset 0 2px 5px rgba(0, 0, 0, 0.6);
+            background: #18181a;
+            color: #FFFFFF;
         }
 
         .remote-power-btn {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: radial-gradient(circle at 35% 30%, #ff5247 0%, #FF3B30 60%, #b81b12 100%);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
             color: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 4px 16px rgba(255, 59, 48, 0.4);
-            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 
+                0 4px 0 #850f08,
+                0 8px 18px rgba(255, 59, 48, 0.45),
+                inset 0 1px 1px rgba(255, 255, 255, 0.35);
+            transition: transform 0.06s ease, box-shadow 0.06s ease;
         }
 
         .remote-power-btn:active {
-            transform: scale(0.92);
-            background: #B71C1C;
-            box-shadow: 0 2px 8px rgba(255, 59, 48, 0.6);
+            transform: translateY(3px);
+            background: radial-gradient(circle at 50% 50%, #b81b12 0%, #850f08 100%);
+            box-shadow: 
+                0 1px 0 #850f08,
+                0 2px 6px rgba(0, 0, 0, 0.4),
+                inset 0 3px 6px rgba(0, 0, 0, 0.7);
         }
 
         .remote-status-box {
@@ -1071,26 +1086,34 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             justify-content: center;
         }
 
-        /* Nút tròn chung */
+        /* Nút tròn chung với hiệu ứng 3D lún vật lý */
         .btn-circle {
             border-radius: 50%;
-            background: #2c2c2e;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: radial-gradient(circle at 35% 30%, #3a3a3e 0%, #262629 60%, #1e1e21 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-top: 1px solid rgba(255, 255, 255, 0.28);
             color: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             user-select: none;
-            transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            box-shadow: 
+                0 5px 0 #121214,
+                0 8px 18px rgba(0, 0, 0, 0.6),
+                inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
         }
 
         .btn-circle:active {
-            transform: scale(0.92);
-            background: #FF9F0A;
-            border-color: #FF9F0A;
-            color: #FFFFFF;
+            transform: translateY(4px);
+            background: radial-gradient(circle at 50% 50%, #1c1c1f 0%, #161618 100%);
+            box-shadow: 
+                0 1px 0 #121214,
+                0 2px 6px rgba(0, 0, 0, 0.4),
+                inset 0 3px 6px rgba(0, 0, 0, 0.7);
+            border-color: rgba(255, 159, 10, 0.5);
+            color: #FF9F0A;
         }
 
         /* Hàng Media (54px x 54px - To hơn) */
@@ -1107,14 +1130,27 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             font-size: 18px;
         }
 
-        /* Nút Mic đặc biệt (màu xanh dương) */
+        /* Nút Mic đặc biệt (màu xanh dương có hiệu ứng lún 3D) */
         .btn-mic-special {
-            background: #007AFF;
-            border-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
+            background: radial-gradient(circle at 35% 30%, #1a8cff 0%, #007AFF 60%, #0056cc 100%);
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 
+                0 5px 0 #003d8f,
+                0 8px 20px rgba(0, 122, 255, 0.5),
+                inset 0 1px 1px rgba(255, 255, 255, 0.4);
         }
 
-        .btn-mic-special:active, .btn-mic-special.listening {
+        .btn-mic-special:active {
+            transform: translateY(4px);
+            background: radial-gradient(circle at 50% 50%, #0056cc 0%, #003d8f 100%);
+            box-shadow: 
+                0 1px 0 #003d8f,
+                0 2px 6px rgba(0, 0, 0, 0.4),
+                inset 0 3px 6px rgba(0, 0, 0, 0.7);
+            color: #FFFFFF;
+        }
+
+        .btn-mic-special.listening {
             background: #30D158;
             border-color: #30D158;
             box-shadow: 0 0 18px rgba(48, 209, 88, 0.7);
@@ -1153,12 +1189,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.1s;
-        }
-
-        .dpad-btn:active {
-            color: #FF9F0A;
-            transform: scale(0.92);
+            user-select: none;
+            transition: transform 0.06s ease, color 0.06s ease, filter 0.06s ease;
         }
 
         .dpad-up {
@@ -1168,11 +1200,23 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             height: 60px;
         }
 
+        .dpad-up:active {
+            transform: translateY(3px) scale(0.94);
+            color: #FF9F0A;
+            filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
+        }
+
         .dpad-down {
             bottom: 4px;
             left: 78px;
             width: 80px;
             height: 60px;
+        }
+
+        .dpad-down:active {
+            transform: translateY(-3px) scale(0.94);
+            color: #FF9F0A;
+            filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
         }
 
         .dpad-left {
@@ -1182,11 +1226,23 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             height: 80px;
         }
 
+        .dpad-left:active {
+            transform: translateX(3px) scale(0.94);
+            color: #FF9F0A;
+            filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
+        }
+
         .dpad-right {
             top: 78px;
             right: 4px;
             width: 60px;
             height: 80px;
+        }
+
+        .dpad-right:active {
+            transform: translateX(-3px) scale(0.94);
+            color: #FF9F0A;
+            filter: drop-shadow(0 0 8px rgba(255, 159, 10, 0.85));
         }
 
         .dpad-ok {
@@ -1195,35 +1251,46 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: #2c2c2e;
+            background: radial-gradient(circle at 35% 30%, #38383c 0%, #252528 65%, #1c1c1e 100%);
             color: #ffffff;
             font-size: 19px;
             font-weight: 800;
             border: 1px solid rgba(255, 255, 255, 0.18);
+            border-top: 1px solid rgba(255, 255, 255, 0.35);
             box-shadow: 
-                inset 0 1px 2px rgba(255, 255, 255, 0.25),
-                0 6px 18px rgba(0, 0, 0, 0.5);
-            transition: all 0.12s;
+                0 5px 0 #101012,
+                0 10px 24px rgba(0, 0, 0, 0.7),
+                inset 0 1px 2px rgba(255, 255, 255, 0.3);
+            transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.06s ease;
         }
 
         .dpad-ok:active {
-            transform: scale(0.92);
-            background: #FF9F0A;
-            border-color: #FF9F0A;
+            transform: translateY(4px);
+            background: radial-gradient(circle at 50% 50%, #1a1a1d 0%, #121214 100%);
+            box-shadow: 
+                0 1px 0 #101012,
+                0 2px 6px rgba(0, 0, 0, 0.5),
+                inset 0 3px 8px rgba(0, 0, 0, 0.85);
+            border-color: rgba(255, 159, 10, 0.6);
+            color: #FF9F0A;
         }
 
-        /* Cụm con nhộng VOL và CH (Dọc 148px, rộng 58px, bo tròn 29px) */
+        /* Cụm con nhộng VOL và CH (Dọc 148px, rộng 58px, bo tròn 29px với hiệu ứng lún 3D) */
         .capsule-box {
             width: 58px;
             height: 148px;
-            background: #252528;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(180deg, #28282b 0%, #1e1e21 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-top: 1px solid rgba(255, 255, 255, 0.28);
             border-radius: 29px;
             display: flex;
             flex-direction: column;
             align-items: center;
             overflow: hidden;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+            box-shadow: 
+                0 5px 0 #121214,
+                0 8px 20px rgba(0, 0, 0, 0.55),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2);
         }
 
         .capsule-btn-top, .capsule-btn-bottom {
@@ -1238,12 +1305,22 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.1s;
+            user-select: none;
+            transition: transform 0.06s ease, background 0.06s ease, box-shadow 0.06s ease;
         }
 
-        .capsule-btn-top:active, .capsule-btn-bottom:active {
-            background: #FF9F0A;
-            color: #FFFFFF;
+        .capsule-btn-top:active {
+            transform: translateY(3px);
+            background: rgba(0, 0, 0, 0.35);
+            box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.7);
+            color: #FF9F0A;
+        }
+
+        .capsule-btn-bottom:active {
+            transform: translateY(-3px);
+            background: rgba(0, 0, 0, 0.35);
+            box-shadow: inset 0 -3px 8px rgba(0, 0, 0, 0.7);
+            color: #FF9F0A;
         }
 
         .capsule-label {
@@ -1257,17 +1334,6 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             font-weight: 800;
             letter-spacing: 0.1em;
             user-select: none;
-        }
-
-        /* Dòng trạng thái đáy Remote */
-        .remote-toast-text {
-            width: 100%;
-            text-align: center;
-            font-size: 13px;
-            color: #8E8E93;
-            min-height: 20px;
-            margin-top: 4px;
-            transition: color 0.3s;
         }
 
         /* ========================================================================= */
@@ -2541,9 +2607,6 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                         </div>
                     </div>
                 </div>
-
-                <!-- 6. Dưới cùng: Dòng thông báo trạng thái -->
-                <div id="remoteToastStatus" class="remote-toast-text">Sẵn sàng</div>
             </div>
         </div>
     </div>
@@ -3350,9 +3413,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         }
 
         function sendKey(key) {
-            if (navigator.vibrate) navigator.vibrate(25);
-            var stEl = document.getElementById('remoteToastStatus');
-            if (stEl) stEl.textContent = 'Bấm ' + key.toUpperCase() + '...';
+            if (navigator.vibrate) navigator.vibrate(28);
             fetch('/api/key', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -3360,17 +3421,10 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }).then(function(res) { return res.json(); }).then(function(data) {
                 if (data.pairingRequested) {
                     showToast('⚠️ VUI LÒNG BẤM [CHO PHÉP] TRÊN MÀN HÌNH TV');
-                    if (stEl) stEl.textContent = 'Chờ chấp nhận trên TV...';
                     var dot = document.getElementById('remoteHeaderDot');
                     if (dot) dot.className = 'remote-status-dot pairing';
-                } else if (data.tvAction && data.tvAction.indexOf('Lỗi') !== -1) {
-                    if (stEl) stEl.textContent = data.tvAction;
-                } else {
-                    if (stEl) stEl.textContent = 'OK (' + key.toUpperCase() + ')';
                 }
-            }).catch(function(e) {
-                if (stEl) stEl.textContent = 'Lỗi gửi lệnh';
-            });
+            }).catch(function(e) {});
         }
 
         // Tự động kiểm tra trạng thái TV định kỳ
