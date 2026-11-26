@@ -2794,13 +2794,20 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
     <!-- Modal 3: Tìm kiếm giọng nói tiếng Việt với Sóng âm -->
     <div id="remoteVoiceModal" class="remote-modal-backdrop" onclick="if(event.target===this)closeVoiceModal()">
         <div class="remote-modal-content">
-            <div style="width:68px; height:68px; border-radius:50%; background:#2c2c2e; display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
+            <div style="width:68px; height:68px; border-radius:50%; background:#2c2c2e; display:flex; align-items:center; justify-content:center; margin-bottom:12px; cursor:pointer;" onclick="finishVoiceSearch()" title="Chạm để kết thúc nói">
                 <svg width="34" height="34" viewBox="0 0 24 24" fill="#007AFF"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
             </div>
             <canvas id="voiceWaveCanvas" class="voice-wave-canvas" width="200" height="60"></canvas>
             <div id="voiceModalStatus" class="modal-title">Đang lắng nghe...</div>
             <div id="voiceModalSub" class="modal-sub">Nói tên video, ca sĩ, kênh hoặc phim...</div>
-            <button class="modal-close-btn" onclick="closeVoiceModal()">Hủy</button>
+            <div class="modal-btn-row" style="margin-top: 16px; width: 100%;">
+                <button id="btnVoiceFinish" class="modal-btn-primary" style="flex: 1.4; background: linear-gradient(135deg, #007AFF 0%, #0051C7 100%); font-weight: 700; font-size: 14px;" onclick="finishVoiceSearch()">
+                    ✓ Kết thúc nói
+                </button>
+                <button class="modal-close-btn" style="flex: 1; margin: 0; padding: 12px 10px;" onclick="closeVoiceModal()">
+                    Hủy
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3096,6 +3103,8 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
 
         var voiceWaveAnimId = null;
         var voiceSpeechRec = null;
+        var currentVoiceTranscript = '';
+        var isVoiceHandled = false;
 
         function openVoiceModal() {
             var m = document.getElementById('remoteVoiceModal');
@@ -3103,8 +3112,13 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             m.classList.add('show');
             var statusEl = document.getElementById('voiceModalStatus');
             var subEl = document.getElementById('voiceModalSub');
+            var btnFinish = document.getElementById('btnVoiceFinish');
+            
+            currentVoiceTranscript = '';
+            isVoiceHandled = false;
             statusEl.textContent = 'Đang lắng nghe...';
             subEl.textContent = 'Nói tên kênh, video hoặc phim tiếng Việt...';
+            if (btnFinish) btnFinish.textContent = '✓ Kết thúc nói';
             
             startVoiceWaveCanvas();
 
@@ -3123,29 +3137,25 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                         }
                         transcript = transcript.trim();
                         if (transcript) {
+                            currentVoiceTranscript = transcript;
                             subEl.textContent = '🔍 "' + transcript + '"';
                             if (event.results[0].isFinal) {
-                                statusEl.textContent = 'Đã nhận dạng!';
-                                setTimeout(function() {
-                                    closeVoiceModal();
-                                    showToast('Tìm YouTube: ' + transcript);
-                                    fetch('/api/key', {
-                                        method: 'POST',
-                                        headers: {'Content-Type': 'application/json'},
-                                        body: JSON.stringify({ key: 'search:' + transcript })
-                                    });
-                                }, 600);
+                                finishVoiceSearch();
                             }
                         }
                     };
 
                     voiceSpeechRec.onerror = function(e) {
-                        statusEl.textContent = 'Không nhận dạng được';
-                        subEl.textContent = 'Lỗi mic hoặc chưa cấp quyền. Hãy thử lại.';
+                        if (!isVoiceHandled && !currentVoiceTranscript) {
+                            statusEl.textContent = 'Không nhận dạng được';
+                            subEl.textContent = 'Lỗi mic hoặc chưa cấp quyền. Hãy thử lại.';
+                        }
                     };
 
                     voiceSpeechRec.onend = function() {
-                        // Finished
+                        if (!isVoiceHandled && currentVoiceTranscript) {
+                            finishVoiceSearch();
+                        }
                     };
 
                     voiceSpeechRec.start();
@@ -3157,9 +3167,49 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             }
         }
 
+        function finishVoiceSearch() {
+            if (isVoiceHandled) return;
+            var txt = (currentVoiceTranscript || '').trim();
+            if (!txt) {
+                var subEl = document.getElementById('voiceModalSub');
+                if (subEl && subEl.textContent && subEl.textContent.indexOf('🔍 "') !== -1) {
+                    txt = subEl.textContent.replace('🔍 "', '').replace('"', '').trim();
+                }
+            }
+
+            if (voiceSpeechRec) {
+                try { voiceSpeechRec.stop(); } catch(e){}
+                voiceSpeechRec = null;
+            }
+            stopVoiceWaveCanvas();
+
+            if (txt) {
+                isVoiceHandled = true;
+                var statusEl = document.getElementById('voiceModalStatus');
+                if (statusEl) statusEl.textContent = 'Đã nhận dạng!';
+                var btnFinish = document.getElementById('btnVoiceFinish');
+                if (btnFinish) btnFinish.textContent = 'Đang tìm kiếm...';
+
+                setTimeout(function() {
+                    closeVoiceModal();
+                    showToast('🔍 Tìm YouTube: ' + txt);
+                    fetch('/api/key', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ key: 'search:' + txt })
+                    });
+                }, 350);
+            } else {
+                var subEl = document.getElementById('voiceModalSub');
+                if (subEl) subEl.textContent = '⚠️ Chưa nhận dạng được nội dung. Hãy thử nói lại!';
+                showToast('Chưa nghe rõ, hãy nói lại!');
+            }
+        }
+
         function closeVoiceModal() {
             var m = document.getElementById('remoteVoiceModal');
             if (m) m.classList.remove('show');
+            isVoiceHandled = true;
             if (voiceSpeechRec) {
                 try { voiceSpeechRec.stop(); } catch(e){}
                 voiceSpeechRec = null;

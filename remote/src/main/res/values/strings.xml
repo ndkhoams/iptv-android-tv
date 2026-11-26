@@ -11,8 +11,6 @@
     <string name="desc_media_play_pause">Phát / Tạm dừng</string>
     <string name="desc_media_ff">Tua tới</string>
     <string name="desc_media_next">Bài kế tiếp</string>
-    <string name="btn_power">⏻</string>
-    <string name="btn_mic">🎤</string>
     <string name="btn_up">▲</string>
     <string name="btn_down">▼</string>
     <string name="btn_left">◀</string>
@@ -20,16 +18,13 @@
     <string name="btn_ok">OK</string>
     <string name="btn_back">Back</string>
     <string name="btn_home">Home</string>
-    <string name="btn_play_pause">▶/❚❚</string>
     <string name="btn_vol">VOL</string>
     <string name="btn_ch">CH</string>
     <string name="btn_plus">+</string>
     <string name="btn_minus">−</string>
     <string name="btn_chevron_up">∧</string>
     <string name="btn_chevron_down">∨</string>
-    <string name="btn_youtube">YouTube</string>
-    <string name="btn_netflix">Netflix</string>
-    <string name="hint_voice_idle">Chạm 🎤 để tìm kiếm giọng nói tiếng Việt trên TV</string>
+    <string name="hint_voice_idle">Chạm micro để tìm kiếm giọng nói tiếng Việt trên TV</string>
     <string name="hint_voice_listening">Đang lắng nghe... Nói tên video hoặc phim</string>
     <string name="tv_settings_title">Cấu hình kết nối TV Samsung</string>
     <string name="tv_settings_hint">10.0.0.9</string>

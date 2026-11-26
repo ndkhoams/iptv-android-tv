@@ -117,17 +117,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupButtonListeners() {
-        // 1. Header: Nút Nguồn đỏ ở góc phải
+        // 1. Header: Nút Nguồn đỏ ở góc phải & Nhấn tên TV để cài đặt
+        binding.layoutTvStatus.setOnClickListener {
+            hapticHelper.click()
+            showSettingsDialog()
+        }
         binding.btnPower.setOnClickListener {
             handleKeyClick("KEY_POWER", "Nguồn")
         }
 
-        // 2. Hàng phím Media (3 nút tròn): Prev, Play/Pause, Next
+        // 2. Hàng phím Media (5 nút tròn): Prev, Rewind, Play/Pause, FF, Next
         binding.btnMediaPrev.setOnClickListener {
             handleKeyClick("KEY_PREVIOUS", "Bài trước")
         }
+        binding.btnMediaRewind.setOnClickListener {
+            handleKeyClick("KEY_REWIND", "Tua lùi")
+        }
         binding.btnMediaPlayPause.setOnClickListener {
             handleKeyClick("KEY_PLAY", "Phát / Tạm dừng")
+        }
+        binding.btnMediaFF.setOnClickListener {
+            handleKeyClick("KEY_FF", "Tua tới")
         }
         binding.btnMediaNext.setOnClickListener {
             handleKeyClick("KEY_NEXT", "Bài kế tiếp")
@@ -344,7 +354,9 @@ class MainActivity : AppCompatActivity() {
         val waveView = dialogView.findViewById<VoiceWaveView>(R.id.voiceWaveView)
         val tvStatus = dialogView.findViewById<TextView>(R.id.tvVoiceStatus)
         val tvSubtitle = dialogView.findViewById<TextView>(R.id.tvVoiceSubtitle)
+        val btnFinish = dialogView.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnVoiceFinish)
         val btnCancel = dialogView.findViewById<androidx.appcompat.widget.AppCompatButton>(R.id.btnVoiceCancel)
+        var currentRecognizedQuery = ""
 
         voiceDialog?.dismiss()
         voiceDialog = AlertDialog.Builder(this)
@@ -361,13 +373,37 @@ class MainActivity : AppCompatActivity() {
             voiceDialog?.dismiss()
         }
 
+        btnFinish?.setOnClickListener {
+            val query = currentRecognizedQuery.trim()
+            if (query.isNotEmpty()) {
+                hapticHelper.longClick()
+                tvStatus.text = "Đã nhận dạng!"
+                tvSubtitle.text = "🔍 \"$query\""
+                waveView.stopAnimation()
+                lifecycleScope.launch {
+                    delay(350)
+                    voiceDialog?.dismiss()
+                    executeYouTubeSearch(query)
+                }
+            } else {
+                voiceSearchManager.stopListening()
+                tvSubtitle.text = "⚠️ Chưa nhận được từ khóa, hãy nói lại hoặc gõ phím!"
+            }
+        }
+
         voiceDialog?.show()
         waveView.startAnimation()
 
         if (!voiceSearchManager.isAvailable()) {
             tvStatus.text = "Chưa có dịch vụ giọng nói"
-            tvSubtitle.text = "Thiết bị của bạn chưa cài đặt Dịch vụ giọng nói Google (Google Speech).\n\nHãy bấm phím ⌨ (Bàn phím) bên cạnh nếu muốn nhập tìm kiếm."
+            tvSubtitle.text = "Thiết bị chưa cài đặt Google Speech.\n\nBấm nút bên dưới để nhập chữ tìm kiếm trên TV."
             waveView.stopAnimation()
+            btnFinish?.visibility = View.GONE
+            btnCancel.text = "Gõ chữ tìm kiếm"
+            btnCancel.setOnClickListener {
+                voiceDialog?.dismiss()
+                showKeyboardDialog()
+            }
             return
         }
 
@@ -396,8 +432,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            override fun onPartialResult(query: String) {
+                runOnUiThread {
+                    currentRecognizedQuery = query
+                    tvSubtitle.text = "🔍 \"$query\""
+                }
+            }
+
             override fun onSpeechResult(query: String) {
                 runOnUiThread {
+                    currentRecognizedQuery = query
                     hapticHelper.longClick()
                     tvStatus.text = "Đã nhận dạng!"
                     tvSubtitle.text = "🔍 \"$query\""

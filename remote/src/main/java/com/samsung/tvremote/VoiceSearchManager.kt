@@ -13,6 +13,7 @@ interface VoiceSearchListener {
     fun onListening()
     fun onSpeechRms(rmsdB: Float)
     fun onSpeechResult(query: String)
+    fun onPartialResult(query: String) {}
     fun onError(errorMessage: String)
     fun onFinished()
 }
@@ -96,6 +97,7 @@ class VoiceSearchManager(private val context: Context) {
                             val partial = matches[0].trim()
                             if (partial.isNotEmpty()) {
                                 listener.onSpeechRms(10f)
+                                listener.onPartialResult(partial)
                             }
                         }
                     }
