@@ -156,8 +156,6 @@ class SamsungTvManager:
 
     def delete_tv(self, tv_id):
         with self.lock:
-            if len(self.tvs) <= 1:
-                return False  # Giữ lại ít nhất 1 TV
             self.tvs = [t for t in self.tvs if t["id"] != tv_id]
             self.save_tvs()
             self.clear_tv_token(tv_id)
@@ -3700,21 +3698,32 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 (isAllActive ? '<div class="tv-item-check">✓</div>' : '') +
             '</div>';
 
-            cachedTvs.forEach(function(tv) {
-                var isSelected = (activeId === tv.id);
-                var dotColor = tv.online ? (tv.paired ? '#30D158' : '#FF9F0A') : '#8E8E93';
-                var statusText = tv.online ? (tv.paired ? 'Đang bật & Đã ghép đôi' : 'Chờ cấp quyền trên TV') : 'Ngoại tuyến hoặc tắt';
-                html += '<div class="tv-picker-item ' + (isSelected ? 'active' : '') + '" onclick="selectTv(\'' + tv.id + '\')">' +
-                    '<div>' +
-                        '<div class="tv-item-title">' +
-                            '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:' + dotColor + '; margin-right:4px;"></span>' +
-                            escapeHtml(tv.name) +
-                        '</div>' +
-                        '<div class="tv-item-sub">' + escapeHtml(tv.ip) + ' • ' + statusText + '</div>' +
-                    '</div>' +
-                    (isSelected ? '<div class="tv-item-check">✓</div>' : '') +
+            if (!cachedTvs || cachedTvs.length === 0) {
+                html += '<div style="text-align:center; padding:16px; color:#8E8E93; font-size:12px;">' +
+                    'Chưa có TV nào được thêm.<br>Bấm "⚙️ Quản lý danh sách TV..." để thêm TV mới.' +
                 '</div>';
-            });
+            } else {
+                cachedTvs.forEach(function(tv) {
+                    var isSelected = (activeId === tv.id);
+                    var dotColor = tv.online ? (tv.paired ? '#30D158' : '#FF9F0A') : '#8E8E93';
+                    var statusText = tv.online ? (tv.paired ? 'Đang bật • Đã ghép đôi' : 'Đang bật • Chưa ghép đôi') : 'Ngoại tuyến hoặc tắt';
+                    var pairBadge = tv.paired ? '<span style="color:#30D158; font-size:10px; border:1px solid rgba(48,209,88,0.4); border-radius:4px; padding:1px 5px; margin-left:6px;">Đã ghép</span>' : '<span style="color:#FF9F0A; font-size:10px; border:1px solid rgba(255,159,10,0.4); border-radius:4px; padding:1px 5px; margin-left:6px;">Chưa ghép</span>';
+
+                    html += '<div class="tv-picker-item ' + (isSelected ? 'active' : '') + '" style="display:flex; align-items:center; justify-content:space-between;">' +
+                        '<div style="flex:1; cursor:pointer;" onclick="selectTv(\'' + tv.id + '\')">' +
+                            '<div class="tv-item-title">' +
+                                '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:' + dotColor + '; margin-right:6px;"></span>' +
+                                escapeHtml(tv.name) + pairBadge +
+                            '</div>' +
+                            '<div class="tv-item-sub">' + escapeHtml(tv.ip) + ' • ' + statusText + '</div>' +
+                        '</div>' +
+                        '<div style="display:flex; align-items:center; gap:6px;">' +
+                            (isSelected ? '<div class="tv-item-check" style="cursor:pointer;" onclick="selectTv(\'' + tv.id + '\')">✓</div>' : '') +
+                            '<button title="Xóa TV đã ghép này" style="background:rgba(255,69,58,0.15); border:1px solid rgba(255,69,58,0.3); color:#FF453A; border-radius:6px; font-size:11px; cursor:pointer; padding:4px 8px;" onclick="event.stopPropagation(); deleteTv(\'' + tv.id + '\')">Xóa</button>' +
+                        '</div>' +
+                    '</div>';
+                });
+            }
 
             container.innerHTML = html;
         }
@@ -3746,22 +3755,30 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         function renderTvManageList() {
             var container = document.getElementById('tvManageList');
             if (!container) return;
+            if (!cachedTvs || cachedTvs.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:18px; color:#8E8E93; font-size:12px;">' +
+                    'Chưa có TV nào trong danh sách.<br>Vui lòng điền thông tin bên dưới để thêm TV mới.' +
+                '</div>';
+                return;
+            }
             var html = '';
             cachedTvs.forEach(function(tv) {
                 var dotColor = tv.online ? (tv.paired ? '#30D158' : '#FF9F0A') : '#8E8E93';
-                var statusText = tv.online ? (tv.paired ? 'Sẵn sàng' : 'Chưa token') : 'Tắt';
+                var statusText = tv.online ? (tv.paired ? 'Sẵn sàng' : 'Chưa có mã ghép') : 'Tắt';
+                var pairBadge = tv.paired ? '<span style="color:#30D158; font-size:10px; border:1px solid rgba(48,209,88,0.4); border-radius:4px; padding:1px 5px; margin-left:6px;">Đã ghép</span>' : '<span style="color:#FF9F0A; font-size:10px; border:1px solid rgba(255,159,10,0.4); border-radius:4px; padding:1px 5px; margin-left:6px;">Chưa ghép</span>';
+
                 html += '<div class="tv-manage-card">' +
-                    '<div style="overflow:hidden; padding-right:8px;">' +
+                    '<div style="overflow:hidden; padding-right:8px; flex:1;">' +
                         '<div style="font-weight:700; font-size:13px; color:#fff; display:flex; align-items:center; gap:6px;">' +
                             '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:' + dotColor + ';"></span>' +
-                            escapeHtml(tv.name) +
+                            escapeHtml(tv.name) + pairBadge +
                         '</div>' +
                         '<div style="font-size:11px; color:#8E8E93; margin-top:2px;">' + escapeHtml(tv.ip) + ' (' + statusText + ')</div>' +
                     '</div>' +
-                    '<div style="display:flex; gap:6px;">' +
-                        '<button class="modal-close-btn" style="margin:0; padding:6px 10px; font-size:11px;" onclick="editTvForm(\'' + tv.id + '\')">Sửa</button>' +
-                        '<button class="modal-close-btn" style="margin:0; padding:6px 10px; font-size:11px; color:#FF9F0A;" onclick="rePairTv(\'' + tv.id + '\')">Ghép lại</button>' +
-                        (cachedTvs.length > 1 ? '<button class="modal-close-btn" style="margin:0; padding:6px 8px; font-size:11px; color:#FF453A;" onclick="deleteTv(\'' + tv.id + '\')">Xóa</button>' : '') +
+                    '<div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;">' +
+                        '<button class="modal-close-btn" style="margin:0; padding:6px 9px; font-size:11px;" onclick="editTvForm(\'' + tv.id + '\')">Sửa</button>' +
+                        (tv.paired ? '<button class="modal-close-btn" style="margin:0; padding:6px 9px; font-size:11px; color:#FF9F0A;" onclick="unpairTv(\'' + tv.id + '\')">Hủy ghép</button>' : '<button class="modal-close-btn" style="margin:0; padding:6px 9px; font-size:11px; color:#0A84FF;" onclick="rePairTv(\'' + tv.id + '\')">Ghép đôi</button>') +
+                        '<button class="modal-close-btn" style="margin:0; padding:6px 9px; font-size:11px; color:#FF453A;" onclick="deleteTv(\'' + tv.id + '\')">Xóa TV</button>' +
                     '</div>' +
                 '</div>';
             });
@@ -3816,6 +3833,7 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
                 resetTvForm();
                 loadTvs(function() {
                     renderTvManageList();
+                    renderTvPickerList();
                 });
             })
             .catch(function() { showToast('Lỗi lưu TV'); });
@@ -3837,9 +3855,43 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             .catch(function() { showToast('Lỗi gửi yêu cầu ghép đôi'); });
         }
 
+        function unpairTv(tvId) {
+            var tvName = 'TV này';
+            for (var i = 0; i < cachedTvs.length; i++) {
+                if (cachedTvs[i].id === tvId) {
+                    tvName = cachedTvs[i].name;
+                    break;
+                }
+            }
+            if (!confirm('Hủy ghép đôi với TV "' + tvName + '"?\n(Mã token ghép đôi sẽ bị xóa, TV sẽ hỏi cấp quyền lại khi bấm phím)')) return;
+            showToast('Đang hủy ghép đôi...');
+            fetch('/api/samsung/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'unpair', tvId: tvId })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(d) {
+                showToast('Đã hủy ghép đôi TV: ' + tvName);
+                loadTvs(function() {
+                    renderTvManageList();
+                    renderTvPickerList();
+                    pollTvStatus();
+                });
+            })
+            .catch(function() { showToast('Lỗi hủy ghép đôi TV'); });
+        }
+
         function deleteTv(tvId) {
-            if (!confirm('Bạn có chắc chắn muốn xóa TV này khỏi danh sách?')) return;
-            showToast('Đang xóa TV...');
+            var tvName = 'TV này';
+            for (var i = 0; i < cachedTvs.length; i++) {
+                if (cachedTvs[i].id === tvId) {
+                    tvName = cachedTvs[i].name;
+                    break;
+                }
+            }
+            if (!confirm('Xác nhận XÓA TV "' + tvName + '" khỏi hệ thống?\n(Bao gồm xóa IP và token đã ghép)')) return;
+            showToast('Đang xóa TV: ' + tvName + '...');
             fetch('/api/samsung/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -3847,12 +3899,14 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             })
             .then(function(res) { return res.json(); })
             .then(function(d) {
-                showToast('Đã xóa TV');
+                showToast('Đã xóa TV: ' + tvName);
                 if (getActiveTvId() === tvId) {
                     setActiveTvId('all');
                 }
                 loadTvs(function() {
                     renderTvManageList();
+                    renderTvPickerList();
+                    pollTvStatus();
                 });
             })
             .catch(function() { showToast('Lỗi xóa TV'); });
@@ -5178,6 +5232,8 @@ class RemoteHTTPRequestHandler(BaseHTTPRequestHandler):
 
             if action == "delete" and tv_id:
                 samsung_tv_mgr.delete_tv(tv_id)
+            elif action == "unpair" and tv_id:
+                samsung_tv_mgr.clear_tv_token(tv_id)
             else:
                 if new_ip or name:
                     tv_id = samsung_tv_mgr.add_or_update_tv(tv_id, name, new_ip)

@@ -526,7 +526,7 @@ class MainActivity : AppCompatActivity() {
 
         val tokenStatus = TextView(this).apply {
             val hasToken = !tvClient.pairingToken.isNullOrEmpty()
-            text = if (hasToken) "Trạng thái: Đã có mã ghép đôi (Token OK)" else "Trạng thái: Chưa ghép đôi (Sẽ hỏi khi bấm phím)"
+            text = if (hasToken) "Trạng thái: Đã ghép đôi (Token OK)" else "Trạng thái: Chưa ghép đôi (Sẽ hỏi khi bấm phím)"
             textSize = 12f
             setTextColor(ContextCompat.getColor(this@MainActivity, if (hasToken) R.color.tv_online else R.color.text_dim))
             setPadding(0, 20, 0, 10)
@@ -545,9 +545,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 dialog.dismiss()
             }
-            .setNeutralButton(R.string.btn_reset_token) { dialog, _ ->
+            .setNeutralButton(R.string.btn_unpair_tv) { dialog, _ ->
                 tvClient.clearPairingToken()
-                showToast("Đã xóa token ghép đôi. Lần tới TV sẽ hỏi lại quyền.")
+                tvClient.disconnectWebSocket()
+                showToast("Đã xóa TV đã ghép (Hủy ghép đôi và xóa mã token thành công)")
+                checkTvStatusOnce()
                 dialog.dismiss()
             }
             .setNegativeButton(R.string.btn_cancel) { dialog, _ ->

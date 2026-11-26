@@ -31,6 +31,7 @@
     <string name="btn_save">Lưu</string>
     <string name="btn_cancel">Hủy</string>
     <string name="btn_reset_token">Ghép đôi lại</string>
+    <string name="btn_unpair_tv">Xóa TV đã ghép</string>
     <string name="permission_mic_required">Cần quyền microphone để nhận diện giọng nói tiếng Việt.</string>
     <string name="dialog_keyboard_title">Bàn phím nhập văn bản TV</string>
     <string name="dialog_keyboard_hint">Nhập văn bản gửi lên TV...</string>
