@@ -11,8 +11,8 @@ android {
         applicationId "com.iptv.tvapp"
         minSdk 21
         targetSdk 34
-        versionCode 97
-        versionName "2.1.39"
+        versionCode 98
+        versionName "2.1.40"
 
         multiDexEnabled false
 

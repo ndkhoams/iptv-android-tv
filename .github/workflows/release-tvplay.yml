@@ -66,6 +66,8 @@ jobs:
         body: |
           ### Bản phát hành ${{ github.ref_name }}:
           - Ứng dụng xem truyền hình & thể thao trực tiếp cho Android TV: **TV Play.apk**
+          - Tích hợp chuẩn hóa nguồn logo CLB V-League và quốc tế siêu nét từ TheSports CDN và Football-Logos CDN.
+          - Loại bỏ hoàn toàn nguồn logo lỗi/cũ từ apiv3.apifootball.com.
         files: |
           app/build/outputs/apk/debug/TV Play.apk
         prerelease: false
