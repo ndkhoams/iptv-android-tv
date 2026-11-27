@@ -1,8 +1,8 @@
 {
-  "version": "2.2.13",
-  "versionCode": 231,
-  "releaseDate": "2026-11-15",
-  "changelog": "Tối ưu hóa điều khiển D-Pad mượt mà, khử hoàn toàn độ trễ khựng khi duyệt danh mục và kênh thể thao, hỗ trợ cài đặt .wgt từ Web Remote.",
+  "version": "2.2.14",
+  "versionCode": 232,
+  "releaseDate": "2026-11-27",
+  "changelog": "Cập nhật nguồn logo câu lạc bộ TheSports CDN chuẩn nét, tối ưu hóa dữ liệu trận đấu thể thao trực tiếp và hiệu năng mượt mà.",
   "bundleUrl": "https://fastly.jsdelivr.net/gh/ndkhoams/iptv@main/tizen_tvplay/js/app.js",
   "downloadUrl": "http://10.0.0.222:8080/data/TVplay.wgt"
 }
