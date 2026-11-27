@@ -79,7 +79,42 @@ object TeamLogoHelper {
         "acmilan" to "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
         "milan" to "https://a.espncdn.com/i/teamlogos/soccer/500/103.png",
         "roma" to "https://a.espncdn.com/i/teamlogos/soccer/500/104.png",
-        "napoli" to "https://a.espncdn.com/i/teamlogos/soccer/500/114.png"
+        "napoli" to "https://a.espncdn.com/i/teamlogos/soccer/500/114.png",
+
+        // V-League & CLB Việt Nam (Official Verified Crests)
+        "thepxanhnamdinh" to "https://img.cltvap.cc/football/team/bc5db4dd418cb566a4475649876b55bb.png",
+        "namdinh" to "https://img.cltvap.cc/football/team/bc5db4dd418cb566a4475649876b55bb.png",
+        "conganhanoi" to "https://img.cltvap.cc/football/team/9882bbda1cd86a2af4e724f399d1a1c8.png",
+        "cahn" to "https://img.cltvap.cc/football/team/9882bbda1cd86a2af4e724f399d1a1c8.png",
+        "hanoi" to "https://img.cltvap.cc/football/team/7146224d9ef4e5d2eb712b4e71bdfaa4.png",
+        "hanoifc" to "https://img.cltvap.cc/football/team/7146224d9ef4e5d2eb712b4e71bdfaa4.png",
+        "thecongviettel" to "https://assets.football-logos.cc/logos/vietnam/700x700/the-cong-viettel.ce5afe8a.png",
+        "viettel" to "https://assets.football-logos.cc/logos/vietnam/700x700/the-cong-viettel.ce5afe8a.png",
+        "hoanganhgialai" to "https://img.cltvap.cc/football/team/df2ae58b9e658494b940b0bd782901b8.png",
+        "hagl" to "https://img.cltvap.cc/football/team/df2ae58b9e658494b940b0bd782901b8.png",
+        "songlamnghean" to "https://img.cltvap.cc/football/team/7f95b001711ce3978d498602e1d2c9fd.png",
+        "slna" to "https://img.cltvap.cc/football/team/7f95b001711ce3978d498602e1d2c9fd.png",
+        "haiphong" to "https://assets.football-logos.cc/logos/vietnam/700x700/hai-phong.89943111.png",
+        "binhduong" to "https://assets.football-logos.cc/logos/vietnam/700x700/becamex-tp-ho-chi-minh.e1813f36.png",
+        "becamexbinhduong" to "https://assets.football-logos.cc/logos/vietnam/700x700/becamex-tp-ho-chi-minh.e1813f36.png",
+        "thanhhoa" to "https://assets.football-logos.cc/logos/vietnam/700x700/thanh-hoa.0708698c.png",
+        "dongathanhhoa" to "https://assets.football-logos.cc/logos/vietnam/700x700/thanh-hoa.0708698c.png",
+        "binhdinh" to "https://assets.football-logos.cc/logos/vietnam/700x700/quy-nhon-united.9a9b4368.png",
+        "quynhonbinhdinh" to "https://assets.football-logos.cc/logos/vietnam/700x700/quy-nhon-united.9a9b4368.png",
+        "danang" to "https://img.cltvap.cc/football/team/9eec5ce9b0aa3a7010cf0de17509948a.png",
+        "shbdanang" to "https://img.cltvap.cc/football/team/9eec5ce9b0aa3a7010cf0de17509948a.png",
+        "hatinh" to "https://img.cltvap.cc/football/team/83dd94c5ca68e8f9a3980f036afcb511.png",
+        "honglinhhatinh" to "https://img.cltvap.cc/football/team/83dd94c5ca68e8f9a3980f036afcb511.png",
+        "tphochiminh" to "https://assets.football-logos.cc/logos/vietnam/700x700/tp-ho-chi-minh.6a41e4cf.png",
+        "tphcm" to "https://assets.football-logos.cc/logos/vietnam/700x700/tp-ho-chi-minh.6a41e4cf.png",
+        "hcmc" to "https://assets.football-logos.cc/logos/vietnam/700x700/tp-ho-chi-minh.6a41e4cf.png",
+        "ninhbinh" to "https://img.cltvap.cc/football/team/5452226660be0829fdb40967dd4b0b77.png",
+        "bacninh" to "https://img.cltvap.cc/football/team/40b7d679de613aedfb80bcaba85fa7e0.png",
+        "pvfcand" to "https://img.cltvap.cc/football/team/16b802abec41440eb4996fc68f16125b.png",
+        "dongtamlongan" to "https://img.cltvap.cc/football/team/347d428c24e85dbda67f7817e7d80ebf.png",
+        "longan" to "https://img.cltvap.cc/football/team/347d428c24e85dbda67f7817e7d80ebf.png",
+        "hudahue" to "https://img.cltvap.cc/football/team/d183acf4e1500de34a9bb72ff77f2ecc.jpg",
+        "hue" to "https://img.cltvap.cc/football/team/d183acf4e1500de34a9bb72ff77f2ecc.jpg"
     )
 
     private val logoUrlCache = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -109,24 +144,30 @@ object TeamLogoHelper {
     }
 
     fun getTeamLogoUrl(teamName: String, directLogo: String? = null): String? {
-        if (!directLogo.isNullOrBlank() && directLogo.startsWith("http")) {
+        val norm = normalize(teamName)
+
+        // 1. Ưu tiên kiểm tra danh bạ CLB chính thức đã verify
+        if (norm.isNotBlank()) {
+            CLUB_LOGOS[norm]?.let {
+                logoUrlCache[teamName] = it
+                return it
+            }
+        }
+
+        // 2. Direct logo nếu hợp lệ và không phải nguồn lỗi (apiv3.apifootball.com / favicon)
+        val isBadLogo = directLogo.isNullOrBlank() || directLogo.contains("apiv3.apifootball.com/badges") || directLogo.contains("favicon")
+        if (!directLogo.isNullOrBlank() && directLogo.startsWith("http") && !isBadLogo) {
             return directLogo
         }
+
         val cached = logoUrlCache[teamName]
         if (cached != null) {
             return if (cached.isEmpty()) null else cached
         }
 
-        val norm = normalize(teamName)
         if (norm.isBlank()) {
             logoUrlCache[teamName] = ""
             return null
-        }
-
-        // 1. Kiểm tra Premapped Club logos
-        CLUB_LOGOS[norm]?.let {
-            logoUrlCache[teamName] = it
-            return it
         }
 
         // 2. Kiểm tra Country Flags

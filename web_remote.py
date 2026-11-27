@@ -4149,6 +4149,52 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
         })();
 
         var premappedClubs = {
+            // V-League 1 & CLB Việt Nam (Official verified high-res logos)
+            thepxanhnamdinh: 'https://img.cltvap.cc/football/team/bc5db4dd418cb566a4475649876b55bb.png',
+            namdinh: 'https://img.cltvap.cc/football/team/bc5db4dd418cb566a4475649876b55bb.png',
+            conganhanoi: 'https://img.cltvap.cc/football/team/9882bbda1cd86a2af4e724f399d1a1c8.png',
+            cahn: 'https://img.cltvap.cc/football/team/9882bbda1cd86a2af4e724f399d1a1c8.png',
+            hanoi: 'https://img.cltvap.cc/football/team/7146224d9ef4e5d2eb712b4e71bdfaa4.png',
+            hanoifc: 'https://img.cltvap.cc/football/team/7146224d9ef4e5d2eb712b4e71bdfaa4.png',
+            thecongviettel: 'https://assets.football-logos.cc/logos/vietnam/700x700/the-cong-viettel.ce5afe8a.png',
+            viettel: 'https://assets.football-logos.cc/logos/vietnam/700x700/the-cong-viettel.ce5afe8a.png',
+            thecong: 'https://assets.football-logos.cc/logos/vietnam/700x700/the-cong-viettel.ce5afe8a.png',
+            hoanganhgialai: 'https://img.cltvap.cc/football/team/df2ae58b9e658494b940b0bd782901b8.png',
+            hagl: 'https://img.cltvap.cc/football/team/df2ae58b9e658494b940b0bd782901b8.png',
+            songlamnghean: 'https://img.cltvap.cc/football/team/7f95b001711ce3978d498602e1d2c9fd.png',
+            slna: 'https://img.cltvap.cc/football/team/7f95b001711ce3978d498602e1d2c9fd.png',
+            haiphong: 'https://assets.football-logos.cc/logos/vietnam/700x700/hai-phong.89943111.png',
+            becamexbinhduong: 'https://assets.football-logos.cc/logos/vietnam/700x700/becamex-tp-ho-chi-minh.e1813f36.png',
+            binhduong: 'https://assets.football-logos.cc/logos/vietnam/700x700/becamex-tp-ho-chi-minh.e1813f36.png',
+            dongathanhhoa: 'https://assets.football-logos.cc/logos/vietnam/700x700/thanh-hoa.0708698c.png',
+            thanhhoa: 'https://assets.football-logos.cc/logos/vietnam/700x700/thanh-hoa.0708698c.png',
+            quynhonbinhdinh: 'https://assets.football-logos.cc/logos/vietnam/700x700/quy-nhon-united.9a9b4368.png',
+            binhdinh: 'https://assets.football-logos.cc/logos/vietnam/700x700/quy-nhon-united.9a9b4368.png',
+            shbdanang: 'https://img.cltvap.cc/football/team/9eec5ce9b0aa3a7010cf0de17509948a.png',
+            danang: 'https://img.cltvap.cc/football/team/9eec5ce9b0aa3a7010cf0de17509948a.png',
+            honglinhhatinh: 'https://img.cltvap.cc/football/team/83dd94c5ca68e8f9a3980f036afcb511.png',
+            hatinh: 'https://img.cltvap.cc/football/team/83dd94c5ca68e8f9a3980f036afcb511.png',
+            tphochiminh: 'https://assets.football-logos.cc/logos/vietnam/700x700/tp-ho-chi-minh.6a41e4cf.png',
+            tphcm: 'https://assets.football-logos.cc/logos/vietnam/700x700/tp-ho-chi-minh.6a41e4cf.png',
+            hcmc: 'https://assets.football-logos.cc/logos/vietnam/700x700/tp-ho-chi-minh.6a41e4cf.png',
+            quangnam: 'https://assets.football-logos.cc/logos/vietnam/700x700/v-league.e985afa1.png',
+            ninhbinh: 'https://img.cltvap.cc/football/team/5452226660be0829fdb40967dd4b0b77.png',
+            bacninh: 'https://img.cltvap.cc/football/team/40b7d679de613aedfb80bcaba85fa7e0.png',
+            pvfcand: 'https://img.cltvap.cc/football/team/16b802abec41440eb4996fc68f16125b.png',
+            dongtamlongan: 'https://img.cltvap.cc/football/team/347d428c24e85dbda67f7817e7d80ebf.png',
+            longan: 'https://img.cltvap.cc/football/team/347d428c24e85dbda67f7817e7d80ebf.png',
+            hudahue: 'https://img.cltvap.cc/football/team/d183acf4e1500de34a9bb72ff77f2ecc.jpg',
+            hue: 'https://img.cltvap.cc/football/team/d183acf4e1500de34a9bb72ff77f2ecc.jpg',
+            khatocokhanhhoa: 'https://assets.football-logos.cc/logos/vietnam/700x700/khatoco-khanh-hoa.8edf34aa.png',
+            khanhhoa: 'https://assets.football-logos.cc/logos/vietnam/700x700/khatoco-khanh-hoa.8edf34aa.png',
+            lamdong: 'https://img.cltvap.cc/football/team/775fb8eca2172951b0f3d904cabfd337.png',
+            xuanthienphutho: 'https://img.cltvap.cc/football/team/a3fa1f2bd7dbd79b0c531417b56647d6.png',
+            phutho: 'https://img.cltvap.cc/football/team/a3fa1f2bd7dbd79b0c531417b56647d6.png',
+            thainguyen: 'https://img.cltvap.cc/football/team/5bc47b0c1409c6deb22abf1bf86f1ef0.png',
+            hungyen: 'https://img.cltvap.cc/football/team/838f9656561a3aab05c59b77850e24d4.png',
+            vanhien: 'https://img.cltvap.cc/football/team/9610ddd41e9e46f5db6a61850e1e0183.png',
+
+            // Quốc Tế
             arsenal: 'https://a.espncdn.com/i/teamlogos/soccer/500/359.png',
             chelsea: 'https://a.espncdn.com/i/teamlogos/soccer/500/363.png',
             liverpool: 'https://a.espncdn.com/i/teamlogos/soccer/500/364.png',
@@ -4282,20 +4328,23 @@ WEB_REMOTE_HTML = r"""<!DOCTYPE html>
             var norm = normalizeName(teamName);
             var cNorm = normalizeName(side === 'home' ? evt.c_home : evt.c_away);
 
-            if (side === 'home' && evt.homeLogo) return evt.homeLogo;
-            if (side === 'away' && evt.awayLogo) return evt.awayLogo;
+            // Ưu tiên 1: Danh bạ CLB chính thức đã verify
+            if (premappedClubs[norm]) return premappedClubs[norm];
+            if (cNorm && premappedClubs[cNorm]) return premappedClubs[cNorm];
+
+            // Ưu tiên 2: Direct logo nếu có và không phải nguồn lỗi (apiv3.apifootball.com / favicon)
+            var directLogo = (side === 'home' ? evt.homeLogo : evt.awayLogo) || '';
+            var isBadLogo = !directLogo || directLogo.indexOf('apiv3.apifootball.com/badges') !== -1 || directLogo.indexOf('favicon') !== -1;
+            if (directLogo && !isBadLogo) return directLogo;
 
             if (countryFlagsMap[norm]) return countryFlagsMap[norm];
             if (cNorm && countryFlagsMap[cNorm]) return countryFlagsMap[cNorm];
 
-            if (premappedClubs[norm]) return premappedClubs[norm];
-            if (cNorm && premappedClubs[cNorm]) return premappedClubs[cNorm];
-
             if (side === 'home' && evt.sources && evt.sources.length > 0) {
                 var srcLogo = evt.sources[0].logo;
-                if (srcLogo && (srcLogo.indexOf('/team') !== -1 || srcLogo.indexOf('/badge') !== -1)) return srcLogo;
+                if (srcLogo && (srcLogo.indexOf('/team') !== -1 || srcLogo.indexOf('/badge') !== -1) && srcLogo.indexOf('apiv3') === -1) return srcLogo;
             }
-            return '';
+            return directLogo || '';
         }
 
         function formatStreamButtonLabel(rawName, index) {
