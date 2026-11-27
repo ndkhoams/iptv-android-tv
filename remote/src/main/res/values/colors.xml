@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg_app">#141416</color>
+    <color name="bg_remote">#1E1E22</color>
     <color name="bg_dpad">#1E1E22</color>
     <color name="btn_normal">#26262A</color>
     <color name="btn_pressed">#3E3E46</color>
